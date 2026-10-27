@@ -10,6 +10,7 @@
 //  Both targets need the App Groups capability with: group.com.c12n.alrashidwidget
 //
 
+import ActivityKit
 import Foundation
 import SwiftUI
 
@@ -705,4 +706,24 @@ struct GoldProgressBar: View {
             .progressViewStyle(.linear)
             .tint(Theme.lightGold)
     }
+}
+
+// MARK: - Live Activity attributes
+
+/// Live Activity (Lock Screen + Dynamic Island) showing the countdown to
+/// the next prayer. The attributes type lives in this shared file so both
+/// the app (which starts/updates the activity) and the widget extension
+/// (which renders it) see the same definition.
+struct PrayerActivityAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var prayerName: String
+        var symbolName: String
+        var adhan: Date
+        var iqamah: Date?
+        var iqamahLabel: String
+        var hijri: String
+        var isTomorrow: Bool
+    }
+
+    var mosqueName: String
 }
