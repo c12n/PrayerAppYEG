@@ -1,0 +1,74 @@
+name: Build APK (Flutter)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'flutter/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.8'
+          channel: stable
+          cache: true
+
+      - name: Assemble platform scaffolding and Android overlay
+        run: |
+          set -euo pipefail
+          flutter create --project-name alrashidwidget --org com.c12n \
+            --platforms=android,ios "$RUNNER_TEMP/scaffold"
+          cp -r "$RUNNER_TEMP/scaffold/android" "$RUNNER_TEMP/scaffold/ios" flutter/
+          cp "$RUNNER_TEMP/scaffold/.metadata" flutter/ || true
+          MAIN_KOTLIN=flutter/android/app/src/main/kotlin/com/c12n/alrashidwidget
+          mkdir -p "$MAIN_KOTLIN"
+          cp -r flutter/android_overlay/kotlin/. "$MAIN_KOTLIN/"
+          cp -r flutter/android_overlay/res/. flutter/android/app/src/main/res/
+          python3 flutter/android_overlay/patch_android.py flutter/android
+          ICON_SRC=AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png
+          for spec in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            density="${spec%%:*}"; px="${spec##*:}"
+            magick "$ICON_SRC" -resize "${px}x${px}" "flutter/android/app/src/main/res/mipmap-$density/ic_launcher.png"
+          done
+
+      - name: Install dependencies
+        working-directory: flutter
+        run: flutter pub get
+
+      - name: Run calculator validation tests
+        working-directory: flutter
+        run: flutter test
+
+      - name: Build release APK
+        working-directory: flutter
+        run: flutter build apk --release
+
+      - name: Stage artifact
+        run: |
+          mkdir -p build-artifacts
+          cp flutter/build/app/outputs/flutter-apk/app-release.apk build-artifacts/AlRashidWidget.apk
+          ls -lh build-artifacts/AlRashidWidget.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AlRashidWidget-APK
+          path: build-artifacts/AlRashidWidget.apk
+          if-no-files-found: error
