@@ -44,5 +44,7 @@
 	<string></string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>
