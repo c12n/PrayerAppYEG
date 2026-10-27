@@ -51,6 +51,15 @@ Every push to `main` runs the **Build IPA** workflow, which archives the app uns
 - `PrayerWidgetExtension/` — the WidgetKit extension (`PrayerWidget.swift`)
 - `make_icon.py` — regenerates the app icon set (Pillow)
 
+## Flutter edition (Android + cross-platform)
+
+The `flutter/` directory holds a Flutter port of the same app — identical prayer calculator and mosque calibration (ported from `Shared/PrayerCalculator.swift` and validated to the minute against the iOS implementation), the same deep-green/gold design, Iqamah offsets, Umm al-Qura Hijri date, and Friday Jumu'ah handling, all computed on-device and offline.
+
+- **Android app + home-screen widgets** — three Android widgets (next prayer with countdown; schedule; full schedule with Hijri header) powered by a Kotlin port of the same calculator (`flutter/android_overlay/`), so they stay correct without the app running. Download `AlRashidWidget.apk` from the Releases page and sideload it.
+- **Responsive layouts** — phone single-column; **duo** two-pane layout at 600–1100dp (landscape phones, foldables, small tablets); wide tablet layout at 1100dp+ with today's and tomorrow's schedules side by side (iPad / Android tablets). The same Dart UI runs on iOS.
+
+The `android/` and `ios/` platform folders are generated, not committed: run `flutter/tool/setup_platforms.sh` (Flutter 3.47.8) to assemble them from `lib/` + `android_overlay/` — the **Build APK** GitHub Actions workflow does the same, runs the calculator validation tests (`flutter/test/calculator_test.dart`), and uploads `AlRashidWidget-APK` as a build artifact.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
