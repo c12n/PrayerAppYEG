@@ -1,4 +1,4 @@
-# AlRashid Prayer Widget
+# Al Rashid Prayer Widget
 
 Prayer time widgets for **AlRashid Mosque, Edmonton, Canada** (13070 113 St NW) — a small companion app whose main purpose is its Home Screen and Lock Screen widgets: today's Adhan and Iqamah times, the next prayer, and a live countdown, in a deep-green and gold design.
 
