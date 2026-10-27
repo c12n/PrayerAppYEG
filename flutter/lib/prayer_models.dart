@@ -20,6 +20,30 @@ class MosqueInfo {
       'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(directionsAddress)}';
 }
 
+/// America/Edmonton as an explicit transition table.
+///
+/// The tz database bundled with package:timezone (0.10.x) still carries
+/// the pre-2026 Alberta rules — spring forward and fall back every year.
+/// Alberta stays on Mountain Daylight Time permanently from the
+/// March 2026 spring-forward: the mosque's published timetable and
+/// current system tzdata both keep Edmonton at UTC-6 after that, with
+/// no fall-back. The bundled database would put every time one hour
+/// early from November 2026 on, so the location is built directly:
+/// MST (UTC-7) / MDT (UTC-6) with transitions on 2025-03-09 (09:00 UTC),
+/// 2025-11-02 (08:00 UTC) and 2026-03-08 (09:00 UTC, then MDT forever).
+tz.Location edmontonLocation() {
+  const mst = tz.TimeZone(-7 * 3600 * 1000, isDst: false, abbreviation: 'MST');
+  const mdt = tz.TimeZone(-6 * 3600 * 1000, isDst: true, abbreviation: 'MDT');
+  int ms(int year, int month, int day, int hourUtc) =>
+      DateTime.utc(year, month, day, hourUtc).millisecondsSinceEpoch;
+  return tz.Location(
+    MosqueInfo.timeZoneIdentifier,
+    [0, ms(2025, 3, 9, 9), ms(2025, 11, 2, 8), ms(2026, 3, 8, 9)],
+    const [0, 1, 0, 1],
+    const [mst, mdt],
+  );
+}
+
 enum Prayer { fajr, sunrise, dhuhr, asr, maghrib, isha }
 
 extension PrayerInfo on Prayer {
@@ -131,7 +155,7 @@ class PrayerSnapshot {
 }
 
 class PrayerProvider {
-  static tz.Location get _edmonton => tz.getLocation(MosqueInfo.timeZoneIdentifier);
+  static tz.Location get _edmonton => edmontonLocation();
 
   static tz.TZDateTime _startOfDay(tz.TZDateTime t) =>
       tz.TZDateTime(_edmonton, t.year, t.month, t.day);
@@ -239,7 +263,7 @@ class PrayerFormat {
 
   /// Jumu'ah Khutbah time (1:30 PM local).
   static String khutbahTime() {
-    final loc = tz.getLocation(MosqueInfo.timeZoneIdentifier);
+    final loc = edmontonLocation();
     final t = tz.TZDateTime(loc, 2026, 1, 2,
         MosqueInfo.jumuahKhutbahHour, MosqueInfo.jumuahKhutbahMinute);
     return time(t);
