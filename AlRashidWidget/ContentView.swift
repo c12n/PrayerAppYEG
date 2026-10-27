@@ -23,6 +23,7 @@ struct ContentView: View {
                     HeaderView(today: todaySchedule, now: context.date)
                     NextPrayerCard(snapshot: snapshot)
                     ScheduleCard(snapshot: snapshot)
+                    AlertsCard()
                     actionButtons
                     FooterView()
                 }
@@ -60,6 +61,7 @@ struct ContentView: View {
     private func refreshWidgets() {
         provider.refreshCache()
         WidgetCenter.shared.reloadAllTimelines()
+        AppServices.refresh()
     }
 }
 
@@ -340,4 +342,69 @@ extension Theme {
 
 #Preview {
     ContentView()
+}
+
+// MARK: - Alerts settings
+
+private struct AlertsCard: View {
+    @AppStorage(AlertSettings.notificationsKey) private var notificationsOn = true
+    @AppStorage(AlertSettings.liveActivityKey) private var liveActivityOn = true
+    @State private var notificationsDenied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Alerts", systemImage: "bell.badge.fill")
+                .font(.headline)
+                .foregroundStyle(Color.white)
+
+            Toggle(isOn: $notificationsOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Adhan notifications")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.white)
+                    Text("A notification with sound at every prayer time, scheduled 7 days ahead and refreshed whenever you open the app.")
+                        .font(.caption)
+                        .foregroundStyle(Color.white.opacity(0.7))
+                }
+            }
+            .toggleStyle(.switch)
+            .tint(Theme.gold)
+            .onChange(of: notificationsOn) { _, isOn in
+                AppServices.notificationsToggled(on: isOn)
+                refreshDeniedState()
+            }
+
+            if notificationsOn && notificationsDenied {
+                Label("Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Theme.lightGold)
+            }
+
+            Divider().overlay(Color.white.opacity(0.15))
+
+            Toggle(isOn: $liveActivityOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Live Activity")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.white)
+                    Text("A live countdown to the next prayer on your Lock Screen and Dynamic Island. It refreshes whenever you open the app.")
+                        .font(.caption)
+                        .foregroundStyle(Color.white.opacity(0.7))
+                }
+            }
+            .toggleStyle(.switch)
+            .tint(Theme.gold)
+            .onChange(of: liveActivityOn) { _, isOn in
+                AppServices.liveActivityToggled(on: isOn)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .greenGlassCard(cornerRadius: 26)
+        .task { refreshDeniedState() }
+    }
+
+    private func refreshDeniedState() {
+        Task { notificationsDenied = await AdhanNotifications.authorizationDenied() }
+    }
 }
