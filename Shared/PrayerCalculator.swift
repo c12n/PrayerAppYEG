@@ -134,7 +134,7 @@ struct PrayerCalculator: Sendable, Equatable {
         // Mosque timetable calibration. The raw solar results are adjusted to
         // reproduce Al Rashid Mosque's own published timetable (see
         // MosqueCalibration below): small seasonal corrections on Sunrise,
-        // Sunset, Fajr and Asr, Dhuhr +1.1 minutes, Isha as a calibrated
+        // Sunset, Fajr, Asr and Dhuhr, Isha as a calibrated
         // interval after Maghrib, and — when the sun is high (declination
         // >= 10°) — Fajr as a calibrated interval before Sunrise instead of
         // the raw depression-angle time, matching the mosque's summer
@@ -167,7 +167,7 @@ struct PrayerCalculator: Sendable, Equatable {
         return Times(
             fajr: instant(calibratedFajr),
             sunrise: instant(calibratedSunrise),
-            dhuhr: instant(solar.dhuhr + 1.1 / 60.0),
+            dhuhr: instant(solar.dhuhr + Self.MosqueCalibration.dhuhrCorrectionMinutes(dayOfYear: dayOfYear) / 60.0),
             asr: instant(solar.asr + Self.MosqueCalibration.asrCorrectionMinutes(dayOfYear: dayOfYear) / 60.0),
             maghrib: instant(calibratedMaghrib),
             isha: instant(calibratedIsha)
@@ -265,13 +265,13 @@ struct PrayerCalculator: Sendable, Equatable {
     /// and in summer it switches to fixed conventions (Isha 75 minutes
     /// after Maghrib; Fajr a near-constant interval before Sunrise).
     ///
-    /// Model: seasonal harmonic bias curves for Sunrise, Sunset, (winter)
-    /// Fajr and Asr; Isha as a declination-indexed interval after the
-    /// calibrated Maghrib; summer Fajr as a declination-indexed interval
-    /// before Sunrise. Validated against the published timetable (exact
-    /// to the minute after rounding): Asr 96% of days, Isha 83%,
-    /// Sunrise 82%, Maghrib 73%, Dhuhr 72%, Fajr 63%; the remaining days
-    /// are almost all a single minute off.
+    /// Model: seasonal harmonic curves for Sunrise, Sunset, (winter)
+    /// Fajr, Asr and Dhuhr; Isha as a declination-indexed interval after
+    /// the calibrated Maghrib; summer Fajr as a declination-indexed
+    /// interval before Sunrise. Validated against the published
+    /// timetable (exact to the minute after rounding): Dhuhr 98% of
+    /// days, Asr 96%, Isha 83%, Sunrise 82%, Maghrib 73%, Fajr 63%;
+    /// the remaining days are almost all a single minute off.
     private enum MosqueCalibration {
         /// Day-of-year harmonic curve (minutes) of the raw solar result:
         /// coefficients are [constant, sin, cos, sin2, cos2, (sin3, cos3)].
@@ -300,6 +300,11 @@ struct PrayerCalculator: Sendable, Equatable {
         /// unlike the biases above it is not subtracted).
         static func asrCorrectionMinutes(dayOfYear: Int) -> Double {
             harmonicBias([0.8720, -1.6200, -0.2740, -0.8510, 0.1490, -0.4220, 0.3900], dayOfYear: dayOfYear)
+        }
+
+        /// Correction ADDED to the raw Dhuhr (same convention as Asr).
+        static func dhuhrCorrectionMinutes(dayOfYear: Int) -> Double {
+            harmonicBias([0.8760, -0.3990, -0.1690, -0.6410, 0.1900, -0.3960, 0.3790], dayOfYear: dayOfYear)
         }
 
         /// Piecewise-linear lookup on a declination grid (degrees).
