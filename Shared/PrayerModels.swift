@@ -410,7 +410,9 @@ struct PrayerProvider: Sendable {
 
     static func hijriString(for date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .islamicUmalqura)
+        // Via NSCalendar: the Swift Calendar.Identifier case for Umm al-Qura is not exposed in every SDK.
+        formatter.calendar = (NSCalendar(calendarIdentifier: .islamicUmalqura) as Calendar?)
+            ?? Calendar(identifier: .islamicCivil)
         formatter.locale = Locale(identifier: "en_US")
         formatter.timeZone = timeZone
         formatter.dateFormat = "d MMMM y"
