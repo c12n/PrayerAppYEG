@@ -3,6 +3,8 @@ name: Build IPA
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'flutter/**'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
