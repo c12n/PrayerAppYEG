@@ -42,11 +42,14 @@ jobs:
           cp -r flutter/android_overlay/kotlin/. "$MAIN_KOTLIN/"
           cp -r flutter/android_overlay/res/. flutter/android/app/src/main/res/
           python3 flutter/android_overlay/patch_android.py flutter/android
-          ICON_SRC=AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png
-          for spec in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-            density="${spec%%:*}"; px="${spec##*:}"
-            magick "$ICON_SRC" -resize "${px}x${px}" "flutter/android/app/src/main/res/mipmap-$density/ic_launcher.png"
-          done
+          python3 -m pip install --quiet pillow
+          python3 - <<'PYEOF'
+          from PIL import Image
+          src = Image.open("AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png")
+          for density, px in [("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)]:
+              src.resize((px, px), Image.LANCZOS).save(f"flutter/android/app/src/main/res/mipmap-{density}/ic_launcher.png")
+          print("launcher icons written")
+          PYEOF
 
       - name: Install dependencies
         working-directory: flutter
