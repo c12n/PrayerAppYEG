@@ -12,10 +12,13 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'package:alrashidwidget/hijri_calendar.dart';
 import 'package:alrashidwidget/prayer_calculator.dart';
+import 'package:alrashidwidget/prayer_models.dart';
 
 void main() {
   tz_data.initializeTimeZones();
-  final edmonton = tz.getLocation('America/Edmonton');
+  // The app's own Edmonton location (explicit transition table) — the
+  // bundled tz database still has the pre-2026 Alberta DST rules.
+  final edmonton = edmontonLocation();
 
   int minutesOfDay(DateTime utc) {
     final local = tz.TZDateTime.from(utc, edmonton);
