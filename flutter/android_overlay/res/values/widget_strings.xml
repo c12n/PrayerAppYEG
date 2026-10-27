@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_next_info_desc">Next prayer and countdown for Al Rashid Mosque</string>
+    <string name="widget_schedule_info_desc">Al Rashid Mosque prayer schedule with next-prayer header</string>
+    <string name="widget_large_info_desc">Al Rashid Mosque full prayer schedule</string>
+</resources>
