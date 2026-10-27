@@ -35,8 +35,10 @@ struct PrayerCalculator: Sendable, Equatable {
         var ishaAngle: Double
         var maghribMinutes: Double
 
-        /// Islamic Society of North America: Fajr 15°, Isha 15°, Maghrib at sunset.
-        static let isna = Method(name: "ISNA", fajrAngle: 15, ishaAngle: 15, maghribMinutes: 0)
+        /// AlRashid Mosque profile, fitted to the mosque's published timetable:
+        /// Fajr depression 18.25°, Isha depression 17.5° (used as the base for
+        /// the calibrated Isha interval), Maghrib 5 minutes after sunset.
+        static let alRashidMosque = Method(name: "AlRashid Mosque", fajrAngle: 18.25, ishaAngle: 17.5, maghribMinutes: 5)
     }
 
     enum AsrMethod: String, Sendable, Equatable {
@@ -95,10 +97,10 @@ struct PrayerCalculator: Sendable, Equatable {
         self.timeZone = timeZone
     }
 
-    /// AlRashid Mosque, 13070 113 St NW, Edmonton — ISNA, Asr standard.
+    /// AlRashid Mosque, 13070 113 St NW, Edmonton — mosque timetable profile, Asr standard.
     static let alRashid = PrayerCalculator(
         coordinates: Coordinates(latitude: 53.591189, longitude: -113.515598),
-        method: .isna,
+        method: .alRashidMosque,
         asrMethod: .standard,
         highLatitudeRule: .angleBased,
         timeZone: TimeZone(identifier: "America/Edmonton") ?? .current
@@ -128,7 +130,27 @@ struct PrayerCalculator: Sendable, Equatable {
             solar = computeSolarTimes(julianDay: julianDay, estimates: solar)
         }
         solar = applyHighLatitudeRule(to: solar)
-        solar.asr += Self.asrReferenceCorrectionMinutes(dayOfYear: localCalendar.ordinality(of: .day, in: .year, for: date) ?? 1) / 60.0
+
+        // Mosque timetable calibration. The raw solar results are adjusted to
+        // reproduce AlRashid Mosque's own published timetable (see
+        // MosqueCalibration below): small seasonal corrections on Sunrise and
+        // Sunset, Dhuhr +1 minute, Asr +2 minutes, Isha as a calibrated
+        // interval after Maghrib, and — when the sun is high (declination
+        // >= 10°) — Fajr as a calibrated interval before Sunrise instead of
+        // the raw depression-angle time, matching the mosque's summer
+        // schedule convention.
+        let dayOfYear = localCalendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        let declination = sunPosition(julianDay: julianDay + solar.dhuhr / 24.0).declination
+        let calibratedSunrise = solar.sunrise - Self.MosqueCalibration.sunriseBiasMinutes(dayOfYear: dayOfYear) / 60.0
+        let calibratedSunset = solar.sunset - Self.MosqueCalibration.sunsetBiasMinutes(dayOfYear: dayOfYear) / 60.0
+        let calibratedMaghrib = calibratedSunset + method.maghribMinutes / 60.0
+        let calibratedFajr: Double
+        if declination >= 10 {
+            calibratedFajr = calibratedSunrise - Self.MosqueCalibration.fajrSummerPortionMinutes(declination: declination) / 60.0
+        } else {
+            calibratedFajr = solar.fajr - Self.MosqueCalibration.fajrBiasMinutes(dayOfYear: dayOfYear) / 60.0
+        }
+        let calibratedIsha = calibratedMaghrib + Self.MosqueCalibration.ishaIntervalMinutes(declination: declination) / 60.0
 
         var utcCalendar = Calendar(identifier: .gregorian)
         utcCalendar.timeZone = TimeZone(secondsFromGMT: 0) ?? timeZone
@@ -143,12 +165,12 @@ struct PrayerCalculator: Sendable, Equatable {
         }
 
         return Times(
-            fajr: instant(solar.fajr),
-            sunrise: instant(solar.sunrise),
-            dhuhr: instant(solar.dhuhr),
-            asr: instant(solar.asr),
-            maghrib: instant(solar.sunset + method.maghribMinutes / 60.0),
-            isha: instant(solar.isha)
+            fajr: instant(calibratedFajr),
+            sunrise: instant(calibratedSunrise),
+            dhuhr: instant(solar.dhuhr + 1.0 / 60.0),
+            asr: instant(solar.asr + 2.0 / 60.0),
+            maghrib: instant(calibratedMaghrib),
+            isha: instant(calibratedIsha)
         )
     }
 
@@ -233,20 +255,69 @@ struct PrayerCalculator: Sendable, Equatable {
         return sunAngleTime(julianDay: julianDay, angle: angle, hours: hours, counterClockwise: false)
     }
 
-    /// Small empirical correction (minutes) applied to Asr only.
+    // MARK: - Mosque timetable calibration
+
+    /// Empirical calibration to AlRashid Mosque's published monthly timetable
+    /// (alrashidfoundation.ca), fitted against every published day of
+    /// May–December 2026 (245 days). The mosque does not use plain ISNA:
+    /// its Fajr/Isha follow larger depression angles (18.25° / 17.5°) with
+    /// its own generator's seasonal wobble, Maghrib is sunset + 5 minutes,
+    /// and in summer it switches to fixed conventions (Isha 75 minutes
+    /// after Maghrib; Fajr a near-constant interval before Sunrise).
     ///
-    /// The plain shadow-factor formula and the ISNA reference source
-    /// (Aladhan) differ on Asr by a smooth annual wave of up to about
-    /// ±2.3 minutes at this latitude, while the other five times already
-    /// agree with the reference to its one-minute rounding. This
-    /// two-harmonic fit of that wave was validated against the reference
-    /// for every day of 2025, 2026 and 2027: Asr mean error drops from
-    /// 1.30 minutes to about 0.35 minutes (the reference's own rounding
-    /// floor), worst case about 1 minute.
-    private static func asrReferenceCorrectionMinutes(dayOfYear: Int) -> Double {
-        let w = 2.0 * Double.pi * Double(dayOfYear) / 365.25
-        return -1.820018 * sin(w) - 0.325561 * cos(w)
-            - 0.690626 * sin(2 * w) - 0.327154 * cos(2 * w)
+    /// Model: two-harmonic seasonal bias curves for Sunrise, Sunset and
+    /// (winter) Fajr; Isha as a declination-indexed interval after
+    /// Maghrib; summer Fajr as a declination-indexed interval before
+    /// Sunrise. Validated result against the published timetable: every
+    /// prayer within about a minute on average (worst case ~2 minutes,
+    /// Fajr ~5 minutes on a few shoulder-season days).
+    private enum MosqueCalibration {
+        /// Two-harmonic day-of-year bias (minutes) of the raw solar result:
+        /// coefficients are [constant, sin, cos, sin2, cos2].
+        private static func harmonicBias(_ c: [Double], dayOfYear: Int) -> Double {
+            let w = 2.0 * Double.pi * Double(dayOfYear) / 365.25
+            return c[0] + c[1] * sin(w) + c[2] * cos(w) + c[3] * sin(2 * w) + c[4] * cos(2 * w)
+        }
+
+        static func sunriseBiasMinutes(dayOfYear: Int) -> Double {
+            harmonicBias([0.6475, -1.2198, -0.3848, 0.0040, -0.1097], dayOfYear: dayOfYear)
+        }
+
+        static func sunsetBiasMinutes(dayOfYear: Int) -> Double {
+            harmonicBias([1.7673, 2.1719, -0.2507, -0.0982, -0.3486], dayOfYear: dayOfYear)
+        }
+
+        static func fajrBiasMinutes(dayOfYear: Int) -> Double {
+            harmonicBias([-0.1420, 1.7990, 1.1200, 0.6390, -2.1960], dayOfYear: dayOfYear)
+        }
+
+        /// Piecewise-linear lookup on a declination grid (degrees).
+        private static func piecewise(_ grid: [(Double, Double)], _ x: Double) -> Double {
+            if x <= grid[0].0 { return grid[0].1 }
+            if x >= grid[grid.count - 1].0 { return grid[grid.count - 1].1 }
+            for i in 0..<(grid.count - 1) where x >= grid[i].0 && x <= grid[i + 1].0 {
+                let f = (x - grid[i].0) / (grid[i + 1].0 - grid[i].0)
+                return grid[i].1 + f * (grid[i + 1].1 - grid[i].1)
+            }
+            return grid[grid.count - 1].1
+        }
+
+        /// Minutes from Maghrib to Isha, by solar declination.
+        static func ishaIntervalMinutes(declination: Double) -> Double {
+            piecewise([
+                (-24, 121.8), (-20, 116.0), (-16, 110.6), (-12, 108.1),
+                (-8, 107.5), (-4, 108.6), (0, 108.3), (4, 97.6),
+                (8, 86.7), (12, 76.8), (16, 75.0), (20, 75.0), (24, 75.0)
+            ], declination)
+        }
+
+        /// Minutes from Fajr to Sunrise in the mosque's summer schedule
+        /// (used when declination >= 10°).
+        static func fajrSummerPortionMinutes(declination: Double) -> Double {
+            piecewise([
+                (8, 137.2), (12, 140.9), (16, 129.7), (20, 119.7), (24, 125.3)
+            ], declination)
+        }
     }
 
     // MARK: - High latitude handling
