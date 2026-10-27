@@ -1,0 +1,867 @@
+// Al Rashid Prayer — Flutter edition.
+//
+// Same app as the native iOS build: Al Rashid Mosque Edmonton prayer
+// times (Adhan calibrated to the mosque's published timetable), Iqamah
+// offsets, Umm al-Qura Hijri date, next-prayer countdown, and Friday
+// Jumu'ah handling — computed fully on-device, offline.
+//
+// Responsive layouts:
+//  - Phone (< 600dp): single column.
+//  - Duo (600–1100dp): two panes — next prayer beside the schedule
+//    (iPhone landscape / small tablets / foldables).
+//  - Tablet (>= 1100dp): wide three-zone layout with today's and
+//    tomorrow's schedules side by side (iPad / Android tablets).
+
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:url_launcher/url_launcher.dart';
+
+import 'prayer_models.dart';
+
+void main() {
+  tz_data.initializeTimeZones();
+  runApp(const AlRashidApp());
+}
+
+// MARK: - Theme
+
+class AppTheme {
+  static const deepGreen = Color(0xFF0B3D2E);
+  static const green = Color(0xFF0E5A40);
+  static const gold = Color(0xFFD4AF37);
+  static const lightGold = Color(0xFFF2CD5C);
+
+  static Color adaptiveGold(Brightness b) =>
+      b == Brightness.dark ? lightGold : const Color(0xFF8C6D12);
+
+  static ThemeData light() => ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: green,
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF1F4F0),
+      );
+
+  static ThemeData dark() => ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: green,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0D130F),
+      );
+}
+
+class AlRashidApp extends StatelessWidget {
+  const AlRashidApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Al Rashid Prayer',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      home: const HomePage(),
+    );
+  }
+}
+
+// MARK: - Home page
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Timer? _timer;
+  late tz.TZDateTime _now;
+
+  tz.Location get _edmonton => tz.getLocation(MosqueInfo.timeZoneIdentifier);
+
+  @override
+  void initState() {
+    super.initState();
+    _now = tz.TZDateTime.now(_edmonton);
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() => _now = tz.TZDateTime.now(_edmonton));
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final snapshot = PrayerProvider.snapshot(_now);
+    final today = PrayerProvider.dayFor(_now);
+    final tomorrowStart =
+        tz.TZDateTime(_edmonton, _now.year, _now.month, _now.day + 1);
+    final tomorrow = PrayerProvider.computeDay(tomorrowStart);
+
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.center,
+            colors: [
+              AppTheme.green.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.45
+                      : 0.16),
+              Colors.transparent,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              if (width >= 1100) {
+                return _tabletLayout(context, snapshot, today, tomorrow);
+              }
+              if (width >= 600) {
+                return _duoLayout(context, snapshot, today);
+              }
+              return _phoneLayout(context, snapshot, today);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Phone: single column.
+  Widget _phoneLayout(
+      BuildContext context, PrayerSnapshot snapshot, PrayerDay today) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          HeaderSection(today: today, now: _now),
+          const SizedBox(height: 20),
+          NextPrayerCard(snapshot: snapshot),
+          const SizedBox(height: 20),
+          ScheduleCard(snapshot: snapshot),
+          const SizedBox(height: 20),
+          const ActionButtons(),
+          const SizedBox(height: 20),
+          const FooterSection(),
+        ],
+      ),
+    );
+  }
+
+  // Duo: two panes side by side.
+  Widget _duoLayout(
+      BuildContext context, PrayerSnapshot snapshot, PrayerDay today) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HeaderSection(today: today, now: _now),
+                  const SizedBox(height: 20),
+                  NextPrayerCard(snapshot: snapshot),
+                  const SizedBox(height: 20),
+                  const ActionButtons(),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            flex: 6,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  ScheduleCard(snapshot: snapshot),
+                  const SizedBox(height: 20),
+                  const FooterSection(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Tablet: left rail + today's and tomorrow's schedules.
+  Widget _tabletLayout(BuildContext context, PrayerSnapshot snapshot,
+      PrayerDay today, PrayerDay tomorrow) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1280),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 16, 28, 28),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      HeaderSection(today: today, now: _now),
+                      const SizedBox(height: 24),
+                      NextPrayerCard(snapshot: snapshot),
+                      const SizedBox(height: 24),
+                      const ActionButtons(),
+                      const SizedBox(height: 24),
+                      const FooterSection(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: ScheduleCard(snapshot: snapshot, large: true),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: ScheduleCard.forDay(
+                    day: tomorrow,
+                    title: "Tomorrow's Prayer Times",
+                    large: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// MARK: - Header
+
+class HeaderSection extends StatelessWidget {
+  final PrayerDay today;
+  final tz.TZDateTime now;
+  const HeaderSection({super.key, required this.today, required this.now});
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final secondary = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.nightlight_round,
+                size: 20, color: AppTheme.adaptiveGold(brightness)),
+            const SizedBox(width: 8),
+            Text(
+              'Assalamu Alaikum',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: secondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          MosqueInfo.name,
+          style: TextStyle(
+            fontSize: 34,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          today.hijriDate,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.adaptiveGold(brightness),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          PrayerFormat.longDate(now),
+          style: TextStyle(fontSize: 15, color: secondary),
+        ),
+      ],
+    );
+  }
+}
+
+// MARK: - Green glass card
+
+class GreenGlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  const GreenGlassCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(20),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.green, AppTheme.deepGreen],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppTheme.lightGold.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.deepGreen.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+// MARK: - Next prayer card
+
+class NextPrayerCard extends StatelessWidget {
+  final PrayerSnapshot snapshot;
+  const NextPrayerCard({super.key, required this.snapshot});
+
+  @override
+  Widget build(BuildContext context) {
+    final next = snapshot.next;
+    final caption =
+        snapshot.isShowingTomorrow ? 'Next prayer · Tomorrow' : 'Next prayer';
+    final remaining = next.adhan.difference(snapshot.date);
+    return GreenGlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(prayerIcon(next.prayer),
+                  size: 18, color: AppTheme.lightGold),
+              const SizedBox(width: 6),
+              Text(
+                caption,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.lightGold,
+                ),
+              ),
+              const Spacer(),
+              if (next.isJumuah)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.gold.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    "JUMU'AH",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: AppTheme.lightGold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Text(
+                  next.name,
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Text(
+                PrayerFormat.time(next.adhan),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withValues(alpha: 0.92),
+                ),
+              ),
+            ],
+          ),
+          if (next.iqamah != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.groups,
+                    size: 16, color: Colors.white.withValues(alpha: 0.8)),
+                const SizedBox(width: 6),
+                Text(
+                  '${next.iqamahLabel} at ${PrayerFormat.time(next.iqamah!)}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 14),
+          Text(
+            PrayerFormat.countdown(remaining),
+            style: const TextStyle(
+              fontSize: 46,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.lightGold,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: snapshot.progress,
+              minHeight: 6,
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppTheme.lightGold),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'until ${next.name} Adhan',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.65),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// MARK: - Schedule card
+
+class ScheduleCard extends StatelessWidget {
+  final PrayerDay day;
+  final String title;
+  final PrayerSlot? highlight;
+  final bool large;
+
+  ScheduleCard({
+    super.key,
+    required PrayerSnapshot snapshot,
+    this.large = false,
+  })  : day = snapshot.day,
+        title = snapshot.isShowingTomorrow
+            ? "Tomorrow's Prayer Times"
+            : "Today's Prayer Times",
+        highlight = snapshot.next;
+
+  const ScheduleCard.forDay({
+    super.key,
+    required this.day,
+    required this.title,
+    this.large = false,
+  }) : highlight = null;
+
+  @override
+  Widget build(BuildContext context) {
+    final nameSize = large ? 18.0 : 16.0;
+    final timeSize = large ? 18.0 : 16.0;
+    return GreenGlassCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Text(
+                PrayerFormat.shortDate(day.date),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                const Expanded(child: _ColumnHeader('PRAYER')),
+                SizedBox(
+                    width: large ? 104 : 86,
+                    child: const _ColumnHeader('ADHAN', right: true)),
+                SizedBox(
+                    width: large ? 104 : 86,
+                    child: const _ColumnHeader('IQAMAH', right: true)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          for (final slot in day.slots)
+            _ScheduleRow(
+              slot: slot,
+              isNext: highlight != null &&
+                  slot.prayer == highlight!.prayer &&
+                  slot.adhan == highlight!.adhan,
+              nameSize: nameSize,
+              timeSize: timeSize,
+              timeWidth: large ? 104 : 86,
+            ),
+          if (day.isFriday) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.mosque, size: 16, color: AppTheme.lightGold),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    "Jumu'ah replaces Dhuhr · Khutbah at ${PrayerFormat.khutbahTime()}",
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.lightGold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ColumnHeader extends StatelessWidget {
+  final String text;
+  final bool right;
+  const _ColumnHeader(this.text, {this.right = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      textAlign: right ? TextAlign.right : TextAlign.left,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.8,
+        color: Colors.white.withValues(alpha: 0.55),
+      ),
+    );
+  }
+}
+
+class _ScheduleRow extends StatelessWidget {
+  final PrayerSlot slot;
+  final bool isNext;
+  final double nameSize;
+  final double timeSize;
+  final double timeWidth;
+
+  const _ScheduleRow({
+    required this.slot,
+    required this.isNext,
+    required this.nameSize,
+    required this.timeSize,
+    required this.timeWidth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = isNext
+        ? AppTheme.lightGold
+        : (slot.prayer == Prayer.sunrise
+            ? Colors.white.withValues(alpha: 0.6)
+            : Colors.white);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: isNext
+          ? BoxDecoration(
+              color: AppTheme.gold.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: AppTheme.lightGold.withValues(alpha: 0.55)),
+            )
+          : null,
+      child: Row(
+        children: [
+          Icon(slot.isJumuah ? Icons.mosque : prayerIcon(slot.prayer),
+              size: 20, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  slot.name,
+                  style: TextStyle(
+                    fontSize: nameSize,
+                    fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+                if (slot.isJumuah)
+                  Text(
+                    'Khutbah time shown',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: timeWidth,
+            child: Text(
+              PrayerFormat.time(slot.adhan),
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: timeSize,
+                fontWeight: isNext ? FontWeight.bold : FontWeight.normal,
+                color: color,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          SizedBox(
+            width: timeWidth,
+            child: Text(
+              slot.iqamah != null ? PrayerFormat.time(slot.iqamah!) : '—',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: timeSize,
+                fontWeight: isNext ? FontWeight.bold : FontWeight.normal,
+                color: color,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData prayerIcon(Prayer prayer) => switch (prayer) {
+      Prayer.fajr => Icons.wb_twilight,
+      Prayer.sunrise => Icons.wb_sunny_outlined,
+      Prayer.dhuhr => Icons.sunny,
+      Prayer.asr => Icons.brightness_6,
+      Prayer.maghrib => Icons.nightlight_outlined,
+      Prayer.isha => Icons.dark_mode,
+    };
+
+// MARK: - Actions & footer
+
+class ActionButtons extends StatelessWidget {
+  const ActionButtons({super.key});
+
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _GradientButton(
+            label: 'Directions',
+            icon: Icons.directions_car,
+            foreground: AppTheme.deepGreen,
+            colors: const [AppTheme.lightGold, AppTheme.gold],
+            onTap: () => _open(MosqueInfo.directionsUrl),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _GradientButton(
+            label: 'Website',
+            icon: Icons.language,
+            foreground: AppTheme.lightGold,
+            colors: const [AppTheme.green, AppTheme.deepGreen],
+            borderColor: AppTheme.gold.withValues(alpha: 0.6),
+            onTap: () => _open(MosqueInfo.websiteUrl),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color foreground;
+  final List<Color> colors;
+  final Color? borderColor;
+  final VoidCallback onTap;
+
+  const _GradientButton({
+    required this.label,
+    required this.icon,
+    required this.foreground,
+    required this.colors,
+    required this.onTap,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: colors,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border:
+                borderColor != null ? Border.all(color: borderColor!) : null,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.deepGreen.withValues(alpha: 0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 20, color: foreground),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: foreground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FooterSection extends StatelessWidget {
+  const FooterSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontSize: 14,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FooterLine(icon: Icons.location_on, text: MosqueInfo.address, style: style),
+        const SizedBox(height: 8),
+        _FooterLine(
+          icon: Icons.mosque,
+          text: "Jumu'ah Khutbah every Friday at ${PrayerFormat.khutbahTime()}",
+          style: style,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          "Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.",
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final TextStyle style;
+  const _FooterLine({required this.icon, required this.text, required this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: style.color),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: style)),
+      ],
+    );
+  }
+}
