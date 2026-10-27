@@ -254,7 +254,7 @@ private struct FooterView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label(MosqueInfo.address, systemImage: "mappin.and.ellipse")
             Label("Jumu'ah Khutbah every Friday at \(PrayerFormat.khutbahTime(on: .now))", systemImage: "building.columns")
-            Text("Adhan times are calculated on-device and calibrated to AlRashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.")
+            Text("Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.")
                 .font(.caption)
                 .padding(.top, 4)
         }

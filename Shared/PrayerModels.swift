@@ -16,7 +16,7 @@ import SwiftUI
 // MARK: - Mosque constants
 
 enum MosqueInfo {
-    static let name = "AlRashid Mosque"
+    static let name = "Al Rashid Mosque"
     static let address = "13070 113 St NW, Edmonton, AB"
     static let directionsAddress = "13070 113 St NW, Edmonton, AB, Canada"
     static let latitude = 53.591189
