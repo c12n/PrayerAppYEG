@@ -8,6 +8,7 @@
 //  Capability: App Groups -> group.com.c12n.alrashidwidget
 //
 
+import ActivityKit
 import SwiftUI
 import WidgetKit
 
@@ -561,6 +562,7 @@ struct PrayerWidget: Widget {
 struct PrayerWidgetBundle: WidgetBundle {
     var body: some Widget {
         PrayerWidget()
+        PrayerLiveActivity()
     }
 }
 
@@ -580,4 +582,114 @@ struct PrayerWidgetBundle: WidgetBundle {
 }
 #Preview(as: .accessoryCircular) { PrayerWidget() } timeline: {
     PrayerEntry(snapshot: PrayerProvider.standard.snapshot(at: .now))
+}
+
+// MARK: - Live Activity (Lock Screen + Dynamic Island)
+
+struct PrayerLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: PrayerActivityAttributes.self) { context in
+            LiveActivityLockScreenView(state: context.state)
+                .activityBackgroundTint(Theme.deepGreen)
+                .activitySystemActionForegroundColor(Color.white)
+        } dynamicIsland: { context in
+            let state = context.state
+            return DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    HStack(spacing: 6) {
+                        Image(systemName: state.symbolName)
+                            .foregroundStyle(Theme.lightGold)
+                        Text(state.prayerName)
+                            .font(.headline)
+                            .foregroundStyle(Color.white)
+                    }
+                    .padding(.leading, 6)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text(state.adhan, style: .timer)
+                        .font(.title3.weight(.bold).monospacedDigit())
+                        .foregroundStyle(Theme.lightGold)
+                        .frame(maxWidth: 92, alignment: .trailing)
+                        .padding(.trailing, 6)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    HStack {
+                        Text("Adhan \(PrayerFormat.time(state.adhan))")
+                        Spacer()
+                        if let iqamah = state.iqamah {
+                            Text("\(state.iqamahLabel) \(PrayerFormat.time(iqamah))")
+                        }
+                    }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.white.opacity(0.85))
+                    .padding(.horizontal, 6)
+                }
+            } compactLeading: {
+                Image(systemName: state.symbolName)
+                    .foregroundStyle(Theme.lightGold)
+            } compactTrailing: {
+                Text(state.adhan, style: .timer)
+                    .font(.caption.weight(.bold).monospacedDigit())
+                    .foregroundStyle(Theme.lightGold)
+                    .frame(maxWidth: 64, alignment: .trailing)
+            } minimal: {
+                Image(systemName: state.symbolName)
+                    .foregroundStyle(Theme.lightGold)
+            }
+            .keylineTint(Theme.gold)
+        }
+    }
+}
+
+private struct LiveActivityLockScreenView: View {
+    let state: PrayerActivityAttributes.ContentState
+
+    var body: some View {
+        ZStack {
+            GlassGreenBackground()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.stars.fill")
+                        .foregroundStyle(Theme.lightGold)
+                    Text(MosqueInfo.name)
+                        .font(.caption.weight(.bold))
+                        .tracking(0.6)
+                        .foregroundStyle(Color.white.opacity(0.85))
+                    Spacer()
+                    Text(state.hijri)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.white.opacity(0.7))
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: state.symbolName)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(Theme.lightGold)
+                    Text(state.isTomorrow ? "\(state.prayerName) · Tomorrow" : state.prayerName)
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Spacer(minLength: 8)
+                    Text(PrayerFormat.time(state.adhan))
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Color.white.opacity(0.92))
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(state.adhan, style: .timer)
+                        .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.lightGold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Spacer(minLength: 8)
+                    if let iqamah = state.iqamah {
+                        Text("\(state.iqamahLabel) \(PrayerFormat.time(iqamah))")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.white.opacity(0.8))
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+        }
+    }
 }
