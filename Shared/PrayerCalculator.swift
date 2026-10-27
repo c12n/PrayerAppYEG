@@ -132,9 +132,9 @@ struct PrayerCalculator: Sendable, Equatable {
         solar = applyHighLatitudeRule(to: solar)
 
         // Mosque timetable calibration. The raw solar results are adjusted to
-        // reproduce AlRashid Mosque's own published timetable (see
-        // MosqueCalibration below): small seasonal corrections on Sunrise and
-        // Sunset, Dhuhr +1 minute, Asr +2 minutes, Isha as a calibrated
+        // reproduce Al Rashid Mosque's own published timetable (see
+        // MosqueCalibration below): small seasonal corrections on Sunrise,
+        // Sunset, Fajr and Asr, Dhuhr +1.1 minutes, Isha as a calibrated
         // interval after Maghrib, and — when the sun is high (declination
         // >= 10°) — Fajr as a calibrated interval before Sunrise instead of
         // the raw depression-angle time, matching the mosque's summer
@@ -167,8 +167,8 @@ struct PrayerCalculator: Sendable, Equatable {
         return Times(
             fajr: instant(calibratedFajr),
             sunrise: instant(calibratedSunrise),
-            dhuhr: instant(solar.dhuhr + 1.0 / 60.0),
-            asr: instant(solar.asr + 2.0 / 60.0),
+            dhuhr: instant(solar.dhuhr + 1.1 / 60.0),
+            asr: instant(solar.asr + Self.MosqueCalibration.asrCorrectionMinutes(dayOfYear: dayOfYear) / 60.0),
             maghrib: instant(calibratedMaghrib),
             isha: instant(calibratedIsha)
         )
@@ -265,18 +265,23 @@ struct PrayerCalculator: Sendable, Equatable {
     /// and in summer it switches to fixed conventions (Isha 75 minutes
     /// after Maghrib; Fajr a near-constant interval before Sunrise).
     ///
-    /// Model: two-harmonic seasonal bias curves for Sunrise, Sunset and
-    /// (winter) Fajr; Isha as a declination-indexed interval after
-    /// Maghrib; summer Fajr as a declination-indexed interval before
-    /// Sunrise. Validated result against the published timetable: every
-    /// prayer within about a minute on average (worst case ~2 minutes,
-    /// Fajr ~5 minutes on a few shoulder-season days).
+    /// Model: seasonal harmonic bias curves for Sunrise, Sunset, (winter)
+    /// Fajr and Asr; Isha as a declination-indexed interval after the
+    /// calibrated Maghrib; summer Fajr as a declination-indexed interval
+    /// before Sunrise. Validated against the published timetable (exact
+    /// to the minute after rounding): Asr 96% of days, Isha 83%,
+    /// Sunrise 82%, Maghrib 73%, Dhuhr 72%, Fajr 63%; the remaining days
+    /// are almost all a single minute off.
     private enum MosqueCalibration {
-        /// Two-harmonic day-of-year bias (minutes) of the raw solar result:
-        /// coefficients are [constant, sin, cos, sin2, cos2].
+        /// Day-of-year harmonic curve (minutes) of the raw solar result:
+        /// coefficients are [constant, sin, cos, sin2, cos2, (sin3, cos3)].
         private static func harmonicBias(_ c: [Double], dayOfYear: Int) -> Double {
             let w = 2.0 * Double.pi * Double(dayOfYear) / 365.25
-            return c[0] + c[1] * sin(w) + c[2] * cos(w) + c[3] * sin(2 * w) + c[4] * cos(2 * w)
+            var value = c[0] + c[1] * sin(w) + c[2] * cos(w) + c[3] * sin(2 * w) + c[4] * cos(2 * w)
+            if c.count > 6 {
+                value += c[5] * sin(3 * w) + c[6] * cos(3 * w)
+            }
+            return value
         }
 
         static func sunriseBiasMinutes(dayOfYear: Int) -> Double {
@@ -291,6 +296,12 @@ struct PrayerCalculator: Sendable, Equatable {
             harmonicBias([-0.1420, 1.7990, 1.1200, 0.6390, -2.1960], dayOfYear: dayOfYear)
         }
 
+        /// Correction ADDED to the raw Asr (fitted as mosque minus raw, so
+        /// unlike the biases above it is not subtracted).
+        static func asrCorrectionMinutes(dayOfYear: Int) -> Double {
+            harmonicBias([0.8720, -1.6200, -0.2740, -0.8510, 0.1490, -0.4220, 0.3900], dayOfYear: dayOfYear)
+        }
+
         /// Piecewise-linear lookup on a declination grid (degrees).
         private static func piecewise(_ grid: [(Double, Double)], _ x: Double) -> Double {
             if x <= grid[0].0 { return grid[0].1 }
@@ -302,12 +313,17 @@ struct PrayerCalculator: Sendable, Equatable {
             return grid[grid.count - 1].1
         }
 
-        /// Minutes from Maghrib to Isha, by solar declination.
+        /// Minutes from the calibrated Maghrib to Isha, by solar
+        /// declination. Fitted on (mosque Isha − calibrated Maghrib) so it
+        /// also absorbs the Maghrib fractional-minute offset.
         static func ishaIntervalMinutes(declination: Double) -> Double {
             piecewise([
-                (-24, 121.8), (-20, 116.0), (-16, 110.6), (-12, 108.1),
-                (-8, 107.5), (-4, 108.6), (0, 108.3), (4, 97.6),
-                (8, 86.7), (12, 76.8), (16, 75.0), (20, 75.0), (24, 75.0)
+                (-24, 122.1), (-22, 120.3), (-20, 116.7), (-18, 114.0),
+                (-16, 111.5), (-14, 109.8), (-12, 108.2), (-10, 107.6),
+                (-8, 107.0), (-6, 107.3), (-4, 107.7), (-2, 108.6),
+                (0, 109.6), (2, 105.0), (4, 99.0), (6, 93.6),
+                (8, 87.8), (10, 81.9), (12, 76.3), (14, 75.3),
+                (16, 75.5), (18, 75.3), (20, 75.2), (22, 74.9), (24, 74.8)
             ], declination)
         }
 
@@ -315,7 +331,8 @@ struct PrayerCalculator: Sendable, Equatable {
         /// (used when declination >= 10°).
         static func fajrSummerPortionMinutes(declination: Double) -> Double {
             piecewise([
-                (8, 137.2), (12, 140.9), (16, 129.7), (20, 119.7), (24, 125.3)
+                (8, 135.0), (10, 140.2), (12, 142.0), (14, 136.2),
+                (16, 131.1), (18, 124.2), (20, 118.2), (22, 122.3), (24, 126.7)
             ], declination)
         }
     }
