@@ -26,12 +26,14 @@ cp -r android_overlay/res/. android/app/src/main/res/
 python3 android_overlay/patch_android.py android
 
 # Launcher icons: resize the iOS app icon (already in this repo) into the
-# Android mipmap densities with ImageMagick.
-ICON_SRC=../AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png
-for spec in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-  density="${spec%%:*}"; px="${spec##*:}"
-  magick "$ICON_SRC" -resize "${px}x${px}" "android/app/src/main/res/mipmap-$density/ic_launcher.png"
-done
+# Android mipmap densities with Pillow (same tool as make_icon.py).
+python3 - <<'PYEOF'
+from PIL import Image
+src = Image.open("../AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png")
+for density, px in [("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)]:
+    src.resize((px, px), Image.LANCZOS).save(f"android/app/src/main/res/mipmap-{density}/ic_launcher.png")
+print("launcher icons written")
+PYEOF
 
 flutter pub get
 echo "Platforms assembled. Build with: flutter build apk --release"
