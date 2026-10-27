@@ -86,7 +86,7 @@ class _HomePageState extends State<HomePage> {
   Timer? _timer;
   late tz.TZDateTime _now;
 
-  tz.Location get _edmonton => tz.getLocation(MosqueInfo.timeZoneIdentifier);
+  tz.Location get _edmonton => edmontonLocation();
 
   @override
   void initState() {
