@@ -48,9 +48,40 @@ jobs:
           zip -r "build-artifacts/AlRashidWidget.ipa" Payload
           ls -lh build-artifacts/AlRashidWidget.ipa
 
-      - name: Upload IPA artifact
+      - name: Build and archive PRIVATE build (no external links)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project AlRashidWidget.xcodeproj \
+            -scheme AlRashidWidget \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/AlRashidWidgetPrivate.xcarchive" \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            APP_DISPLAY_NAME="Al Rashid Private" \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS="PRIVACY_BUILD"
+
+      - name: Package Private IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="$RUNNER_TEMP/AlRashidWidgetPrivate.xcarchive/Products/Applications/AlRashidWidget.app"
+          test -d "$APP_PATH"
+          test -d "$APP_PATH/PlugIns/PrayerWidgetExtension.appex"
+          rm -rf PayloadPrivate
+          mkdir -p PayloadPrivate/Payload
+          cp -R "$APP_PATH" PayloadPrivate/Payload/
+          (cd PayloadPrivate && zip -r "../build-artifacts/AlRashidWidget-Private.ipa" Payload)
+          ls -lh build-artifacts/AlRashidWidget-Private.ipa
+
+      - name: Upload IPA artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: AlRashidWidget-IPA
-          path: build-artifacts/AlRashidWidget.ipa
+          name: AlRashidWidget-IPAs
+          path: |
+            build-artifacts/AlRashidWidget.ipa
+            build-artifacts/AlRashidWidget-Private.ipa
           if-no-files-found: error
