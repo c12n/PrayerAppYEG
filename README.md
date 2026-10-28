@@ -12,8 +12,10 @@ Prayer time widgets for **AlRashid Mosque, Edmonton, Canada** (13070 113 St NW) 
 - **Hijri date** — computed from an embedded Umm al-Qura month table, matching the mosque's official app.
 - **Iqamah times** — shown alongside Adhan using Al Rashid's usual offsets (Fajr +20 min, Dhuhr +10, Asr +10, Maghrib +5, Isha +10). Note: the mosque occasionally publishes fixed iqamah times (for example a fixed Fajr iqamah in some seasons), which can differ from the offset pattern.
 - **Widget timeline** — entries are planned at every prayer boundary (plus midnight rollovers), so the "next prayer" and countdown roll over on time without opening the app.
+- **Adhan notifications & Live Activity** — a notification with sound at every prayer time (7 days scheduled ahead), and a Lock Screen / Dynamic Island Live Activity counting down to the next prayer. Since v1.0.4 the Live Activity rolls over to the following prayer by itself when a prayer time arrives (a background refresh is chained to just after every Adhan — no server, everything stays on-device), and it already shows the prayer after next as a "Then: …" line.
 - **Companion app** — one screen with today's times, the next-prayer countdown, and buttons for directions to the mosque and the mosque website (alrashidmosque.ca).
 - Deep green (#0B3D2E / #0E5A40) and gold (#D4AF37) theme, with Dark and Tinted app-icon variants.
+- **Native Light & Dark Mode (v1.0.4)** — the app, widgets and Live Activity follow the system appearance: warm white surfaces with deep-green text in Light Mode, green glass in Dark Mode, and the app icon switches to its Dark variant automatically (set the Home Screen icon appearance to Auto). Colors are kept high-contrast in both modes (deep green on white ≈ 10.9:1, white on green ≈ 7.5:1+) and text sizes were bumped up, for readers with low vision.
 
 ## Requirements
 
