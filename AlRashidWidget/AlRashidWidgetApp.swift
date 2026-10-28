@@ -9,11 +9,17 @@
 //
 
 import ActivityKit
+import BackgroundTasks
 import SwiftUI
 import UserNotifications
+import WidgetKit
 
 @main
 struct AlRashidWidgetApp: App {
+    init() {
+        BackgroundRefresh.register()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -52,9 +58,13 @@ enum AlertSettings {
 ///   64-pending cap) and re-scheduled whenever the app becomes active, so
 ///   the schedule is always fresh. v1.0.2 and earlier scheduled none.
 /// - A Live Activity counting down to the next prayer on the Lock Screen
-///   and Dynamic Island. It refreshes whenever the app is opened or
-///   foregrounded (Live Activities can only be updated by the app or a
-///   push server; there is no server here by design).
+///   and Dynamic Island. Since v1.0.4 it rolls over to the following prayer
+///   on its own when a prayer time arrives: a BGAppRefreshTask is chained
+///   to fire just after every Adhan (see BackgroundRefresh), and each
+///   update also pre-stages the prayer after next on the Lock Screen.
+///   There is still no push server by design, so iOS decides the exact
+///   moment the background task runs — for an app used daily it lands
+///   within a few minutes of the Adhan.
 enum AppServices {
 
     /// Called on launch and on every move to the active state.
@@ -65,6 +75,7 @@ enum AppServices {
                 await AdhanNotifications.reschedule()
             }
             await LiveActivityController.refresh()
+            BackgroundRefresh.schedule()
         }
     }
 
@@ -172,6 +183,7 @@ enum LiveActivityController {
         let provider = PrayerProvider.standard
         let snapshot = provider.snapshot()
         let next = snapshot.next
+        let following = provider.followingSlot(after: next)
         let state = PrayerActivityAttributes.ContentState(
             prayerName: next.name,
             symbolName: next.symbolName,
@@ -179,11 +191,16 @@ enum LiveActivityController {
             iqamah: next.iqamah,
             iqamahLabel: next.iqamahLabel,
             hijri: snapshot.day.hijriDate,
-            isTomorrow: snapshot.isShowingTomorrow
+            isTomorrow: snapshot.isShowingTomorrow,
+            followingName: following?.name,
+            followingAdhan: following?.adhan
         )
-        // Go stale shortly after the Iqamah (or the Adhan when no Iqamah),
-        // so a finished countdown does not linger as if it were live.
-        let staleDate = (next.iqamah ?? next.adhan).addingTimeInterval(10 * 60)
+        // Go stale shortly after the FOLLOWING prayer's Iqamah (or Adhan),
+        // so the activity stays live across the automatic rollover at this
+        // prayer's Adhan instead of dimming while the background refresh
+        // that swaps in the next prayer is still on its way.
+        let staleBase = following?.iqamah ?? following?.adhan ?? next.iqamah ?? next.adhan
+        let staleDate = staleBase.addingTimeInterval(10 * 60)
         let content = ActivityContent(state: state, staleDate: staleDate)
 
         if let activity = activities.first {
@@ -198,6 +215,60 @@ enum LiveActivityController {
     private static func endAll(_ activities: [Activity<PrayerActivityAttributes>]) {
         for activity in activities {
             Task { await activity.end(nil, dismissalPolicy: .immediate) }
+        }
+    }
+}
+
+// MARK: - Background refresh (automatic Live Activity rollover)
+
+/// Chains a BGAppRefreshTask to just after every Adhan. When it fires, the
+/// Live Activity is updated to the following prayer — so the Lock Screen
+/// countdown rolls from Dhuhr to Asr (and so on) without the app ever
+/// being opened — the Adhan notifications are re-scheduled, and the next
+/// refresh is chained. The identifier must also be listed under
+/// BGTaskSchedulerPermittedIdentifiers in Info.plist.
+enum BackgroundRefresh {
+    static let identifier = "com.c12n.alrashidwidget.refresh"
+    private static var didRegister = false
+
+    /// Must run before the app finishes launching (called from App.init).
+    static func register() {
+        guard !didRegister else { return }
+        didRegister = true
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
+            guard let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            handle(refreshTask)
+        }
+    }
+
+    /// Asks iOS to wake the app shortly after the next Adhan. Submitting a
+    /// new request with the same identifier replaces the pending one.
+    static func schedule() {
+        let next = PrayerProvider.standard.snapshot().next
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = next.adhan.addingTimeInterval(15)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    private static func handle(_ task: BGAppRefreshTask) {
+        // Chain first: by the time this runs, the snapshot's next prayer is
+        // the following one, so this schedules the refresh after ITS Adhan.
+        schedule()
+
+        let work = Task {
+            if AlertSettings.notificationsEnabled {
+                await AdhanNotifications.reschedule()
+            }
+            await LiveActivityController.refresh()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        task.expirationHandler = { work.cancel() }
+        Task {
+            _ = await work.result
+            task.setTaskCompleted(success: !work.isCancelled)
         }
     }
 }
