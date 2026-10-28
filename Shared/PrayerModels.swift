@@ -694,32 +694,70 @@ enum Theme {
 
     private static var deepGreenUI: UIColor { UIColor(red: 0.043, green: 0.239, blue: 0.180, alpha: 1) }
 
-    /// Gold that stays readable in both appearances (bright on dark, deep on light).
+    /// The user's chosen accent color (Appearance settings, v1.0.5),
+    /// auto-adjusted per appearance so it stays readable: brightened for
+    /// dark surfaces, deepened for light ones (the HSB adjustment keeps
+    /// the hue, so gold stays gold). Defaults to the signature gold.
     static var adaptiveGold: Color {
-        themed(
-            dark: UIColor(red: 0.949, green: 0.804, blue: 0.361, alpha: 1),
-            light: UIColor(red: 0.478, green: 0.373, blue: 0.063, alpha: 1)
-        )
+        Color(uiColor: UIColor { traits in
+            let base = AppAppearance.accentUIColor
+            return traits.userInterfaceStyle == .dark
+                ? base.adjustedForDarkSurface()
+                : base.adjustedForLightSurface()
+        })
+    }
+
+    // MARK: Theme colors (user-pickable, v1.0.5)
+    //
+    // The Settings page lets the user recolor the app: the MAIN color
+    // replaces the signature green on the app cards and buttons, the
+    // TEXT color is the main text color on those colored surfaces, and
+    // the ACCENT (adaptiveGold above) drives countdowns and highlights.
+    // All three are stored in the App Group, so the Home Screen widgets
+    // and the Live Activity follow the same theme. Text colors pass a
+    // contrast guard (see AppAppearance.resolvedTextUIColor) so a picked
+    // color can never become unreadable for low-vision users.
+
+    /// The user's main color (default: the signature deep green).
+    static var primary: Color { Color(uiColor: AppAppearance.primaryUIColor) }
+
+    /// Main color lightened — top of the card gradient.
+    static var primaryBright: Color {
+        Color(uiColor: AppAppearance.primaryUIColor.lightened(by: 0.16))
+    }
+
+    /// Main color darkened — bottom of the card gradient, text on gold.
+    static var primaryDeep: Color {
+        Color(uiColor: AppAppearance.primaryUIColor.darkened(by: 0.30))
+    }
+
+    /// Text drawn on main-color surfaces (cards in Dark Mode, buttons in
+    /// both modes): the picked text color, contrast-guarded.
+    static var onPrimaryText: Color {
+        Color(uiColor: AppAppearance.resolvedTextUIColor(forDarkSurface: true))
     }
 
     /// Primary text on adaptive surfaces.
     static var onSurface: Color {
-        themed(dark: .white, light: deepGreenUI)
+        themed(
+            dark: AppAppearance.resolvedTextUIColor(forDarkSurface: true),
+            light: AppAppearance.resolvedTextUIColor(forDarkSurface: false)
+        )
     }
 
     /// Secondary text on adaptive surfaces.
     static var onSurfaceSecondary: Color {
         themed(
-            dark: UIColor.white.withAlphaComponent(0.85),
-            light: deepGreenUI.withAlphaComponent(0.84)
+            dark: AppAppearance.resolvedTextUIColor(forDarkSurface: true).withAlphaComponent(0.85),
+            light: AppAppearance.resolvedTextUIColor(forDarkSurface: false).withAlphaComponent(0.84)
         )
     }
 
     /// Muted text on adaptive surfaces (captions, column headers).
     static var onSurfaceMuted: Color {
         themed(
-            dark: UIColor.white.withAlphaComponent(0.72),
-            light: deepGreenUI.withAlphaComponent(0.74)
+            dark: AppAppearance.resolvedTextUIColor(forDarkSurface: true).withAlphaComponent(0.72),
+            light: AppAppearance.resolvedTextUIColor(forDarkSurface: false).withAlphaComponent(0.74)
         )
     }
 
@@ -727,7 +765,7 @@ enum Theme {
     static var panelFill: Color {
         themed(
             dark: UIColor.white.withAlphaComponent(0.09),
-            light: deepGreenUI.withAlphaComponent(0.06)
+            light: AppAppearance.primaryUIColor.withAlphaComponent(0.06)
         )
     }
 
@@ -735,16 +773,358 @@ enum Theme {
     static var hairline: Color {
         themed(
             dark: UIColor.white.withAlphaComponent(0.16),
-            light: deepGreenUI.withAlphaComponent(0.22)
+            light: AppAppearance.primaryUIColor.withAlphaComponent(0.22)
         )
     }
 
-    /// Live Activity background tint (matches AdaptiveSurfaceBackground).
+    /// Live Activity background tint (matches AdaptiveSurfaceBackground:
+    /// pure black in Dark Mode, pure white in Light Mode — v1.0.5). An
+    /// explicit Light/Dark choice in Settings wins over the system.
     static var activityTint: Color {
-        themed(
-            dark: deepGreenUI,
-            light: UIColor(red: 0.992, green: 0.984, blue: 0.961, alpha: 1)
+        switch AppAppearance.mode {
+        case .light: return .white
+        case .dark: return .black
+        case .system: return themed(dark: .black, light: .white)
+        }
+    }
+}
+
+// MARK: - Appearance settings (shared app + widgets, v1.0.5)
+
+/// User appearance choices, stored in the App Group so the app, the Home
+/// Screen widgets and the Live Activity all follow the same settings:
+/// - Mode: System (follow iOS), Light, or Dark — the app applies it with
+///   preferredColorScheme; widgets resolve it against the system scheme.
+/// - Main color: replaces the signature green on cards and buttons.
+/// - Accent: countdowns, highlights, progress bar.
+/// - Text color: the main text color on colored surfaces (contrast-guarded).
+/// - Saved themes: the user's own named combinations of the above.
+/// Colors are stored as sRGB hex ints.
+enum AppAppearance {
+    static let modeKey = "appearance.mode"
+    static let accentKey = "appearance.accentHex"
+    static let primaryKey = "appearance.primaryHex"
+    static let textKey = "appearance.textHex"
+    static let iconKey = "appearance.iconName"
+    static let savedThemesKey = "appearance.savedThemes"
+
+    static let defaultAccentHex: UInt32 = 0xD4AF37
+    static let defaultPrimaryHex: UInt32 = 0x0B3D2E
+    static let defaultTextHex: UInt32 = 0xFFFFFF
+
+    enum Mode: String, CaseIterable {
+        case system, light, dark
+
+        var label: String {
+            switch self {
+            case .system: "System"
+            case .light: "Light"
+            case .dark: "Dark"
+            }
+        }
+
+        /// nil = follow the system (no override).
+        var colorScheme: ColorScheme? {
+            switch self {
+            case .system: nil
+            case .light: .light
+            case .dark: .dark
+            }
+        }
+    }
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static var mode: Mode {
+        get { Mode(rawValue: sharedDefaults.string(forKey: modeKey) ?? "") ?? .system }
+        set { sharedDefaults.set(newValue.rawValue, forKey: modeKey) }
+    }
+
+    private static func hex(forKey key: String, default defaultHex: UInt32) -> UInt32 {
+        (sharedDefaults.object(forKey: key) as? NSNumber)?.uint32Value ?? defaultHex
+    }
+
+    private static func setHex(_ value: UInt32, forKey key: String) {
+        sharedDefaults.set(NSNumber(value: value), forKey: key)
+    }
+
+    static func uiColor(forHex hex: UInt32) -> UIColor {
+        UIColor(
+            red: CGFloat((hex >> 16) & 0xFF) / 255.0,
+            green: CGFloat((hex >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(hex & 0xFF) / 255.0,
+            alpha: 1
         )
+    }
+
+    static var accentHex: UInt32 {
+        get { hex(forKey: accentKey, default: defaultAccentHex) }
+        set { setHex(newValue, forKey: accentKey) }
+    }
+
+    static var accentUIColor: UIColor { uiColor(forHex: accentHex) }
+    static var accent: Color { Color(uiColor: accentUIColor) }
+
+    static var primaryHex: UInt32 {
+        get { hex(forKey: primaryKey, default: defaultPrimaryHex) }
+        set { setHex(newValue, forKey: primaryKey) }
+    }
+
+    static var primaryUIColor: UIColor { uiColor(forHex: primaryHex) }
+
+    static var textHex: UInt32 {
+        get { hex(forKey: textKey, default: defaultTextHex) }
+        set { setHex(newValue, forKey: textKey) }
+    }
+
+    static var textUIColor: UIColor { uiColor(forHex: textHex) }
+
+    /// The picked text color made safe for its surface. On dark (main
+    /// color) surfaces the default is plain white; on light (white)
+    /// surfaces the default is the deepened main color. A picked color
+    /// is blended toward white (dark surfaces) or black (light surfaces)
+    /// until it reaches ~4.5:1 contrast with its background, so text can
+    /// never end up unreadable for low-vision users.
+    static func resolvedTextUIColor(forDarkSurface dark: Bool) -> UIColor {
+        let picked = textUIColor
+        if dark {
+            if sharedDefaults.object(forKey: textKey) == nil { return .white }
+            return picked.ensuringContrast(against: primaryUIColor, minimum: 4.5, blendToward: .white)
+        }
+        if sharedDefaults.object(forKey: textKey) == nil {
+            return primaryUIColor.darkened(by: 0.15)
+        }
+        // A near-white pick on a white surface would vanish: use the
+        // deepened main color instead of an unreadable light gray.
+        if picked.relativeLuminance > 0.75 { return primaryUIColor.darkened(by: 0.15) }
+        return picked.ensuringContrast(against: .white, minimum: 4.5, blendToward: .black)
+    }
+
+    /// The color scheme surfaces should render in: the stored mode wins,
+    /// System defers to the ambient (system) scheme.
+    static func resolvedColorScheme(system: ColorScheme) -> ColorScheme {
+        mode.colorScheme ?? system
+    }
+
+    // MARK: Pickers' preset swatches
+
+    /// Accent presets (name, sRGB hex).
+    static let presets: [(name: String, hex: UInt32)] = [
+        ("Gold", 0xD4AF37),
+        ("Emerald", 0x10B981),
+        ("Teal", 0x14B8A6),
+        ("Sky", 0x38BDF8),
+        ("Blue", 0x3B82F6),
+        ("Violet", 0x8B5CF6),
+        ("Rose", 0xF43F5E),
+        ("Orange", 0xF97316),
+    ]
+
+    /// Main-color presets: deep, saturated colors that carry white text.
+    static let primaryPresets: [(name: String, hex: UInt32)] = [
+        ("Mosque Green", 0x0B3D2E),
+        ("Midnight", 0x0F2440),
+        ("Ocean", 0x083344),
+        ("Royal", 0x2E1065),
+        ("Rosewood", 0x571233),
+        ("Bronze", 0x6B4420),
+        ("Forest", 0x14532D),
+        ("Charcoal", 0x171717),
+    ]
+
+    /// Text-color presets.
+    static let textPresets: [(name: String, hex: UInt32)] = [
+        ("White", 0xFFFFFF),
+        ("Warm White", 0xFFF8E7),
+        ("Soft Gold", 0xF2CD5C),
+        ("Deep Green", 0x0B3D2E),
+        ("Black", 0x111111),
+    ]
+
+    // MARK: Themes
+
+    /// A complete, apply-in-one-tap look: main + accent + text + mode.
+    struct ThemeChoice: Codable, Identifiable, Hashable {
+        var id: String
+        var name: String
+        var primaryHex: UInt32
+        var accentHex: UInt32
+        var textHex: UInt32
+        var modeRaw: String
+
+        var mode: Mode { Mode(rawValue: modeRaw) ?? .system }
+    }
+
+    /// Curated theme pairs, designed to work as sets (deep main color,
+    /// a bright harmonious accent, near-white text with full contrast).
+    static let presetThemes: [ThemeChoice] = [
+        ThemeChoice(id: "preset-mosque", name: "Mosque Green & Gold",
+                    primaryHex: 0x0B3D2E, accentHex: 0xD4AF37, textHex: 0xFFFFFF, modeRaw: "system"),
+        ThemeChoice(id: "preset-midnight", name: "Midnight Oasis",
+                    primaryHex: 0x0F2440, accentHex: 0x7DD3FC, textHex: 0xF0F9FF, modeRaw: "dark"),
+        ThemeChoice(id: "preset-ocean", name: "Ocean Depths",
+                    primaryHex: 0x083344, accentHex: 0x67E8F9, textHex: 0xECFEFF, modeRaw: "dark"),
+        ThemeChoice(id: "preset-royal", name: "Royal Amethyst",
+                    primaryHex: 0x2E1065, accentHex: 0xC4B5FD, textHex: 0xF5F3FF, modeRaw: "dark"),
+        ThemeChoice(id: "preset-rose", name: "Rose Garden",
+                    primaryHex: 0x571233, accentHex: 0xFDA4AF, textHex: 0xFFF1F2, modeRaw: "dark"),
+        ThemeChoice(id: "preset-desert", name: "Desert Dunes",
+                    primaryHex: 0x6B4420, accentHex: 0xF2C14E, textHex: 0xFFF8E7, modeRaw: "system"),
+        ThemeChoice(id: "preset-forest", name: "Forest Canopy",
+                    primaryHex: 0x14532D, accentHex: 0xFDE68A, textHex: 0xF0FDF4, modeRaw: "system"),
+        ThemeChoice(id: "preset-charcoal", name: "Charcoal Mono",
+                    primaryHex: 0x171717, accentHex: 0xE7E5E4, textHex: 0xFAFAF9, modeRaw: "dark"),
+    ]
+
+    /// The user's own saved themes (JSON in the App Group).
+    static var savedThemes: [ThemeChoice] {
+        get {
+            guard let data = sharedDefaults.data(forKey: savedThemesKey),
+                  let themes = try? JSONDecoder().decode([ThemeChoice].self, from: data) else { return [] }
+            return themes
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                sharedDefaults.set(data, forKey: savedThemesKey)
+            }
+        }
+    }
+
+    /// A snapshot of the current look, ready to save or apply.
+    static var currentTheme: ThemeChoice {
+        ThemeChoice(
+            id: UUID().uuidString, name: "Current",
+            primaryHex: primaryHex, accentHex: accentHex, textHex: textHex,
+            modeRaw: mode.rawValue
+        )
+    }
+
+    static func apply(_ theme: ThemeChoice) {
+        primaryHex = theme.primaryHex
+        accentHex = theme.accentHex
+        textHex = theme.textHex
+        mode = theme.mode
+    }
+
+    /// Appearance back to the shipped defaults (mode System, signature
+    /// green + gold, white text, default icon). Saved themes are kept.
+    static func resetToDefaults() {
+        for key in [modeKey, accentKey, primaryKey, textKey, iconKey] {
+            sharedDefaults.removeObject(forKey: key)
+        }
+    }
+}
+
+// MARK: - Per-prayer alert settings (v1.0.5)
+
+/// Which prayers raise an Adhan notification. Stored per prayer in the
+/// App Group; the five prayers default ON and Sunrise defaults OFF
+/// (Sunrise is not a prayer, but many people like a wake-up marker for
+/// the end of Fajr time, so it can be turned on).
+enum PrayerAlertSettings {
+    static func key(for prayer: Prayer) -> String { "alerts.prayer.\(prayer.rawValue)" }
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static func isEnabled(_ prayer: Prayer) -> Bool {
+        if let value = sharedDefaults.object(forKey: key(for: prayer)) as? Bool { return value }
+        return prayer != .sunrise
+    }
+
+    static func setEnabled(_ enabled: Bool, for prayer: Prayer) {
+        sharedDefaults.set(enabled, forKey: key(for: prayer))
+    }
+
+    static func reset() {
+        for prayer in Prayer.allCases {
+            sharedDefaults.removeObject(forKey: key(for: prayer))
+        }
+    }
+}
+
+extension UIColor {
+    /// WCAG relative luminance (0 = black, 1 = white).
+    var relativeLuminance: CGFloat {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getRed(&r, green: &g, blue: &b, alpha: &a) else { return 0 }
+        func channel(_ c: CGFloat) -> CGFloat {
+            c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+    }
+
+    /// WCAG contrast ratio against another color (1...21).
+    func contrastRatio(against other: UIColor) -> CGFloat {
+        let mine = relativeLuminance
+        let theirs = other.relativeLuminance
+        return (max(mine, theirs) + 0.05) / (min(mine, theirs) + 0.05)
+    }
+
+    /// Blends this color toward `target` in 10% steps until it reaches
+    /// the minimum contrast against `background` (or the target itself).
+    func ensuringContrast(against background: UIColor, minimum: CGFloat, blendToward target: UIColor) -> UIColor {
+        if contrastRatio(against: background) >= minimum { return self }
+        var tr: CGFloat = 0, tg: CGFloat = 0, tb: CGFloat = 0, ta: CGFloat = 0
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getRed(&r, green: &g, blue: &b, alpha: &a),
+              target.getRed(&tr, green: &tg, blue: &tb, alpha: &ta) else { return self }
+        for step in 1...10 {
+            let fraction = CGFloat(step) / 10.0
+            let blended = UIColor(
+                red: r + (tr - r) * fraction,
+                green: g + (tg - g) * fraction,
+                blue: b + (tb - b) * fraction,
+                alpha: 1
+            )
+            if blended.contrastRatio(against: background) >= minimum { return blended }
+        }
+        return target
+    }
+
+    /// HSB lightening (fraction = amount of the way toward full brightness).
+    func lightened(by fraction: CGFloat) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return self }
+        return UIColor(hue: h, saturation: s * (1 - fraction * 0.35),
+                       brightness: b + (1 - b) * fraction, alpha: 1)
+    }
+
+    /// HSB darkening (fraction = amount of the way toward black).
+    func darkened(by fraction: CGFloat) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return self }
+        return UIColor(hue: h, saturation: s, brightness: b * (1 - fraction), alpha: 1)
+    }
+
+    /// Brighten (in HSB) until the color reads clearly on black/dark
+    /// surfaces: same hue, brightness at least 0.82.
+    func adjustedForDarkSurface() -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return self }
+        return UIColor(hue: h, saturation: min(s, 0.9), brightness: max(b, 0.82), alpha: 1)
+    }
+
+    /// Deepen (in HSB) until the color reads clearly on white: same hue,
+    /// brightness at most 0.42 and saturation at least 0.55.
+    func adjustedForLightSurface() -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return self }
+        return UIColor(hue: h, saturation: min(max(s, 0.55), 1.0), brightness: min(b, 0.42), alpha: 1)
+    }
+}
+
+extension Color {
+    /// sRGB hex value of a (solid) color, for persisting picker choices.
+    var hexValue: UInt32 {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(self).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return (UInt32((r * 255).rounded()) << 16)
+            | (UInt32((g * 255).rounded()) << 8)
+            | UInt32((b * 255).rounded())
     }
 }
 
@@ -781,29 +1161,56 @@ struct GlassGreenBackground: View {
     }
 }
 
-/// Light-mode counterpart of GlassGreenBackground: warm white with a soft
-/// gold glow, so widgets, cards and the Live Activity look native in Light
-/// Mode while Dark Mode keeps the signature green glass.
+/// App-card surface (v1.0.5): in Dark Mode a rich gradient of the user's
+/// main color (the signature green by default) with soft light and accent
+/// glows; in Light Mode a clean white card with only a whisper of the
+/// main color, so cards stay bright and text stays high-contrast.
+struct CardSurfaceBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        if colorScheme == .dark {
+            ZStack {
+                LinearGradient(
+                    colors: [Theme.primaryBright, Theme.primary, Theme.primaryDeep],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+                RadialGradient(colors: [Color.white.opacity(0.16), Color.clear], center: .topLeading, startRadius: 0, endRadius: 260)
+                RadialGradient(colors: [Theme.adaptiveGold.opacity(0.15), Color.clear], center: .bottomTrailing, startRadius: 0, endRadius: 240)
+                LinearGradient(colors: [Color.white.opacity(0.06), Color.clear], startPoint: .top, endPoint: .center)
+            }
+        } else {
+            ZStack {
+                Color.white
+                RadialGradient(colors: [Theme.primary.opacity(0.05), Color.clear], center: .topLeading, startRadius: 0, endRadius: 260)
+                RadialGradient(colors: [Theme.adaptiveGold.opacity(0.06), Color.clear], center: .bottomTrailing, startRadius: 0, endRadius: 240)
+            }
+        }
+    }
+}
+
+/// Surface background for widgets and the Live Activity (v1.0.5, per the
+/// user's request): the background stays PURE BLACK in Dark Mode and PURE
+/// WHITE in Light Mode, with only a whisper of the accent color glowing
+/// in one corner so it still feels like the same app.
 struct AdaptiveSurfaceBackground: View {
     @Environment(\.colorScheme) private var colorScheme
     var showsWatermark: Bool = false
 
     var body: some View {
-        if colorScheme == .dark {
-            GlassGreenBackground(showsWatermark: showsWatermark)
-        } else {
-            ZStack {
-                LinearGradient(colors: [Color(hex: 0xFFFFFF), Color(hex: 0xF4F0E1)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                RadialGradient(colors: [Theme.gold.opacity(0.10), Color.clear], center: .bottomTrailing, startRadius: 0, endRadius: 240)
-                LinearGradient(colors: [Color.white.opacity(0.5), Color.clear], startPoint: .top, endPoint: .center)
-                if showsWatermark {
-                    Image(systemName: "moon.stars.fill")
-                        .font(.system(size: 120, weight: .regular))
-                        .foregroundStyle(Theme.deepGreen.opacity(0.05))
-                        .rotationEffect(.degrees(-12))
-                        .offset(x: 30, y: -20)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                }
+        ZStack {
+            colorScheme == .dark ? Color.black : Color.white
+            RadialGradient(
+                colors: [Theme.adaptiveGold.opacity(colorScheme == .dark ? 0.13 : 0.08), Color.clear],
+                center: .bottomTrailing, startRadius: 0, endRadius: 260
+            )
+            if showsWatermark {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 120, weight: .regular))
+                    .foregroundStyle(Theme.adaptiveGold.opacity(0.06))
+                    .rotationEffect(.degrees(-12))
+                    .offset(x: 30, y: -20)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
         }
     }
