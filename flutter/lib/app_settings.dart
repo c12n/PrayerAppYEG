@@ -1,0 +1,297 @@
+// App settings (v1.0.5) — the Android counterpart of the iOS Settings
+// page: appearance mode, theme colors (main / accent / text), designed
+// themes, save-your-own themes, per-prayer countdown choices, and reset.
+//
+// Stored with shared_preferences, which on Android writes into
+// FlutterSharedPreferences.xml (keys get a "flutter." prefix there) —
+// the Kotlin home-screen widgets read the same values from that file,
+// so the widgets follow the accent color and the prayer choices.
+
+import 'dart:convert';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'prayer_models.dart';
+
+class SavedTheme {
+  final String id;
+  final String name;
+  final int primaryHex;
+  final int accentHex;
+  final int textHex;
+  final ThemeMode mode;
+
+  const SavedTheme({
+    required this.id,
+    required this.name,
+    required this.primaryHex,
+    required this.accentHex,
+    required this.textHex,
+    required this.mode,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'primaryHex': primaryHex,
+        'accentHex': accentHex,
+        'textHex': textHex,
+        'mode': mode.name,
+      };
+
+  static SavedTheme fromJson(Map<String, dynamic> json) => SavedTheme(
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? 'Theme',
+        primaryHex: (json['primaryHex'] as num?)?.toInt() ?? AppSettings.defaultPrimary,
+        accentHex: (json['accentHex'] as num?)?.toInt() ?? AppSettings.defaultAccent,
+        textHex: (json['textHex'] as num?)?.toInt() ?? AppSettings.defaultText,
+        mode: ThemeMode.values.asNameMap()[json['mode'] as String?] ?? ThemeMode.system,
+      );
+}
+
+class AppSettings extends ChangeNotifier {
+  static const modeKey = 'appearance.mode';
+  static const primaryKey = 'appearance.primaryHex';
+  static const accentKey = 'appearance.accentHex';
+  static const textKey = 'appearance.textHex';
+  static const savedThemesKey = 'appearance.savedThemes';
+  static String alertKey(Prayer p) => 'alerts.${p.name}';
+
+  static const defaultPrimary = 0x0B3D2E;
+  static const defaultAccent = 0xD4AF37;
+  static const defaultText = 0xFFFFFF;
+
+  ThemeMode mode = ThemeMode.system;
+  int primaryHex = defaultPrimary;
+  int accentHex = defaultAccent;
+  int textHex = defaultText;
+
+  /// False until the user actually picks a text color; while false the
+  /// text color follows the defaults (white on colored surfaces, the
+  /// deepened main color on white), exactly like the iOS app.
+  bool textIsCustom = false;
+
+  List<SavedTheme> savedThemes = [];
+  final Map<Prayer, bool> alerts = {
+    for (final p in Prayer.values) p: p != Prayer.sunrise,
+  };
+
+  SharedPreferences? _prefs;
+
+  static Future<AppSettings> load() async {
+    final s = AppSettings();
+    final prefs = await SharedPreferences.getInstance();
+    s._prefs = prefs;
+    s.mode = switch (prefs.getString(modeKey)) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+    s.primaryHex = prefs.getInt(primaryKey) ?? defaultPrimary;
+    s.accentHex = prefs.getInt(accentKey) ?? defaultAccent;
+    final storedText = prefs.getInt(textKey);
+    if (storedText != null) {
+      s.textHex = storedText;
+      s.textIsCustom = true;
+    }
+    for (final p in Prayer.values) {
+      final v = prefs.getBool(alertKey(p));
+      if (v != null) s.alerts[p] = v;
+    }
+    final raw = prefs.getString(savedThemesKey);
+    if (raw != null) {
+      try {
+        s.savedThemes = (jsonDecode(raw) as List)
+            .map((e) => SavedTheme.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        s.savedThemes = [];
+      }
+    }
+    return s;
+  }
+
+  Future<void> _save() async {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    await prefs.setString(modeKey, mode.name);
+    await prefs.setInt(primaryKey, primaryHex);
+    await prefs.setInt(accentKey, accentHex);
+    if (textIsCustom) {
+      await prefs.setInt(textKey, textHex);
+    } else {
+      await prefs.remove(textKey);
+    }
+    for (final p in Prayer.values) {
+      await prefs.setBool(alertKey(p), alerts[p] ?? false);
+    }
+    await prefs.setString(
+        savedThemesKey, jsonEncode(savedThemes.map((t) => t.toJson()).toList()));
+  }
+
+  /// Applies a change, notifies the UI and persists everything.
+  void update(void Function() change) {
+    change();
+    notifyListeners();
+    _save();
+  }
+
+  Set<Prayer> get enabledPrayers => {
+        for (final p in Prayer.values)
+          if (alerts[p] ?? false) p,
+      };
+
+  void applyTheme(SavedTheme theme) => update(() {
+        primaryHex = theme.primaryHex;
+        accentHex = theme.accentHex;
+        textHex = theme.textHex;
+        textIsCustom = true;
+        mode = theme.mode;
+      });
+
+  void resetToDefaults() => update(() {
+        mode = ThemeMode.system;
+        primaryHex = defaultPrimary;
+        accentHex = defaultAccent;
+        textHex = defaultText;
+        textIsCustom = false;
+        for (final p in Prayer.values) {
+          alerts[p] = p != Prayer.sunrise;
+        }
+      });
+}
+
+/// Gives the widget tree access to the current [AppSettings].
+class SettingsScope extends InheritedWidget {
+  final AppSettings settings;
+  const SettingsScope({super.key, required this.settings, required super.child});
+
+  static AppSettings of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SettingsScope>()!.settings;
+
+  @override
+  bool updateShouldNotify(SettingsScope oldWidget) =>
+      settings != oldWidget.settings;
+}
+
+// MARK: - Color helpers (ports of the iOS contrast guards)
+
+Color colorFromHex(int hex) => Color(0xFF000000 | (hex & 0xFFFFFF));
+
+int hexFromColor(Color c) =>
+    ((c.r * 255).round() << 16) | ((c.g * 255).round() << 8) | (c.b * 255).round();
+
+Color lightenColor(Color c, double fraction) {
+  final hsv = HSVColor.fromColor(c);
+  return hsv
+      .withValue(hsv.value + (1 - hsv.value) * fraction)
+      .withSaturation(hsv.saturation * (1 - fraction * 0.35))
+      .toColor();
+}
+
+Color darkenColor(Color c, double fraction) {
+  final hsv = HSVColor.fromColor(c);
+  return hsv.withValue(hsv.value * (1 - fraction)).toColor();
+}
+
+/// Brighten for dark surfaces (brightness at least 0.82), like iOS.
+Color adjustAccentForDark(Color c) {
+  final hsv = HSVColor.fromColor(c);
+  return hsv
+      .withValue(math.max(hsv.value, 0.82))
+      .withSaturation(math.min(hsv.saturation, 0.9))
+      .toColor();
+}
+
+/// Deepen for light surfaces (brightness at most 0.42), like iOS.
+Color adjustAccentForLight(Color c) {
+  final hsv = HSVColor.fromColor(c);
+  return hsv
+      .withValue(math.min(hsv.value, 0.42))
+      .withSaturation(hsv.saturation.clamp(0.55, 1.0))
+      .toColor();
+}
+
+Color accentFor(Brightness brightness, AppSettings s) {
+  final base = colorFromHex(s.accentHex);
+  return brightness == Brightness.dark
+      ? adjustAccentForDark(base)
+      : adjustAccentForLight(base);
+}
+
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final hi = math.max(la, lb);
+  final lo = math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+Color _ensureContrast(Color fg, Color bg, Color toward, double minimum) {
+  if (_contrast(fg, bg) >= minimum) return fg;
+  for (var step = 1; step <= 10; step++) {
+    final blended = Color.lerp(fg, toward, step / 10)!;
+    if (_contrast(blended, bg) >= minimum) return blended;
+  }
+  return toward;
+}
+
+/// The text color for adaptive surfaces, with the same rules as iOS:
+/// defaults are white on the (dark) main color and the deepened main
+/// color on white; a picked color is contrast-guarded to ~4.5:1.
+Color resolvedTextColor({required bool darkSurface, required AppSettings s}) {
+  final primary = colorFromHex(s.primaryHex);
+  if (darkSurface) {
+    if (!s.textIsCustom) return Colors.white;
+    return _ensureContrast(colorFromHex(s.textHex), primary, Colors.white, 4.5);
+  }
+  if (!s.textIsCustom) return darkenColor(primary, 0.15);
+  final picked = colorFromHex(s.textHex);
+  if (picked.computeLuminance() > 0.75) return darkenColor(primary, 0.15);
+  return _ensureContrast(picked, Colors.white, Colors.black, 4.5);
+}
+
+// MARK: - Presets (same values as iOS)
+
+const accentPresets = <(String, int)>[
+  ('Gold', 0xD4AF37),
+  ('Emerald', 0x10B981),
+  ('Teal', 0x14B8A6),
+  ('Sky', 0x38BDF8),
+  ('Blue', 0x3B82F6),
+  ('Violet', 0x8B5CF6),
+  ('Rose', 0xF43F5E),
+  ('Orange', 0xF97316),
+];
+
+const primaryPresets = <(String, int)>[
+  ('Mosque Green', 0x0B3D2E),
+  ('Midnight', 0x0F2440),
+  ('Ocean', 0x083344),
+  ('Royal', 0x2E1065),
+  ('Rosewood', 0x571233),
+  ('Bronze', 0x6B4420),
+  ('Forest', 0x14532D),
+  ('Charcoal', 0x171717),
+];
+
+const textPresets = <(String, int)>[
+  ('White', 0xFFFFFF),
+  ('Warm White', 0xFFF8E7),
+  ('Soft Gold', 0xF2CD5C),
+  ('Deep Green', 0x0B3D2E),
+  ('Black', 0x111111),
+];
+
+const presetThemes = <SavedTheme>[
+  SavedTheme(id: 'preset-mosque', name: 'Mosque Green & Gold', primaryHex: 0x0B3D2E, accentHex: 0xD4AF37, textHex: 0xFFFFFF, mode: ThemeMode.system),
+  SavedTheme(id: 'preset-midnight', name: 'Midnight Oasis', primaryHex: 0x0F2440, accentHex: 0x7DD3FC, textHex: 0xF0F9FF, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-ocean', name: 'Ocean Depths', primaryHex: 0x083344, accentHex: 0x67E8F9, textHex: 0xECFEFF, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-royal', name: 'Royal Amethyst', primaryHex: 0x2E1065, accentHex: 0xC4B5FD, textHex: 0xF5F3FF, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-rose', name: 'Rose Garden', primaryHex: 0x571233, accentHex: 0xFDA4AF, textHex: 0xFFF1F2, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-desert', name: 'Desert Dunes', primaryHex: 0x6B4420, accentHex: 0xF2C14E, textHex: 0xFFF8E7, mode: ThemeMode.system),
+  SavedTheme(id: 'preset-forest', name: 'Forest Canopy', primaryHex: 0x14532D, accentHex: 0xFDE68A, textHex: 0xF0FDF4, mode: ThemeMode.system),
+  SavedTheme(id: 'preset-charcoal', name: 'Charcoal Mono', primaryHex: 0x171717, accentHex: 0xE7E5E4, textHex: 0xFAFAF9, mode: ThemeMode.dark),
+];
