@@ -46,5 +46,9 @@
 	<true/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.c12n.alrashidwidget.refresh</string>
+	</array>
 </dict>
 </plist>
