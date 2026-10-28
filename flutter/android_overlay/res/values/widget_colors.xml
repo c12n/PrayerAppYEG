@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget colors — LIGHT appearance (default). The values-night copy of
+     this file overrides every entry for Dark Mode, and the layouts and
+     background drawable reference these names, so the home-screen widgets
+     follow the system appearance like the iOS widgets do (v1.0.4).
+     Contrast (light): deep green #0B3D2E on white ≈ 10.9:1; accent
+     #7A5F10 on white ≈ 5.9:1. -->
+<resources>
+    <color name="widget_bg_top">#FFFFFF</color>
+    <color name="widget_bg_bottom">#F4F0E1</color>
+    <color name="widget_stroke">#400B3D2E</color>
+    <color name="widget_primary">#0B3D2E</color>
+    <color name="widget_secondary">#D60B3D2E</color>
+    <color name="widget_muted">#BD0B3D2E</color>
+    <color name="widget_accent">#7A5F10</color>
+    <color name="widget_panel">#140B3D2E</color>
+</resources>
