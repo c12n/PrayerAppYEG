@@ -1,42 +1,62 @@
 #!/usr/bin/env python3
-"""AlRashid Prayer Widget app icon: gold mosque skyline (central dome +
-two minarets) and a gold crescent on a deep-green gradient, with a soft
+"""AlRashid Prayer Widget app icons: gold mosque skyline (central dome +
+two minarets) and a gold crescent over a gradient, with a soft
 Liquid-Glass-style top gloss. Drawn entirely with PIL shapes (no text).
 Renders at 2x and downscales for clean edges.
 
-Variants: standard (green gradient), Dark (near-black green),
-Tinted (grayscale of the standard art).
+Variants:
+- AppIcon (primary): standard (green gradient), Dark (near-black green),
+  Tinted (grayscale) — iOS swaps these automatically with Light/Dark Mode.
+- Alternate icons (v1.0.5, pickable in Settings): Midnight, Desert, Rose,
+  Royal — same artwork, different background/silhouette colorways.
+- IconPreview*.imageset: 180px previews of each icon for the in-app picker.
 """
+import json
+import os
+
 from PIL import Image, ImageDraw, ImageFilter
 
 S = 2  # supersample factor
 W = 1024 * S
-OUT = "AlRashidWidget/Assets.xcassets/AppIcon.appiconset"
+ASSETS = "AlRashidWidget/Assets.xcassets"
+OUT = f"{ASSETS}/AppIcon.appiconset"
 
 GOLD_TOP = (242, 205, 92)     # #F2CD5C
 GOLD = (212, 175, 55)         # #D4AF37
 GOLD_DEEP = (150, 118, 30)
+CREAM_TOP = (255, 243, 214)
+CREAM = (249, 224, 171)
+CREAM_DEEP = (224, 188, 108)
 
 
-def green_gradient(top, bottom):
+def vertical_gradient(top, bottom, stops=None):
     img = Image.new("RGB", (W, W))
     for row in range(W):
         t = row / W
-        c = tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3))
+        if stops is None:
+            c = tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3))
+        else:
+            mid = stops
+            if t < 0.5:
+                k = t / 0.5
+                c = tuple(int(top[i] + (mid[i] - top[i]) * k) for i in range(3))
+            else:
+                k = (t - 0.5) / 0.5
+                c = tuple(int(mid[i] + (bottom[i] - mid[i]) * k) for i in range(3))
         img.paste(c, (0, row, W, row + 1))
     return img
 
 
-def gold_gradient():
+def silhouette_gradient(top, mid, deep):
     img = Image.new("RGB", (1, W))
     for row in range(W):
         t = row / W
         if t < 0.5:
             k = t / 0.5
-            c = tuple(int(GOLD_TOP[i] + (GOLD[i] - GOLD_TOP[i]) * k) for i in range(3))
+            c = tuple(int(top[i] + (mid[i] - top[i]) * k) for i in range(3))
         else:
             k = (t - 0.5) / 0.5
-            c = tuple(int(GOLD[i] + (GOLD_DEEP[i] - GOLD[i]) * k) for i in range(3))
+            c = tuple(int(mid[i] + (deep[i] - mid[i]) * k) for i in range(3))
         img.putpixel((0, row), c)
     return img.resize((W, W))
 
@@ -50,8 +70,7 @@ def silhouette_mask():
     hall_l, hall_r = int(W * 0.24), int(W * 0.76)
     hall_t = int(W * 0.66)
     d.rectangle([hall_l, hall_t, hall_r, base_y], fill=255)
-    # small arched doorway cut is skipped (silhouette reads better solid)
-    # --- central dome: semicircle (bbox 0.34W wide, base at its centre y=0.43W) on a drum ---
+    # --- central dome: semicircle on a drum ---
     d.rectangle([int(W * 0.36), int(W * 0.43), int(W * 0.64), hall_t], fill=255)
     d.pieslice([int(W * 0.33), int(W * 0.26), int(W * 0.67), int(W * 0.60)],
                start=180, end=360, fill=255)
@@ -98,33 +117,73 @@ def gloss_layer():
     return g.resize((W, W))
 
 
-def render(bg_top, bg_bottom, name):
-    img = green_gradient(bg_top, bg_bottom).convert("RGBA")
+def render(bg_top, bg_bottom, outdir, name, sil=(GOLD_TOP, GOLD, GOLD_DEEP), glow_rgb=(24, 92, 66)):
+    img = vertical_gradient(bg_top, bg_bottom).convert("RGBA")
     # subtle radial light behind the dome
     glow = Image.new("L", (W, W), 0)
     gd = ImageDraw.Draw(glow)
     gd.ellipse([W * 0.05, -W * 0.45, W * 0.95, W * 0.45], fill=46)
     glow = glow.filter(ImageFilter.GaussianBlur(W // 6))
-    img = Image.composite(Image.new("RGBA", (W, W), (24, 92, 66, 255)), img, glow).convert("RGBA")
+    img = Image.composite(Image.new("RGBA", (W, W), glow_rgb + (255,)), img, glow).convert("RGBA")
     mask = silhouette_mask()
     # soft drop shadow
     shadow = Image.new("RGBA", (W, W), (0, 0, 0, 0))
     shadow.paste(Image.new("RGBA", (W, W), (0, 0, 0, 140)), (0, int(W * 0.010)), mask)
     img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(W // 90)))
-    # gold body
-    img.paste(gold_gradient(), (0, 0), mask)
-    # glass gloss over the top, clipped to the silhouette + a faint full-frame sheen
+    # silhouette body
+    img.paste(silhouette_gradient(*sil), (0, 0), mask)
+    # glass gloss over the top, clipped to the silhouette
     img.paste(Image.new("RGBA", (W, W), (255, 255, 255, 255)), (0, 0),
               Image.composite(gloss_layer(), Image.new("L", (W, W), 0), mask))
     final = img.convert("RGB").resize((1024, 1024), Image.LANCZOS)
-    final.save(f"{OUT}/{name}")
+    os.makedirs(outdir, exist_ok=True)
+    final.save(f"{outdir}/{name}")
     return final
 
 
+def write_appiconset(set_name, variants):
+    """variants: list of (filename, appearances-or-None)."""
+    outdir = f"{ASSETS}/{set_name}.appiconset"
+    os.makedirs(outdir, exist_ok=True)
+    images = []
+    for filename, appearances in variants:
+        entry = {"filename": filename, "idiom": "universal", "platform": "ios", "size": "1024x1024"}
+        if appearances:
+            entry["appearances"] = appearances
+        images.append(entry)
+    with open(f"{outdir}/Contents.json", "w") as f:
+        json.dump({"images": images, "info": {"author": "xcode", "version": 1}}, f)
+    return outdir
+
+
+def write_preview(preview_name, source_image):
+    outdir = f"{ASSETS}/{preview_name}.imageset"
+    os.makedirs(outdir, exist_ok=True)
+    source_image.resize((180, 180), Image.LANCZOS).save(f"{outdir}/preview.png")
+    with open(f"{outdir}/Contents.json", "w") as f:
+        json.dump({
+            "images": [{"filename": "preview.png", "idiom": "universal", "scale": "1x"}],
+            "info": {"author": "xcode", "version": 1},
+        }, f)
+
+
+# Alternate icon colorways: (set name, preview name, bg top, bg bottom, silhouette, glow)
+ALTERNATES = [
+    ("AppIconMidnight", "IconPreviewMidnight", (16, 42, 84), (5, 15, 35), (GOLD_TOP, GOLD, GOLD_DEEP), (30, 70, 140)),
+    ("AppIconDesert", "IconPreviewDesert", (200, 155, 90), (138, 90, 40), (CREAM_TOP, CREAM, CREAM_DEEP), (255, 220, 150)),
+    ("AppIconRose", "IconPreviewRose", (110, 24, 66), (46, 8, 28), (GOLD_TOP, GOLD, GOLD_DEEP), (160, 50, 100)),
+    ("AppIconRoyal", "IconPreviewRoyal", (62, 24, 130), (24, 8, 54), (GOLD_TOP, GOLD, GOLD_DEEP), (110, 70, 200)),
+]
+
+
 if __name__ == "__main__":
-    import os
     os.makedirs(OUT, exist_ok=True)
-    std = render((14, 90, 64), (11, 61, 46), "AppIcon1024.png")          # #0E5A40 -> #0B3D2E
-    render((7, 26, 18), (3, 14, 10), "AppIcon1024-Dark.png")              # near-black green
-    std.convert("L").convert("RGB").save(f"{OUT}/AppIcon1024-Tinted.png")  # grayscale tinted
-    print("icons written to", OUT)
+    std = render((14, 90, 64), (11, 61, 46), OUT, "AppIcon1024.png")          # #0E5A40 -> #0B3D2E
+    render((7, 26, 18), (3, 14, 10), OUT, "AppIcon1024-Dark.png")              # near-black green
+    std.convert("L").convert("RGB").save(f"{OUT}/AppIcon1024-Tinted.png")      # grayscale tinted
+    write_preview("IconPreviewDefault", std)
+    for set_name, preview_name, top, bottom, sil, glow in ALTERNATES:
+        outdir = write_appiconset(set_name, [("AppIcon1024.png", None)])
+        img = render(top, bottom, outdir, "AppIcon1024.png", sil=sil, glow_rgb=glow)
+        write_preview(preview_name, img)
+    print("icons + alternates + previews written under", ASSETS)
