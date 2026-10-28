@@ -19,11 +19,15 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:url_launcher/url_launcher.dart';
 
+import 'app_settings.dart';
 import 'prayer_models.dart';
+import 'settings_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   tz_data.initializeTimeZones();
-  runApp(const AlRashidApp());
+  final settings = await AppSettings.load();
+  runApp(AlRashidApp(settings: settings));
 }
 
 // MARK: - Theme
@@ -37,38 +41,48 @@ class AppTheme {
   static Color adaptiveGold(Brightness b) =>
       b == Brightness.dark ? lightGold : const Color(0xFF7A5F10);
 
-  static ThemeData light() => ThemeData(
+  // v1.0.5: the page background stays pure white in Light Mode and pure
+  // black in Dark Mode (the user's request, same as iOS).
+  static ThemeData light(AppSettings settings) => ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: green,
+          seedColor: colorFromHex(settings.primaryHex),
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF1F4F0),
+        scaffoldBackgroundColor: Colors.white,
       );
 
-  static ThemeData dark() => ThemeData(
+  static ThemeData dark(AppSettings settings) => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: green,
+          seedColor: colorFromHex(settings.primaryHex),
           brightness: Brightness.dark,
         ),
-        scaffoldBackgroundColor: const Color(0xFF0D130F),
+        scaffoldBackgroundColor: Colors.black,
       );
 }
 
 class AlRashidApp extends StatelessWidget {
-  const AlRashidApp({super.key});
+  final AppSettings settings;
+  const AlRashidApp({super.key, required this.settings});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Al Rashid Prayer',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      home: const HomePage(),
+    return AnimatedBuilder(
+      animation: settings,
+      builder: (context, _) => SettingsScope(
+        settings: settings,
+        child: MaterialApp(
+          title: 'Al Rashid Prayer',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(settings),
+          darkTheme: AppTheme.dark(settings),
+          themeMode: settings.mode,
+          home: const HomePage(),
+        ),
+      ),
     );
   }
 }
@@ -105,7 +119,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final snapshot = PrayerProvider.snapshot(_now);
+    final settings = SettingsScope.of(context);
+    final snapshot = PrayerProvider.snapshot(_now, enabled: settings.enabledPrayers);
     final today = PrayerProvider.dayFor(_now);
     final tomorrowStart =
         tz.TZDateTime(_edmonton, _now.year, _now.month, _now.day + 1);
@@ -118,10 +133,10 @@ class _HomePageState extends State<HomePage> {
             begin: Alignment.topCenter,
             end: Alignment.center,
             colors: [
-              AppTheme.green.withValues(
+              colorFromHex(settings.primaryHex).withValues(
                   alpha: Theme.of(context).brightness == Brightness.dark
-                      ? 0.45
-                      : 0.16),
+                      ? 0.35
+                      : 0.07),
               Colors.transparent,
             ],
           ),
@@ -268,15 +283,14 @@ class HeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+    final accent = SurfaceColors.of(context).accent;
     final secondary = Theme.of(context).colorScheme.onSurfaceVariant;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.nightlight_round,
-                size: 20, color: AppTheme.adaptiveGold(brightness)),
+            Icon(Icons.nightlight_round, size: 20, color: accent),
             const SizedBox(width: 8),
             Text(
               'Assalamu Alaikum',
@@ -285,6 +299,19 @@ class HeaderSection extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: secondary,
               ),
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Settings',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        SettingsPage(settings: SettingsScope.of(context)),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -303,7 +330,7 @@ class HeaderSection extends StatelessWidget {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
-            color: AppTheme.adaptiveGold(brightness),
+            color: accent,
           ),
         ),
         const SizedBox(height: 2),
@@ -338,23 +365,24 @@ class SurfaceColors {
     required this.panelTrack,
   });
 
-  static SurfaceColors of(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? dark : light;
-
-  static const dark = SurfaceColors(
-    primary: Colors.white,
-    secondary: Color(0xD9FFFFFF),
-    muted: Color(0xB8FFFFFF),
-    accent: AppTheme.lightGold,
-    panelTrack: Color(0x33FFFFFF),
-  );
-  static const light = SurfaceColors(
-    primary: AppTheme.deepGreen,
-    secondary: Color(0xD60B3D2E),
-    muted: Color(0xBD0B3D2E),
-    accent: Color(0xFF7A5F10),
-    panelTrack: Color(0x1F0B3D2E),
-  );
+  /// v1.0.5: computed from the user's theme settings — the text color is
+  /// the picked one (contrast-guarded, defaults as on iOS) and the accent
+  /// is the picked accent adjusted for the current appearance.
+  static SurfaceColors of(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final text = resolvedTextColor(darkSurface: dark, settings: settings);
+    return SurfaceColors(
+      primary: text,
+      secondary: text.withValues(alpha: dark ? 0.85 : 0.84),
+      muted: text.withValues(alpha: dark ? 0.72 : 0.74),
+      accent: accentFor(
+          dark ? Brightness.dark : Brightness.light, settings),
+      panelTrack: dark
+          ? const Color(0x33FFFFFF)
+          : colorFromHex(settings.primaryHex).withValues(alpha: 0.12),
+    );
+  }
 }
 
 class AdaptiveCard extends StatelessWidget {
@@ -368,7 +396,9 @@ class AdaptiveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final primary = colorFromHex(settings.primaryHex);
     return Container(
       width: double.infinity,
       padding: padding,
@@ -377,19 +407,23 @@ class AdaptiveCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: dark
-              ? const [AppTheme.green, AppTheme.deepGreen]
-              : const [Colors.white, Color(0xFFF4F0E1)],
+              ? [
+                  lightenColor(primary, 0.16),
+                  primary,
+                  darkenColor(primary, 0.30),
+                ]
+              : const [Colors.white, Colors.white],
         ),
         borderRadius: BorderRadius.circular(26),
         border: Border.all(
           color: dark
-              ? AppTheme.lightGold.withValues(alpha: 0.45)
-              : AppTheme.deepGreen.withValues(alpha: 0.25),
+              ? accentFor(Brightness.dark, settings).withValues(alpha: 0.45)
+              : primary.withValues(alpha: 0.25),
         ),
         boxShadow: [
           BoxShadow(
             color: dark
-                ? AppTheme.deepGreen.withValues(alpha: 0.35)
+                ? darkenColor(primary, 0.30).withValues(alpha: 0.35)
                 : Colors.black.withValues(alpha: 0.10),
             blurRadius: 16,
             offset: const Offset(0, 8),
@@ -436,7 +470,7 @@ class NextPrayerCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.gold.withValues(alpha: 0.25),
+                    color: c.accent.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -682,7 +716,7 @@ class _ScheduleRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: isNext
           ? BoxDecoration(
-              color: AppTheme.gold.withValues(alpha: 0.2),
+              color: c.accent.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: c.accent.withValues(alpha: 0.65)),
             )
@@ -768,14 +802,17 @@ class ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final primary = colorFromHex(settings.primaryHex);
+    final accent = colorFromHex(settings.accentHex);
     return Row(
       children: [
         Expanded(
           child: _GradientButton(
             label: 'Directions',
             icon: Icons.directions_car,
-            foreground: AppTheme.deepGreen,
-            colors: const [AppTheme.lightGold, AppTheme.gold],
+            foreground: darkenColor(primary, 0.30),
+            colors: [lightenColor(accent, 0.25), accent],
             onTap: () => _open(MosqueInfo.directionsUrl),
           ),
         ),
@@ -784,9 +821,13 @@ class ActionButtons extends StatelessWidget {
           child: _GradientButton(
             label: 'Website',
             icon: Icons.language,
-            foreground: AppTheme.lightGold,
-            colors: const [AppTheme.green, AppTheme.deepGreen],
-            borderColor: AppTheme.gold.withValues(alpha: 0.6),
+            foreground: resolvedTextColor(darkSurface: true, settings: settings),
+            colors: [
+              lightenColor(primary, 0.16),
+              primary,
+              darkenColor(primary, 0.30),
+            ],
+            borderColor: accent.withValues(alpha: 0.6),
             onTap: () => _open(MosqueInfo.websiteUrl),
           ),
         ),
@@ -831,7 +872,10 @@ class _GradientButton extends StatelessWidget {
                 borderColor != null ? Border.all(color: borderColor!) : null,
             boxShadow: [
               BoxShadow(
-                color: AppTheme.deepGreen.withValues(alpha: 0.25),
+                color: darkenColor(
+                        colorFromHex(SettingsScope.of(context).primaryHex),
+                        0.30)
+                    .withValues(alpha: 0.25),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
