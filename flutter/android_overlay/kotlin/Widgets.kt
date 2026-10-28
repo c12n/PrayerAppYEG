@@ -1,11 +1,12 @@
 package com.c12n.alrashidwidget
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.widget.RemoteViews
 import java.time.DayOfWeek
 import java.time.Duration
@@ -34,7 +35,9 @@ object WidgetData {
         val countdownText: String,
         val showingTomorrow: Boolean,
         val rows: List<Row>,
-        val isFriday: Boolean
+        val isFriday: Boolean,
+        /// Epoch millis of the next Adhan — the rollover alarm target.
+        val nextAdhanMillis: Long
     )
 
     private val timeFmt = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
@@ -132,7 +135,8 @@ object WidgetData {
             countdownText = countdownText(now, nextAdhan),
             showingTomorrow = nextDay.date.isAfter(today),
             rows = rows,
-            isFriday = nextDay.isFriday
+            isFriday = nextDay.isFriday,
+            nextAdhanMillis = nextAdhan.toInstant().toEpochMilli()
         )
     }
 
@@ -171,6 +175,32 @@ abstract class BaseWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_root, pending)
             appWidgetManager.updateAppWidget(id, views)
         }
+        scheduleRollover(context, model.nextAdhanMillis)
+    }
+
+    /// Automatic rollover (v1.0.4): chain an alarm to just after the next
+    /// Adhan so the widgets swap to the following prayer on their own —
+    /// Dhuhr hands over to Asr without the app being opened. Each update
+    /// re-arms the alarm for the following Adhan. setAndAllowWhileIdle is
+    /// inexact (Doze can delay it a few minutes) and needs no exact-alarm
+    /// permission; the 30-minute updatePeriodMillis remains the backstop.
+    private fun scheduleRollover(context: Context, nextAdhanMillis: Long) {
+        val component = ComponentName(context, javaClass)
+        val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(component)
+        if (ids.isEmpty()) return
+        val intent = Intent(context, javaClass).apply {
+            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+        }
+        val pending = PendingIntent.getBroadcast(
+            context, javaClass.name.hashCode(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmManager =
+            context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC, nextAdhanMillis + 15_000, pending
+        )
     }
 }
 
@@ -199,16 +229,17 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
         views.setTextViewText(R.id.widget_header_next,
             "${model.nextName} · ${model.nextTime}")
         views.setTextViewText(R.id.widget_header_countdown, model.countdownText)
-        fillRows(views, model)
+        fillRows(context, views, model)
         return views
     }
 
     companion object {
-        val GOLD = Color.rgb(0xF2, 0xCD, 0x5C)
-        val WHITE: Int = Color.WHITE
-        val DIM: Int = Color.argb(0x99, 0xFF, 0xFF, 0xFF)
-
-        fun fillRows(views: RemoteViews, model: WidgetData.Model) {
+        /// Row colors come from values/widget_colors.xml (+ values-night),
+        /// so the table follows Light/Dark Mode like the layouts do.
+        fun fillRows(context: Context, views: RemoteViews, model: WidgetData.Model) {
+            val accent = context.getColor(R.color.widget_accent)
+            val primary = context.getColor(R.color.widget_primary)
+            val muted = context.getColor(R.color.widget_muted)
             val nameIds = intArrayOf(
                 R.id.row0_name, R.id.row1_name, R.id.row2_name,
                 R.id.row3_name, R.id.row4_name, R.id.row5_name
@@ -223,9 +254,9 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
             )
             model.rows.forEachIndexed { i, row ->
                 val color = when {
-                    row.isNext -> GOLD
-                    row.dimmed -> DIM
-                    else -> WHITE
+                    row.isNext -> accent
+                    row.dimmed -> muted
+                    else -> primary
                 }
                 views.setTextViewText(nameIds[i], row.name)
                 views.setTextViewText(adhanIds[i], WidgetData.formatTime(row.adhan))
@@ -254,7 +285,7 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_iqamah, model.nextIqamahText ?: "")
-        ScheduleWidgetProvider.fillRows(views, model)
+        ScheduleWidgetProvider.fillRows(context, views, model)
         return views
     }
 }
