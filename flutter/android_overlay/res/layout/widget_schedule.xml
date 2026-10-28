@@ -7,42 +7,42 @@
     android:orientation="vertical"
     android:padding="12dp">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <TextView android:id="@+id/widget_header_next" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="15sp" android:textStyle="bold" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/widget_header_countdown" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" android:textStyle="bold" android:textColor="#F2CD5C" />
+        <TextView android:id="@+id/widget_header_next" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/widget_header_countdown" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="6dp" android:paddingBottom="2dp">
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="PRAYER" android:textSize="9sp" android:textStyle="bold" android:textColor="#8CFFFFFF" />
-        <TextView android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:text="ADHAN" android:textSize="9sp" android:textStyle="bold" android:textColor="#8CFFFFFF" />
-        <TextView android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:text="IQAMAH" android:textSize="9sp" android:textStyle="bold" android:textColor="#8CFFFFFF" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="PRAYER" android:textSize="10sp" android:textStyle="bold" android:textColor="@color/widget_muted" />
+        <TextView android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:text="ADHAN" android:textSize="10sp" android:textStyle="bold" android:textColor="@color/widget_muted" />
+        <TextView android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:text="IQAMAH" android:textSize="10sp" android:textStyle="bold" android:textColor="@color/widget_muted" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="2dp">
-        <TextView android:id="@+id/row0_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row0_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row0_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
+        <TextView android:id="@+id/row0_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row0_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row0_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="2dp">
-        <TextView android:id="@+id/row1_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row1_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row1_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
+        <TextView android:id="@+id/row1_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row1_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row1_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="2dp">
-        <TextView android:id="@+id/row2_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row2_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row2_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
+        <TextView android:id="@+id/row2_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row2_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row2_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="2dp">
-        <TextView android:id="@+id/row3_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row3_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row3_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
+        <TextView android:id="@+id/row3_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row3_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row3_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="2dp">
-        <TextView android:id="@+id/row4_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row4_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row4_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
+        <TextView android:id="@+id/row4_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row4_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row4_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="2dp">
-        <TextView android:id="@+id/row5_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row5_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
-        <TextView android:id="@+id/row5_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="13sp" android:textColor="#FFFFFF" />
+        <TextView android:id="@+id/row5_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row5_adhan" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
+        <TextView android:id="@+id/row5_iqamah" android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:textSize="14sp" android:textColor="@color/widget_primary" />
     </LinearLayout>
 </LinearLayout>
