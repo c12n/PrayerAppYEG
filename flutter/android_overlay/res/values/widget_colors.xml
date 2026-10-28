@@ -7,7 +7,7 @@
      #7A5F10 on white ≈ 5.9:1. -->
 <resources>
     <color name="widget_bg_top">#FFFFFF</color>
-    <color name="widget_bg_bottom">#F4F0E1</color>
+    <color name="widget_bg_bottom">#FFFFFF</color>
     <color name="widget_stroke">#400B3D2E</color>
     <color name="widget_primary">#0B3D2E</color>
     <color name="widget_secondary">#D60B3D2E</color>
