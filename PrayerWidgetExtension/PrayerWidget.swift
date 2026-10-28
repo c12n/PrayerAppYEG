@@ -48,9 +48,20 @@ struct PrayerTimelineProvider: TimelineProvider {
 
 struct PrayerWidgetEntryView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) private var systemColorScheme
     let entry: PrayerEntry
 
     var body: some View {
+        // The user's Light/Dark choice in Settings wins over the system
+        // appearance (v1.0.5): the stored mode is resolved against the
+        // system scheme and applied to the whole widget, background
+        // included, so widgets always match the app.
+        content
+            .environment(\.colorScheme, AppAppearance.resolvedColorScheme(system: systemColorScheme))
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch family {
         case .systemSmall:
             SmallPrayerWidgetView(snapshot: entry.snapshot)
@@ -103,7 +114,11 @@ struct SmallPrayerWidgetView: View {
                     .tracking(0.8)
                     .foregroundStyle(Theme.onSurfaceMuted)
                     .lineLimit(1)
-                Spacer(minLength: 0)
+                Spacer(minLength: 2)
+                Text(PrayerFormat.shortDate(snapshot.day.date))
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(Theme.onSurfaceMuted)
+                    .lineLimit(1)
             }
             Text(next.name)
                 .font(.system(size: 27, weight: .bold))
@@ -259,7 +274,7 @@ struct PrayerTableView: View {
                     .background {
                         if isNext {
                             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(Theme.gold.opacity(0.22))
+                                .fill(Theme.adaptiveGold.opacity(0.22))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                                         .strokeBorder(Theme.adaptiveGold.opacity(0.65), lineWidth: 0.6)
@@ -332,7 +347,7 @@ struct LargeHeaderView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Theme.adaptiveGold)
                 .frame(width: 28, height: 28)
-                .background(Theme.gold.opacity(0.18), in: Circle())
+                .background(Theme.adaptiveGold.opacity(0.18), in: Circle())
             VStack(alignment: .leading, spacing: 1) {
                 Text(MosqueInfo.name)
                     .font(.system(size: 18, weight: .bold))
@@ -370,7 +385,7 @@ struct WidgetPill: View {
             .foregroundStyle(Theme.adaptiveGold)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
-            .background(Theme.gold.opacity(0.22), in: Capsule())
+            .background(Theme.adaptiveGold.opacity(0.22), in: Capsule())
             .overlay {
                 Capsule()
                     .strokeBorder(Theme.adaptiveGold.opacity(0.5), lineWidth: 0.5)
@@ -585,7 +600,7 @@ struct PrayerWidgetBundle: WidgetBundle {
 struct PrayerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PrayerActivityAttributes.self) { context in
-            LiveActivityLockScreenView(state: context.state)
+            LiveActivityRootView(state: context.state)
                 .activityBackgroundTint(Theme.activityTint)
                 .activitySystemActionForegroundColor(Theme.onSurface)
         } dynamicIsland: { context in
@@ -594,7 +609,7 @@ struct PrayerLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
                         Image(systemName: state.symbolName)
-                            .foregroundStyle(Theme.lightGold)
+                            .foregroundStyle(Theme.adaptiveGold)
                         Text(state.prayerName)
                             .font(.headline)
                             .foregroundStyle(Color.white)
@@ -604,7 +619,7 @@ struct PrayerLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(state.adhan, style: .timer)
                         .font(.title3.weight(.bold).monospacedDigit())
-                        .foregroundStyle(Theme.lightGold)
+                        .foregroundStyle(Theme.adaptiveGold)
                         .frame(maxWidth: 92, alignment: .trailing)
                         .padding(.trailing, 6)
                 }
@@ -622,18 +637,30 @@ struct PrayerLiveActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: state.symbolName)
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
             } compactTrailing: {
                 Text(state.adhan, style: .timer)
                     .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
                     .frame(maxWidth: 64, alignment: .trailing)
             } minimal: {
                 Image(systemName: state.symbolName)
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
             }
-            .keylineTint(Theme.gold)
+            .keylineTint(Theme.adaptiveGold)
         }
+    }
+}
+
+/// Applies the user's Settings Light/Dark choice to the Live Activity,
+/// resolved against the system appearance (v1.0.5).
+private struct LiveActivityRootView: View {
+    @Environment(\.colorScheme) private var systemColorScheme
+    let state: PrayerActivityAttributes.ContentState
+
+    var body: some View {
+        LiveActivityLockScreenView(state: state)
+            .environment(\.colorScheme, AppAppearance.resolvedColorScheme(system: systemColorScheme))
     }
 }
 
@@ -652,9 +679,11 @@ private struct LiveActivityLockScreenView: View {
                         .tracking(0.6)
                         .foregroundStyle(Theme.onSurfaceSecondary)
                     Spacer()
-                    Text(state.hijri)
+                    Text("\(PrayerFormat.shortDate(state.adhan)) · \(state.hijri)")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.onSurfaceMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Image(systemName: state.symbolName)
