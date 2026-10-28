@@ -104,7 +104,7 @@ class SettingsPage extends StatelessWidget {
                   'Choose which times the countdown moves to, in the app and in the home-screen widgets. Sunrise is off by default — turn it on to count down to the end of Fajr time too. Changes reach the widgets at their next refresh.'),
               _sectionHeader(context, 'Privacy'),
               const ListTile(
-                leading: Icon(Icons.hand_raised),
+                leading: Icon(Icons.pan_tool),
                 title: Text('No data collected'),
                 subtitle: Text('No accounts, no tracking, no ads, no analytics.'),
               ),
