@@ -35,7 +35,7 @@ class AppTheme {
   static const lightGold = Color(0xFFF2CD5C);
 
   static Color adaptiveGold(Brightness b) =>
-      b == Brightness.dark ? lightGold : const Color(0xFF8C6D12);
+      b == Brightness.dark ? lightGold : const Color(0xFF7A5F10);
 
   static ThemeData light() => ThemeData(
         useMaterial3: true,
@@ -316,12 +316,51 @@ class HeaderSection extends StatelessWidget {
   }
 }
 
-// MARK: - Green glass card
+// MARK: - Adaptive card + surface colors (v1.0.4)
+//
+// Native Light & Dark Mode, mirroring the iOS app: cards are warm white
+// with deep-green text in Light Mode and keep the green glass design in
+// Dark Mode. Every text color comes from SurfaceColors, whose values are
+// chosen for high contrast in both appearances (deep green on white
+// ≈ 10.9:1, white on green ≈ 7.5:1+, adaptive gold ≈ 5.9:1 on white).
 
-class GreenGlassCard extends StatelessWidget {
+class SurfaceColors {
+  final Color primary;
+  final Color secondary;
+  final Color muted;
+  final Color accent;
+  final Color panelTrack;
+  const SurfaceColors({
+    required this.primary,
+    required this.secondary,
+    required this.muted,
+    required this.accent,
+    required this.panelTrack,
+  });
+
+  static SurfaceColors of(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? dark : light;
+
+  static const dark = SurfaceColors(
+    primary: Colors.white,
+    secondary: Color(0xD9FFFFFF),
+    muted: Color(0xB8FFFFFF),
+    accent: AppTheme.lightGold,
+    panelTrack: Color(0x33FFFFFF),
+  );
+  static const light = SurfaceColors(
+    primary: AppTheme.deepGreen,
+    secondary: Color(0xD60B3D2E),
+    muted: Color(0xBD0B3D2E),
+    accent: Color(0xFF7A5F10),
+    panelTrack: Color(0x1F0B3D2E),
+  );
+}
+
+class AdaptiveCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
-  const GreenGlassCard({
+  const AdaptiveCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(20),
@@ -329,20 +368,29 @@ class GreenGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.green, AppTheme.deepGreen],
+          colors: dark
+              ? const [AppTheme.green, AppTheme.deepGreen]
+              : const [Colors.white, Color(0xFFF4F0E1)],
         ),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppTheme.lightGold.withValues(alpha: 0.45)),
+        border: Border.all(
+          color: dark
+              ? AppTheme.lightGold.withValues(alpha: 0.45)
+              : AppTheme.deepGreen.withValues(alpha: 0.25),
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.deepGreen.withValues(alpha: 0.35),
+            color: dark
+                ? AppTheme.deepGreen.withValues(alpha: 0.35)
+                : Colors.black.withValues(alpha: 0.10),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -365,21 +413,21 @@ class NextPrayerCard extends StatelessWidget {
     final caption =
         snapshot.isShowingTomorrow ? 'Next prayer · Tomorrow' : 'Next prayer';
     final remaining = next.adhan.difference(snapshot.date);
-    return GreenGlassCard(
+    final c = SurfaceColors.of(context);
+    return AdaptiveCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(prayerIcon(next.prayer),
-                  size: 18, color: AppTheme.lightGold),
+              Icon(prayerIcon(next.prayer), size: 18, color: c.accent),
               const SizedBox(width: 6),
               Text(
                 caption,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.lightGold,
+                  color: c.accent,
                 ),
               ),
               const Spacer(),
@@ -391,13 +439,13 @@ class NextPrayerCard extends StatelessWidget {
                     color: AppTheme.gold.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Text(
+                  child: Text(
                     "JUMU'AH",
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.8,
-                      color: AppTheme.lightGold,
+                      color: c.accent,
                     ),
                   ),
                 ),
@@ -411,10 +459,10 @@ class NextPrayerCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   next.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: c.primary,
                   ),
                 ),
               ),
@@ -423,7 +471,7 @@ class NextPrayerCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white.withValues(alpha: 0.92),
+                  color: c.primary,
                 ),
               ),
             ],
@@ -432,15 +480,14 @@ class NextPrayerCard extends StatelessWidget {
             const SizedBox(height: 6),
             Row(
               children: [
-                Icon(Icons.groups,
-                    size: 16, color: Colors.white.withValues(alpha: 0.8)),
+                Icon(Icons.groups, size: 16, color: c.secondary),
                 const SizedBox(width: 6),
                 Text(
                   '${next.iqamahLabel} at ${PrayerFormat.time(next.iqamah!)}',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: c.secondary,
                   ),
                 ),
               ],
@@ -449,11 +496,11 @@ class NextPrayerCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             PrayerFormat.countdown(remaining),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 46,
               fontWeight: FontWeight.bold,
-              color: AppTheme.lightGold,
-              fontFeatures: [FontFeature.tabularFigures()],
+              color: c.accent,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           const SizedBox(height: 8),
@@ -462,9 +509,8 @@ class NextPrayerCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: snapshot.progress,
               minHeight: 6,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppTheme.lightGold),
+              backgroundColor: c.panelTrack,
+              valueColor: AlwaysStoppedAnimation<Color>(c.accent),
             ),
           ),
           const SizedBox(height: 8),
@@ -472,7 +518,8 @@ class NextPrayerCard extends StatelessWidget {
             'until ${next.name} Adhan',
             style: TextStyle(
               fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.65),
+              fontWeight: FontWeight.w500,
+              color: c.muted,
             ),
           ),
         ],
@@ -510,7 +557,8 @@ class ScheduleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final nameSize = large ? 18.0 : 16.0;
     final timeSize = large ? 18.0 : 16.0;
-    return GreenGlassCard(
+    final c = SurfaceColors.of(context);
+    return AdaptiveCard(
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,10 +570,10 @@ class ScheduleCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: c.primary,
                   ),
                 ),
               ),
@@ -533,7 +581,7 @@ class ScheduleCard extends StatelessWidget {
                 PrayerFormat.shortDate(day.date),
                 style: TextStyle(
                   fontSize: 15,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: c.secondary,
                 ),
               ),
             ],
@@ -568,15 +616,15 @@ class ScheduleCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.mosque, size: 16, color: AppTheme.lightGold),
+                Icon(Icons.mosque, size: 16, color: c.accent),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     "Jumu'ah replaces Dhuhr · Khutbah at ${PrayerFormat.khutbahTime()}",
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: AppTheme.lightGold,
+                      color: c.accent,
                     ),
                   ),
                 ),
@@ -603,7 +651,7 @@ class _ColumnHeader extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.bold,
         letterSpacing: 0.8,
-        color: Colors.white.withValues(alpha: 0.55),
+        color: SurfaceColors.of(context).muted,
       ),
     );
   }
@@ -626,19 +674,17 @@ class _ScheduleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = SurfaceColors.of(context);
     final Color color = isNext
-        ? AppTheme.lightGold
-        : (slot.prayer == Prayer.sunrise
-            ? Colors.white.withValues(alpha: 0.6)
-            : Colors.white);
+        ? c.accent
+        : (slot.prayer == Prayer.sunrise ? c.muted : c.primary);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: isNext
           ? BoxDecoration(
               color: AppTheme.gold.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: AppTheme.lightGold.withValues(alpha: 0.55)),
+              border: Border.all(color: c.accent.withValues(alpha: 0.65)),
             )
           : null,
       child: Row(
@@ -663,7 +709,7 @@ class _ScheduleRow extends StatelessWidget {
                     'Khutbah time shown',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: c.muted,
                     ),
                   ),
               ],
