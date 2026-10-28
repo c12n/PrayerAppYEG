@@ -7,6 +7,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.Color
 import android.widget.RemoteViews
 import java.time.DayOfWeek
 import java.time.Duration
@@ -14,6 +16,40 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+/// User settings written by the Flutter app (shared_preferences), read
+/// back here so the widgets follow the same choices. shared_preferences
+/// stores into "FlutterSharedPreferences" with a "flutter." key prefix;
+/// ints land as Long, booleans as Boolean.
+object WidgetPrefs {
+    private fun prefs(context: Context) =
+        context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+
+    /// Whether the countdown should move to this prayer (Settings →
+    /// Widget Countdown). The five prayers default on, Sunrise off.
+    fun countdownEnabled(context: Context, name: String): Boolean =
+        prefs(context).getBoolean("flutter.alerts.${name.lowercase()}", name != "Sunrise")
+
+    /// The user's accent color (Settings → Theme Colors), adjusted for
+    /// the current appearance the same way the apps do it: brightened on
+    /// dark surfaces, deepened on light ones. Null = not picked yet.
+    fun accentColor(context: Context): Int? {
+        val raw = prefs(context).getLong("flutter.appearance.accentHex", -1L)
+        if (raw < 0) return null
+        val night = (context.resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val hsv = FloatArray(3)
+        Color.colorToHSV((0xFF000000 or raw).toInt(), hsv)
+        if (night) {
+            hsv[1] = minOf(hsv[1], 0.9f)
+            hsv[2] = maxOf(hsv[2], 0.82f)
+        } else {
+            hsv[1] = hsv[1].coerceIn(0.55f, 1.0f)
+            hsv[2] = minOf(hsv[2], 0.42f)
+        }
+        return Color.HSVToColor(hsv)
+    }
+}
 
 /// Shared data builder for the home-screen widgets: computes today's
 /// (and tomorrow's) schedule with the same calibrated calculator as the
@@ -29,6 +65,8 @@ object WidgetData {
 
     data class Model(
         val hijri: String,
+        /// Gregorian date of the displayed day, "Wed, Oct 28" (v1.0.5).
+        val dateText: String,
         val nextName: String,
         val nextTime: String,
         val nextIqamahText: String?,
@@ -41,6 +79,7 @@ object WidgetData {
     )
 
     private val timeFmt = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
+    private val dateFmt = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.US)
 
     fun formatTime(t: ZonedDateTime): String = timeFmt.format(t)
 
@@ -81,7 +120,16 @@ object WidgetData {
     private val allNames = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha")
     private val prayerNames = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
 
-    fun current(now: ZonedDateTime = ZonedDateTime.now(PrayerCalculator.ZONE)): Model {
+    fun current(
+        context: Context,
+        now: ZonedDateTime = ZonedDateTime.now(PrayerCalculator.ZONE)
+    ): Model {
+        // The countdown rotation honors the user's Widget Countdown
+        // choices (v1.0.5): prayers they turned off are skipped, and
+        // Sunrise joins the rotation when they turned it on. If they
+        // turned everything off, fall back to the five prayers.
+        val rotation = allNames.filter { WidgetPrefs.countdownEnabled(context, it) }
+            .ifEmpty { prayerNames }
         val today = now.toLocalDate()
         val days = (-1..2).map { offset ->
             val date = today.plusDays(offset.toLong())
@@ -97,7 +145,7 @@ object WidgetData {
         var nextName = "Fajr"
         var found = false
         for (day in days) {
-            for (name in prayerNames) {
+            for (name in rotation) {
                 if (day.adhan(name).isAfter(now)) {
                     nextDay = day
                     nextName = name
@@ -129,6 +177,7 @@ object WidgetData {
             hijri = UmmAlQuraCalendar.hijriString(
                 nextDay.date.year, nextDay.date.monthValue, nextDay.date.dayOfMonth
             ),
+            dateText = dateFmt.format(nextDay.date),
             nextName = displayName,
             nextTime = formatTime(nextAdhan),
             nextIqamahText = nextIqamah?.let { "$iqamahLabel at ${formatTime(it)}" },
@@ -162,7 +211,7 @@ abstract class BaseWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        val model = WidgetData.current()
+        val model = WidgetData.current(context)
         for (id in appWidgetIds) {
             val views = buildViews(context, model)
             val intent = Intent(context, MainActivity::class.java).apply {
@@ -212,10 +261,15 @@ class NextPrayerWidgetProvider : BaseWidgetProvider() {
         val views = RemoteViews(context.packageName, layoutId())
         views.setTextViewText(R.id.widget_caption,
             if (model.showingTomorrow) "NEXT · TOMORROW" else "NEXT PRAYER")
+        views.setTextViewText(R.id.widget_date, model.dateText)
         views.setTextViewText(R.id.widget_next_name, model.nextName)
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_iqamah, model.nextIqamahText ?: "")
+        WidgetPrefs.accentColor(context)?.let { accent ->
+            views.setTextColor(R.id.widget_caption, accent)
+            views.setTextColor(R.id.widget_countdown, accent)
+        }
         return views
     }
 }
@@ -229,15 +283,21 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
         views.setTextViewText(R.id.widget_header_next,
             "${model.nextName} · ${model.nextTime}")
         views.setTextViewText(R.id.widget_header_countdown, model.countdownText)
+        views.setTextViewText(R.id.widget_date, model.dateText)
+        WidgetPrefs.accentColor(context)?.let { accent ->
+            views.setTextColor(R.id.widget_header_countdown, accent)
+        }
         fillRows(context, views, model)
         return views
     }
 
     companion object {
         /// Row colors come from values/widget_colors.xml (+ values-night),
-        /// so the table follows Light/Dark Mode like the layouts do.
+        /// so the table follows Light/Dark Mode like the layouts do. The
+        /// "next" row uses the user's picked accent color when set.
         fun fillRows(context: Context, views: RemoteViews, model: WidgetData.Model) {
-            val accent = context.getColor(R.color.widget_accent)
+            val accent = WidgetPrefs.accentColor(context)
+                ?: context.getColor(R.color.widget_accent)
             val primary = context.getColor(R.color.widget_primary)
             val muted = context.getColor(R.color.widget_muted)
             val nameIds = intArrayOf(
@@ -278,13 +338,17 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
 
     override fun buildViews(context: Context, model: WidgetData.Model): RemoteViews {
         val views = RemoteViews(context.packageName, layoutId())
-        views.setTextViewText(R.id.widget_hijri, model.hijri)
+        views.setTextViewText(R.id.widget_hijri, "${model.dateText} · ${model.hijri}")
         views.setTextViewText(R.id.widget_next_label,
             if (model.showingTomorrow) "Next prayer · Tomorrow" else "Next prayer")
         views.setTextViewText(R.id.widget_next_name, model.nextName)
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_iqamah, model.nextIqamahText ?: "")
+        WidgetPrefs.accentColor(context)?.let { accent ->
+            views.setTextColor(R.id.widget_countdown, accent)
+            views.setTextColor(R.id.widget_next_label, accent)
+        }
         ScheduleWidgetProvider.fillRows(context, views, model)
         return views
     }
