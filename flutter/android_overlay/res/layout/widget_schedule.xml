@@ -10,6 +10,7 @@
         <TextView android:id="@+id/widget_header_next" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/widget_primary" />
         <TextView android:id="@+id/widget_header_countdown" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
     </LinearLayout>
+    <TextView android:id="@+id/widget_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="11sp" android:textColor="@color/widget_muted" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="6dp" android:paddingBottom="2dp">
         <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="PRAYER" android:textSize="10sp" android:textStyle="bold" android:textColor="@color/widget_muted" />
         <TextView android:layout_width="76dp" android:layout_height="wrap_content" android:gravity="end" android:text="ADHAN" android:textSize="10sp" android:textStyle="bold" android:textColor="@color/widget_muted" />
