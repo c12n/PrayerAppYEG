@@ -23,7 +23,7 @@ struct AlRashidWidgetApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .tint(Theme.gold)
+                .tint(Theme.adaptiveGold)
         }
     }
 }
@@ -54,9 +54,11 @@ enum AlertSettings {
 /// Owns the two alert channels added in v1.0.3:
 ///
 /// - Local notifications at every Adhan (the five prayers; Jumu'ah on
-///   Fridays), scheduled 7 days ahead (35 requests — under iOS's
+///   Fridays), scheduled 7 days ahead (up to 42 requests — under iOS's
 ///   64-pending cap) and re-scheduled whenever the app becomes active, so
-///   the schedule is always fresh. v1.0.2 and earlier scheduled none.
+///   the schedule is always fresh. Since v1.0.5 each prayer's alert can
+///   be turned off in Settings, and Sunrise can be turned on. v1.0.2 and
+///   earlier scheduled none.
 /// - A Live Activity counting down to the next prayer on the Lock Screen
 ///   and Dynamic Island. Since v1.0.4 it rolls over to the following prayer
 ///   on its own when a prayer time arrives: a BGAppRefreshTask is chained
@@ -137,13 +139,21 @@ enum AdhanNotifications {
         for offset in 0..<7 {
             guard let dayStart = calendar.date(byAdding: .day, value: offset, to: todayStart) else { continue }
             let day = provider.computeDay(for: dayStart)
-            for slot in day.prayerSlots where slot.adhan > now {
+            for slot in day.slots where slot.adhan > now && PrayerAlertSettings.isEnabled(slot.prayer) {
                 let content = UNMutableNotificationContent()
-                content.title = slot.isJumuah ? "Jumu'ah — \(MosqueInfo.name)" : "\(slot.name) Adhan — \(MosqueInfo.name)"
-                if let iqamah = slot.iqamah {
-                    content.body = "\(slot.iqamahLabel) at \(PrayerFormat.time(iqamah))"
+                if slot.prayer == .sunrise {
+                    content.title = "Sunrise — \(MosqueInfo.name)"
+                    content.body = "Sunrise at \(PrayerFormat.time(slot.adhan)) — the time for Fajr has ended."
+                } else if slot.isJumuah {
+                    content.title = "Jumu'ah — \(MosqueInfo.name)"
+                    content.body = "\(slot.iqamahLabel) at \(PrayerFormat.time(slot.iqamah ?? slot.adhan))"
                 } else {
-                    content.body = "Adhan at \(PrayerFormat.time(slot.adhan))"
+                    content.title = "\(slot.name) Adhan — \(MosqueInfo.name)"
+                    if let iqamah = slot.iqamah {
+                        content.body = "\(slot.iqamahLabel) at \(PrayerFormat.time(iqamah))"
+                    } else {
+                        content.body = "Adhan at \(PrayerFormat.time(slot.adhan))"
+                    }
                 }
                 content.sound = .default
                 let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: slot.adhan)
