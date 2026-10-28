@@ -75,11 +75,13 @@ struct PrayerWidgetEntryView: View {
 }
 
 private extension View {
+    /// Widget surface that follows the system appearance (v1.0.4): warm
+    /// white in Light Mode, green glass in Dark Mode. (Before v1.0.4 the
+    /// widgets forced Dark Mode in both appearances.)
     func homeScreenGlass(watermark: Bool) -> some View {
         self
-            .environment(\.colorScheme, .dark)
             .containerBackground(for: .widget) {
-                GlassGreenBackground(showsWatermark: watermark)
+                AdaptiveSurfaceBackground(showsWatermark: watermark)
             }
     }
 }
@@ -94,35 +96,35 @@ struct SmallPrayerWidgetView: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 Image(systemName: next.symbolName)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.lightGold)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.adaptiveGold)
                 Text(snapshot.isShowingTomorrow ? "TOMORROW" : "NEXT PRAYER")
-                    .font(.system(size: 10.5, weight: .bold))
+                    .font(.system(size: 11.5, weight: .bold))
                     .tracking(0.8)
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .foregroundStyle(Theme.onSurfaceMuted)
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
             Text(next.name)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(Color.white)
+                .font(.system(size: 27, weight: .bold))
+                .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(PrayerFormat.time(next.adhan))
-                .font(.system(size: 16.5, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Color.white.opacity(0.92))
+                .font(.system(size: 18, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
             if let iqamah = next.iqamah {
                 Text("\(next.iqamahLabel) \(PrayerFormat.time(iqamah))")
-                    .font(.system(size: 11.5, weight: .medium).monospacedDigit())
-                    .foregroundStyle(Theme.lightGold.opacity(0.9))
+                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Theme.adaptiveGold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
             Spacer(minLength: 0)
             Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(Theme.lightGold)
+                .font(.system(size: 25, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(Theme.adaptiveGold)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -140,11 +142,11 @@ struct MediumPrayerWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            WidgetHeaderView(snapshot: snapshot, nameSize: 13, detailSize: 10.5)
+            WidgetHeaderView(snapshot: snapshot, nameSize: 14, detailSize: 11.5)
             HStack(alignment: .top, spacing: 8) {
                 CompactNextPrayerPanel(snapshot: snapshot)
-                    .frame(width: 96)
-                PrayerTableView(snapshot: snapshot, fontSize: 11, timeColumnWidth: 52, rowVerticalPadding: 0.75)
+                    .frame(width: 100)
+                PrayerTableView(snapshot: snapshot, fontSize: 12, timeColumnWidth: 56, rowVerticalPadding: 0.75)
             }
             .frame(maxHeight: .infinity)
         }
@@ -161,15 +163,15 @@ struct WidgetHeaderView: View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
             Image(systemName: "moon.stars.fill")
                 .font(.system(size: nameSize - 1, weight: .semibold))
-                .foregroundStyle(Theme.lightGold)
+                .foregroundStyle(Theme.adaptiveGold)
             Text(MosqueInfo.name)
                 .font(.system(size: nameSize, weight: .bold))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
             Spacer(minLength: 4)
             Text(hijriText)
                 .font(.system(size: detailSize, weight: .semibold))
-                .foregroundStyle(Theme.lightGold)
+                .foregroundStyle(Theme.adaptiveGold)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -187,31 +189,31 @@ struct CompactNextPrayerPanel: View {
         let next = snapshot.next
         VStack(alignment: .leading, spacing: 1.5) {
             Text("NEXT PRAYER")
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 10, weight: .bold))
                 .tracking(0.7)
-                .foregroundStyle(Color.white.opacity(0.6))
+                .foregroundStyle(Theme.onSurfaceMuted)
                 .lineLimit(1)
             Text(next.name)
-                .font(.system(size: 17.5, weight: .bold))
-                .foregroundStyle(Color.white)
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(PrayerFormat.time(next.adhan))
-                .font(.system(size: 12.5, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Color.white.opacity(0.92))
+                .font(.system(size: 13.5, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             if let iqamah = next.iqamah {
                 Text("\(next.iqamahLabel) \(PrayerFormat.time(iqamah))")
-                    .font(.system(size: 10, weight: .medium).monospacedDigit())
-                    .foregroundStyle(Theme.lightGold.opacity(0.9))
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Theme.adaptiveGold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
             Spacer(minLength: 0)
             Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                .font(.system(size: 16.5, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(Theme.lightGold)
+                .font(.system(size: 18, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(Theme.adaptiveGold)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -219,10 +221,10 @@ struct CompactNextPrayerPanel: View {
         }
         .padding(6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Theme.panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5)
+                .strokeBorder(Theme.hairline, lineWidth: 0.5)
         }
     }
 }
@@ -242,9 +244,9 @@ struct PrayerTableView: View {
                 Text("ADHAN").frame(width: timeColumnWidth, alignment: .trailing)
                 Text("IQAMAH").frame(width: timeColumnWidth, alignment: .trailing)
             }
-            .font(.system(size: max(fontSize - 3, 7.5), weight: .bold))
+            .font(.system(size: max(fontSize - 3, 8.5), weight: .bold))
             .tracking(0.5)
-            .foregroundStyle(Color.white.opacity(0.55))
+            .foregroundStyle(Theme.onSurfaceMuted)
             .lineLimit(1)
             .padding(.horizontal, 6)
             .padding(.bottom, 2)
@@ -260,7 +262,7 @@ struct PrayerTableView: View {
                                 .fill(Theme.gold.opacity(0.22))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .strokeBorder(Theme.lightGold.opacity(0.55), lineWidth: 0.6)
+                                        .strokeBorder(Theme.adaptiveGold.opacity(0.65), lineWidth: 0.6)
                                 }
                         }
                     }
@@ -299,8 +301,8 @@ struct PrayerTableRow: View {
     }
 
     private var foreground: Color {
-        if isNext { return Theme.lightGold }
-        return slot.prayer == .sunrise ? Color.white.opacity(0.6) : Color.white.opacity(0.95)
+        if isNext { return Theme.adaptiveGold }
+        return slot.prayer == .sunrise ? Theme.onSurfaceMuted : Theme.onSurface
     }
 }
 
@@ -313,7 +315,7 @@ struct LargePrayerWidgetView: View {
         VStack(alignment: .leading, spacing: 8) {
             LargeHeaderView(snapshot: snapshot)
             LargeNextPrayerBanner(snapshot: snapshot)
-            PrayerTableView(snapshot: snapshot, fontSize: 14, timeColumnWidth: 68, rowVerticalPadding: 2)
+            PrayerTableView(snapshot: snapshot, fontSize: 15, timeColumnWidth: 74, rowVerticalPadding: 2)
                 .frame(maxHeight: .infinity)
             LargeFooterView(snapshot: snapshot)
         }
@@ -328,23 +330,23 @@ struct LargeHeaderView: View {
         HStack(alignment: .center, spacing: 8) {
             Image(systemName: "moon.stars.fill")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.lightGold)
+                .foregroundStyle(Theme.adaptiveGold)
                 .frame(width: 28, height: 28)
                 .background(Theme.gold.opacity(0.18), in: Circle())
             VStack(alignment: .leading, spacing: 1) {
                 Text(MosqueInfo.name)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(Color.white)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
                 HStack(spacing: 4) {
                     Text(snapshot.day.hijriDate)
-                        .foregroundStyle(Theme.lightGold)
+                        .foregroundStyle(Theme.adaptiveGold)
                     Text("·")
-                        .foregroundStyle(Color.white.opacity(0.5))
+                        .foregroundStyle(Theme.onSurfaceMuted)
                     Text(PrayerFormat.shortDate(snapshot.day.date))
-                        .foregroundStyle(Color.white.opacity(0.75))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
                 }
-                .font(.system(size: 11.5, weight: .semibold))
+                .font(.system(size: 12.5, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             }
@@ -363,15 +365,15 @@ struct WidgetPill: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 9.5, weight: .heavy))
+            .font(.system(size: 10.5, weight: .heavy))
             .tracking(0.6)
-            .foregroundStyle(Theme.lightGold)
+            .foregroundStyle(Theme.adaptiveGold)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(Theme.gold.opacity(0.22), in: Capsule())
             .overlay {
                 Capsule()
-                    .strokeBorder(Theme.lightGold.opacity(0.4), lineWidth: 0.5)
+                    .strokeBorder(Theme.adaptiveGold.opacity(0.5), lineWidth: 0.5)
             }
     }
 }
@@ -385,48 +387,42 @@ struct LargeNextPrayerBanner: View {
             HStack(alignment: .center, spacing: 10) {
                 Image(systemName: next.symbolName)
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
                     .frame(width: 34, height: 34)
-                    .background(Color.white.opacity(0.1), in: Circle())
+                    .background(Theme.panelFill, in: Circle())
                 VStack(alignment: .leading, spacing: 1) {
                     Text(snapshot.isShowingTomorrow ? "NEXT PRAYER · TOMORROW" : "NEXT PRAYER")
-                        .font(.system(size: 9.5, weight: .bold))
+                        .font(.system(size: 10.5, weight: .bold))
                         .tracking(0.7)
-                        .foregroundStyle(Color.white.opacity(0.6))
+                        .foregroundStyle(Theme.onSurfaceMuted)
                         .lineLimit(1)
                     Text(next.name)
-                        .font(.system(size: 19.5, weight: .bold))
-                        .foregroundStyle(Color.white)
+                        .font(.system(size: 21, weight: .bold))
+                        .foregroundStyle(Theme.onSurface)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(detailText)
-                        .font(.system(size: 11.5, weight: .medium).monospacedDigit())
-                        .foregroundStyle(Color.white.opacity(0.8))
+                        .font(.system(size: 12.5, weight: .medium).monospacedDigit())
+                        .foregroundStyle(Theme.onSurfaceSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 4)
                 Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                    .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(Theme.lightGold)
+                    .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(Theme.adaptiveGold)
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                    .frame(width: 104, alignment: .trailing)
+                    .frame(width: 110, alignment: .trailing)
             }
             GoldProgressBar(range: snapshot.progressRange)
         }
         .padding(10)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Theme.panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [Theme.lightGold.opacity(0.5), Color.white.opacity(0.08)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.75
-                )
+                .strokeBorder(Theme.hairline, lineWidth: 0.75)
         }
     }
 
@@ -444,26 +440,26 @@ struct LargeFooterView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Rectangle()
-                .fill(Color.white.opacity(0.15))
+                .fill(Theme.hairline)
                 .frame(height: 0.5)
                 .padding(.bottom, 2)
             HStack(spacing: 5) {
                 Image(systemName: "mappin.and.ellipse")
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
                 Text(MosqueInfo.address)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             HStack(spacing: 5) {
                 Image(systemName: "building.columns.fill")
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
                 Text(jumuahNote)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
         }
-        .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(Color.white.opacity(0.78))
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(Theme.onSurfaceSecondary)
     }
 
     private var jumuahNote: String {
@@ -590,8 +586,8 @@ struct PrayerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PrayerActivityAttributes.self) { context in
             LiveActivityLockScreenView(state: context.state)
-                .activityBackgroundTint(Theme.deepGreen)
-                .activitySystemActionForegroundColor(Color.white)
+                .activityBackgroundTint(Theme.activityTint)
+                .activitySystemActionForegroundColor(Theme.onSurface)
         } dynamicIsland: { context in
             let state = context.state
             return DynamicIsland {
@@ -646,46 +642,52 @@ private struct LiveActivityLockScreenView: View {
 
     var body: some View {
         ZStack {
-            GlassGreenBackground()
+            AdaptiveSurfaceBackground()
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: "moon.stars.fill")
-                        .foregroundStyle(Theme.lightGold)
+                        .foregroundStyle(Theme.adaptiveGold)
                     Text(MosqueInfo.name)
                         .font(.caption.weight(.bold))
                         .tracking(0.6)
-                        .foregroundStyle(Color.white.opacity(0.85))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
                     Spacer()
                     Text(state.hijri)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.white.opacity(0.7))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.onSurfaceMuted)
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Image(systemName: state.symbolName)
                         .font(.title2.weight(.semibold))
-                        .foregroundStyle(Theme.lightGold)
+                        .foregroundStyle(Theme.adaptiveGold)
                     Text(state.isTomorrow ? "\(state.prayerName) · Tomorrow" : state.prayerName)
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(Color.white)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(Theme.onSurface)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Spacer(minLength: 8)
                     Text(PrayerFormat.time(state.adhan))
                         .font(.title3.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Theme.onSurface)
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(state.adhan, style: .timer)
-                        .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(Theme.lightGold)
+                        .font(.system(size: 36, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.adaptiveGold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Spacer(minLength: 8)
                     if let iqamah = state.iqamah {
                         Text("\(state.iqamahLabel) \(PrayerFormat.time(iqamah))")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.white.opacity(0.8))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.onSurfaceSecondary)
                     }
+                }
+                if let followingName = state.followingName, let followingAdhan = state.followingAdhan {
+                    Text("Then \(followingName) · \(PrayerFormat.time(followingAdhan))")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.onSurfaceMuted)
+                        .lineLimit(1)
                 }
             }
             .padding(.horizontal, 18)
