@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget colors — DARK appearance overrides (see values/widget_colors.xml).
+     Contrast (dark): white on the green gradient ≈ 7.5:1 or better;
+     accent #F2CD5C on deep green ≈ 9:1. -->
+<resources>
+    <color name="widget_bg_top">#0E5A40</color>
+    <color name="widget_bg_bottom">#0B3D2E</color>
+    <color name="widget_stroke">#73F2CD5C</color>
+    <color name="widget_primary">#FFFFFF</color>
+    <color name="widget_secondary">#D9FFFFFF</color>
+    <color name="widget_muted">#B8FFFFFF</color>
+    <color name="widget_accent">#F2CD5C</color>
+    <color name="widget_panel">#33FFFFFF</color>
+</resources>
