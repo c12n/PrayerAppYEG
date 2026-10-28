@@ -108,13 +108,13 @@ private struct NextPrayerCard: View {
             HStack {
                 Label(caption, systemImage: next.symbolName)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
                 Spacer()
                 if next.isJumuah {
                     Text("JUMU'AH")
                         .font(.caption2.weight(.heavy))
                         .tracking(0.8)
-                        .foregroundStyle(Theme.lightGold)
+                        .foregroundStyle(Theme.adaptiveGold)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Theme.gold.opacity(0.25), in: Capsule())
@@ -123,35 +123,35 @@ private struct NextPrayerCard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(next.name)
                     .font(.system(size: 40, weight: .bold))
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Spacer(minLength: 8)
                 Text(PrayerFormat.time(next.adhan))
                     .font(.title2.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
             }
             if let iqamah = next.iqamah {
                 Label("\(next.iqamahLabel) at \(PrayerFormat.time(iqamah))", systemImage: "person.3.fill")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.white.opacity(0.8))
+                    .foregroundStyle(Theme.onSurfaceSecondary)
             }
             VStack(alignment: .leading, spacing: 8) {
                 Text(timerInterval: snapshot.countdownRange, countsDown: true)
                     .font(.system(size: 46, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 GoldProgressBar(range: snapshot.progressRange)
                 Text("until \(next.name) Adhan")
-                    .font(.footnote)
-                    .foregroundStyle(Color.white.opacity(0.65))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.onSurfaceMuted)
             }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .greenGlassCard(cornerRadius: 26)
+        .adaptiveCard(cornerRadius: 26)
     }
 }
 
@@ -165,11 +165,11 @@ private struct ScheduleCard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(snapshot.isShowingTomorrow ? "Tomorrow's Prayer Times" : "Today's Prayer Times")
                     .font(.headline)
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(Theme.onSurface)
                 Spacer(minLength: 8)
                 Text(PrayerFormat.shortDate(snapshot.day.date))
                     .font(.subheadline)
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .foregroundStyle(Theme.onSurfaceSecondary)
             }
             HStack(spacing: 8) {
                 Text("PRAYER").frame(maxWidth: .infinity, alignment: .leading)
@@ -178,7 +178,7 @@ private struct ScheduleCard: View {
             }
             .font(.caption2.weight(.bold))
             .tracking(0.8)
-            .foregroundStyle(Color.white.opacity(0.55))
+            .foregroundStyle(Theme.onSurfaceMuted)
             .padding(.horizontal, 12)
             VStack(spacing: 4) {
                 ForEach(snapshot.day.slots) { slot in
@@ -188,12 +188,12 @@ private struct ScheduleCard: View {
             if snapshot.day.isFriday {
                 Label("Jumu'ah replaces Dhuhr · Khutbah at \(PrayerFormat.khutbahTime(on: snapshot.day.date))", systemImage: "building.columns.fill")
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .greenGlassCard(cornerRadius: 26)
+        .adaptiveCard(cornerRadius: 26)
     }
 }
 
@@ -215,7 +215,7 @@ private struct ScheduleRow: View {
                     if slot.isJumuah {
                         Text("Khutbah time shown")
                             .font(.caption2)
-                            .foregroundStyle(Color.white.opacity(0.6))
+                            .foregroundStyle(Theme.onSurfaceMuted)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,15 +237,15 @@ private struct ScheduleRow: View {
                     .fill(Theme.gold.opacity(0.2))
                     .overlay {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Theme.lightGold.opacity(0.55), lineWidth: 1)
+                            .strokeBorder(Theme.adaptiveGold.opacity(0.65), lineWidth: 1)
                     }
             }
         }
     }
 
     private var rowColor: Color {
-        if isNext { return Theme.lightGold }
-        return slot.prayer == .sunrise ? Color.white.opacity(0.6) : Color.white
+        if isNext { return Theme.adaptiveGold }
+        return slot.prayer == .sunrise ? Theme.onSurfaceMuted : Theme.onSurface
     }
 }
 
@@ -309,34 +309,42 @@ private struct ThemeButtonStyle: ButtonStyle {
     }
 }
 
-private extension View {
-    func greenGlassCard(cornerRadius: CGFloat) -> some View {
-        self.background {
-            GlassGreenBackground()
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [Theme.lightGold.opacity(0.45), Color.white.opacity(0.08)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        }
-        .shadow(color: Theme.deepGreen.opacity(0.35), radius: 16, x: 0, y: 8)
+/// Card surface that follows the system appearance (v1.0.4): the signature
+/// green glass in Dark Mode, a warm white card with a deep-green hairline
+/// in Light Mode. Text on it uses the Theme.onSurface* colors, which flip
+/// with the appearance to stay high-contrast in both.
+private struct AdaptiveCardModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                AdaptiveSurfaceBackground()
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        colorScheme == .dark
+                            ? AnyShapeStyle(LinearGradient(
+                                colors: [Theme.lightGold.opacity(0.45), Color.white.opacity(0.08)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ))
+                            : AnyShapeStyle(Theme.deepGreen.opacity(0.25)),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(
+                color: colorScheme == .dark ? Theme.deepGreen.opacity(0.35) : Color.black.opacity(0.10),
+                radius: 16, x: 0, y: 8
+            )
     }
 }
 
-extension Theme {
-    /// Gold that stays readable on light backgrounds (darker) and dark backgrounds (brighter).
-    static var adaptiveGold: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.949, green: 0.804, blue: 0.361, alpha: 1)
-                : UIColor(red: 0.549, green: 0.427, blue: 0.071, alpha: 1)
-        })
+private extension View {
+    func adaptiveCard(cornerRadius: CGFloat) -> some View {
+        modifier(AdaptiveCardModifier(cornerRadius: cornerRadius))
     }
 }
 
@@ -355,16 +363,16 @@ private struct AlertsCard: View {
         VStack(alignment: .leading, spacing: 14) {
             Label("Alerts", systemImage: "bell.badge.fill")
                 .font(.headline)
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Theme.onSurface)
 
             Toggle(isOn: $notificationsOn) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Adhan notifications")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(Theme.onSurface)
                     Text("A notification with sound at every prayer time, scheduled 7 days ahead and refreshed whenever you open the app.")
                         .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.7))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
                 }
             }
             .toggleStyle(.switch)
@@ -377,19 +385,19 @@ private struct AlertsCard: View {
             if notificationsOn && notificationsDenied {
                 Label("Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", systemImage: "exclamationmark.triangle.fill")
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(Theme.lightGold)
+                    .foregroundStyle(Theme.adaptiveGold)
             }
 
-            Divider().overlay(Color.white.opacity(0.15))
+            Divider().overlay(Theme.hairline)
 
             Toggle(isOn: $liveActivityOn) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Live Activity")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.white)
-                    Text("A live countdown to the next prayer on your Lock Screen and Dynamic Island. It refreshes whenever you open the app.")
+                        .foregroundStyle(Theme.onSurface)
+                    Text("A live countdown to the next prayer on your Lock Screen and Dynamic Island. It moves on to the following prayer by itself when a prayer time arrives, and also refreshes whenever you open the app.")
                         .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.7))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
                 }
             }
             .toggleStyle(.switch)
@@ -400,7 +408,7 @@ private struct AlertsCard: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .greenGlassCard(cornerRadius: 26)
+        .adaptiveCard(cornerRadius: 26)
         .task { refreshDeniedState() }
     }
 
