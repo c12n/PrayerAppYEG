@@ -209,7 +209,10 @@ class PrayerProvider {
 
   /// State at an arbitrary instant: the next upcoming prayer and the day
   /// whose schedule should be displayed (switches to tomorrow after Isha).
-  static PrayerSnapshot snapshot(tz.TZDateTime now) {
+  /// [enabled] (v1.0.5) optionally restricts which times the countdown
+  /// moves to — the user's Widget Countdown choices from Settings; it may
+  /// include Sunrise. Null means the five prayers, as before.
+  static PrayerSnapshot snapshot(tz.TZDateTime now, {Set<Prayer>? enabled}) {
     final start = _startOfDay(now);
     final days = <PrayerDay>[
       for (var offset = -1; offset <= 2; offset++)
@@ -217,7 +220,10 @@ class PrayerProvider {
     ];
     final candidates = <(PrayerDay, PrayerSlot)>[
       for (final day in days)
-        for (final slot in day.prayerSlots) (day, slot),
+        for (final slot in day.slots)
+          if (enabled == null
+              ? slot.prayer.isPrayer
+              : enabled.contains(slot.prayer)) (day, slot),
     ];
     for (var i = 0; i < candidates.length; i++) {
       final (day, slot) = candidates[i];
