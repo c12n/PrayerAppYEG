@@ -13,6 +13,7 @@
 import ActivityKit
 import Foundation
 import SwiftUI
+import UIKit
 
 // MARK: - Mosque constants
 
@@ -297,6 +298,18 @@ struct PrayerProvider: Sendable {
 
     func tomorrow(now: Date = .now) -> PrayerDay {
         computeDay(for: shifted(calendar.startOfDay(for: now), byDays: 1))
+    }
+
+    /// The first prayer slot whose Adhan falls strictly after `slot`'s Adhan
+    /// (looking into the following day when needed). Used to pre-stage the
+    /// prayer after the next one in the Live Activity, so its name and time
+    /// are already on the Lock Screen when the current countdown ends.
+    func followingSlot(after slot: PrayerSlot) -> PrayerSlot? {
+        let start = calendar.startOfDay(for: slot.adhan)
+        let days = (0...1).map { computeDay(for: shifted(start, byDays: $0)) }
+        return days.flatMap { $0.prayerSlots }
+            .sorted { $0.adhan < $1.adhan }
+            .first { $0.adhan > slot.adhan }
     }
 
     /// Forces a recompute of today and writes it to the App Group cache.
@@ -662,6 +675,77 @@ enum Theme {
     static let green = Color(hex: 0x0E5A40)
     static let gold = Color(hex: 0xD4AF37)
     static let lightGold = Color(hex: 0xF2CD5C)
+
+    // MARK: Adaptive (Light/Dark) surface colors — v1.0.4
+    //
+    // Native Light & Dark Mode: surfaces are warm white in Light Mode and
+    // deep green in Dark Mode, and every text color below is chosen to stay
+    // high-contrast in BOTH appearances for low-vision readers:
+    // deep green #0B3D2E on white is ~10.9:1, white on the green gradient
+    // is ~7.5:1 or better, and the adaptive gold is ~5.9:1 on white and
+    // ~9:1 on deep green. Nothing readable is drawn in pale gold or in
+    // white/green below ~0.7 opacity.
+
+    private static func themed(dark: UIColor, light: UIColor) -> Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? dark : light
+        })
+    }
+
+    private static var deepGreenUI: UIColor { UIColor(red: 0.043, green: 0.239, blue: 0.180, alpha: 1) }
+
+    /// Gold that stays readable in both appearances (bright on dark, deep on light).
+    static var adaptiveGold: Color {
+        themed(
+            dark: UIColor(red: 0.949, green: 0.804, blue: 0.361, alpha: 1),
+            light: UIColor(red: 0.478, green: 0.373, blue: 0.063, alpha: 1)
+        )
+    }
+
+    /// Primary text on adaptive surfaces.
+    static var onSurface: Color {
+        themed(dark: .white, light: deepGreenUI)
+    }
+
+    /// Secondary text on adaptive surfaces.
+    static var onSurfaceSecondary: Color {
+        themed(
+            dark: UIColor.white.withAlphaComponent(0.85),
+            light: deepGreenUI.withAlphaComponent(0.84)
+        )
+    }
+
+    /// Muted text on adaptive surfaces (captions, column headers).
+    static var onSurfaceMuted: Color {
+        themed(
+            dark: UIColor.white.withAlphaComponent(0.72),
+            light: deepGreenUI.withAlphaComponent(0.74)
+        )
+    }
+
+    /// Translucent panel fill on adaptive surfaces.
+    static var panelFill: Color {
+        themed(
+            dark: UIColor.white.withAlphaComponent(0.09),
+            light: deepGreenUI.withAlphaComponent(0.06)
+        )
+    }
+
+    /// Hairline borders and dividers on adaptive surfaces.
+    static var hairline: Color {
+        themed(
+            dark: UIColor.white.withAlphaComponent(0.16),
+            light: deepGreenUI.withAlphaComponent(0.22)
+        )
+    }
+
+    /// Live Activity background tint (matches AdaptiveSurfaceBackground).
+    static var activityTint: Color {
+        themed(
+            dark: deepGreenUI,
+            light: UIColor(red: 0.992, green: 0.984, blue: 0.961, alpha: 1)
+        )
+    }
 }
 
 extension Color {
@@ -697,6 +781,34 @@ struct GlassGreenBackground: View {
     }
 }
 
+/// Light-mode counterpart of GlassGreenBackground: warm white with a soft
+/// gold glow, so widgets, cards and the Live Activity look native in Light
+/// Mode while Dark Mode keeps the signature green glass.
+struct AdaptiveSurfaceBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var showsWatermark: Bool = false
+
+    var body: some View {
+        if colorScheme == .dark {
+            GlassGreenBackground(showsWatermark: showsWatermark)
+        } else {
+            ZStack {
+                LinearGradient(colors: [Color(hex: 0xFFFFFF), Color(hex: 0xF4F0E1)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [Theme.gold.opacity(0.10), Color.clear], center: .bottomTrailing, startRadius: 0, endRadius: 240)
+                LinearGradient(colors: [Color.white.opacity(0.5), Color.clear], startPoint: .top, endPoint: .center)
+                if showsWatermark {
+                    Image(systemName: "moon.stars.fill")
+                        .font(.system(size: 120, weight: .regular))
+                        .foregroundStyle(Theme.deepGreen.opacity(0.05))
+                        .rotationEffect(.degrees(-12))
+                        .offset(x: 30, y: -20)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
+            }
+        }
+    }
+}
+
 /// Live, self-updating gold progress bar between two prayer boundaries.
 struct GoldProgressBar: View {
     let range: ClosedRange<Date>
@@ -704,7 +816,7 @@ struct GoldProgressBar: View {
     var body: some View {
         ProgressView(timerInterval: range, countsDown: false, label: { EmptyView() }, currentValueLabel: { EmptyView() })
             .progressViewStyle(.linear)
-            .tint(Theme.lightGold)
+            .tint(Theme.adaptiveGold)
     }
 }
 
@@ -723,6 +835,11 @@ struct PrayerActivityAttributes: ActivityAttributes {
         var iqamahLabel: String
         var hijri: String
         var isTomorrow: Bool
+        /// The prayer after this one, pre-staged (v1.0.4) so the Lock Screen
+        /// can already show "Then: …" before the automatic rollover update
+        /// lands. Optional so v1.0.3 activity payloads still decode.
+        var followingName: String? = nil
+        var followingAdhan: Date? = nil
     }
 
     var mosqueName: String
