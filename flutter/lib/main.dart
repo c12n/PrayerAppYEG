@@ -371,7 +371,7 @@ class SurfaceColors {
   static SurfaceColors of(BuildContext context) {
     final settings = SettingsScope.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final text = resolvedTextColor(darkSurface: dark, settings: settings);
+    final text = resolvedTextColor(darkSurface: dark, s: settings);
     return SurfaceColors(
       primary: text,
       secondary: text.withValues(alpha: dark ? 0.85 : 0.84),
@@ -821,7 +821,7 @@ class ActionButtons extends StatelessWidget {
           child: _GradientButton(
             label: 'Website',
             icon: Icons.language,
-            foreground: resolvedTextColor(darkSurface: true, settings: settings),
+            foreground: resolvedTextColor(darkSurface: true, s: settings),
             colors: [
               lightenColor(primary, 0.16),
               primary,
