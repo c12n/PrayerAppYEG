@@ -1,3 +1,5 @@
+import 'prayer_models.dart';
+
 // Umm al-Qura Hijri conversion using the official month table
 // (van Gent's algorithm): monthStarts holds the Modified Julian Day of
 // the first day of each Hijri month, lunations 16260...18000
@@ -16,6 +18,21 @@ class UmmAlQuraCalendar {
     'Muharram', 'Safar', 'Rabi I', 'Rabi II', 'Jumada I', 'Jumada II',
     'Rajab', 'Shaban', 'Ramadan', 'Shawwal', 'Dhul Qadah', 'Dhul Hijjah',
   ];
+
+  static List<String> monthNamesFor(AppLanguage language) => switch (language) {
+        AppLanguage.en => monthNames,
+        AppLanguage.ar => const [
+            'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة',
+            'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة',
+          ],
+        AppLanguage.fr => const [
+            'Mouharram', 'Safar', 'Rabi I', 'Rabi II', 'Joumada I', 'Joumada II',
+            'Rajab', 'Chaabane', 'Ramadan', 'Chawwal', 'Dhoul Qada', 'Dhoul Hijja',
+          ],
+      };
+
+  static String arabicDigits(String input) => input.replaceAllMapped(
+      RegExp(r'[0-9]'), (m) => '٠١٢٣٤٥٦٧٨٩'[int.parse(m.group(0)!)]);
 
   static const List<int> monthStarts = [
     28607, 28636, 28665, 28695, 28724, 28754, 28783, 28813,
@@ -273,6 +290,11 @@ class UmmAlQuraCalendar {
   static String hijriString(int year, int month, int day) {
     final h = hijri(year, month, day);
     if (h == null) return '';
-    return '${h.day} ${monthNames[h.month - 1]} ${h.year} AH';
+    final language = LanguageState.current;
+    final month = monthNamesFor(language)[h.month - 1];
+    if (language == AppLanguage.ar) {
+      return arabicDigits('${h.day} $month ${h.year} هـ');
+    }
+    return '${h.day} $month ${h.year} AH';
   }
 }
