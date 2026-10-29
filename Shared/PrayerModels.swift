@@ -1247,6 +1247,12 @@ struct PrayerActivityAttributes: ActivityAttributes {
         /// lands. Optional so v1.0.3 activity payloads still decode.
         var followingName: String? = nil
         var followingAdhan: Date? = nil
+        /// Extra pre-staged fields (v1.0.6) so the Lock Screen / Dynamic
+        /// Island can promote the following prayer the moment the current
+        /// Adhan arrives, before any background update lands.
+        var followingSymbolName: String? = nil
+        var followingIqamah: Date? = nil
+        var followingIqamahLabel: String? = nil
     }
 
     var mosqueName: String
