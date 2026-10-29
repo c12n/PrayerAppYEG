@@ -71,12 +71,14 @@ class SettingsPage extends StatelessWidget {
                 _ThemeRow(
                   theme: theme,
                   subtitle: 'Designed theme',
+                  isActive: settings.isActiveTheme(theme),
                   onTap: () => settings.applyTheme(theme),
                 ),
               for (final theme in settings.savedThemes)
                 _ThemeRow(
                   theme: theme,
                   subtitle: 'Your saved theme',
+                  isActive: settings.isActiveTheme(theme),
                   onTap: () => settings.applyTheme(theme),
                   onDelete: () => settings.update(() =>
                       settings.savedThemes =
@@ -385,12 +387,14 @@ class _HsvPickerDialogState extends State<_HsvPickerDialog> {
 class _ThemeRow extends StatelessWidget {
   final SavedTheme theme;
   final String subtitle;
+  final bool isActive;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
 
   const _ThemeRow({
     required this.theme,
     required this.subtitle,
+    required this.isActive,
     required this.onTap,
     this.onDelete,
   });
@@ -439,12 +443,22 @@ class _ThemeRow extends StatelessWidget {
       title: Text(theme.name),
       subtitle: Text('$subtitle · ${theme.mode.name[0].toUpperCase()}${theme.mode.name.substring(1)}'),
       trailing: onDelete != null
-          ? IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: 'Delete theme',
-              onPressed: onDelete,
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isActive)
+                  Icon(Icons.check_circle,
+                      color: colorFromHex(theme.accentHex)),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Delete theme',
+                  onPressed: onDelete,
+                ),
+              ],
             )
-          : const Icon(Icons.chevron_right),
+          : isActive
+              ? Icon(Icons.check_circle, color: colorFromHex(theme.accentHex))
+              : const Icon(Icons.chevron_right),
       onTap: onTap,
     );
   }
