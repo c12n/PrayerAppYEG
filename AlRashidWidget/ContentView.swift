@@ -10,7 +10,6 @@ import UIKit
 import WidgetKit
 
 struct ContentView: View {
-    @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     /// The user's Light/Dark choice from Settings (App Group, shared with
     /// the widgets). Applied with preferredColorScheme below — this is
@@ -32,9 +31,6 @@ struct ContentView: View {
                     NextPrayerCard(snapshot: snapshot)
                     ScheduleCard(snapshot: snapshot)
                     AlertsCard()
-                    #if !PRIVACY_BUILD
-                    actionButtons
-                    #endif
                     FooterView()
                 }
                 .padding(.horizontal, 20)
@@ -51,24 +47,6 @@ struct ContentView: View {
         .onAppear { refreshWidgets() }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active { refreshWidgets() }
-        }
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: 12) {
-            Button {
-                openURL(MosqueInfo.directionsURL)
-            } label: {
-                Label("Directions", systemImage: "car.fill")
-            }
-            .buttonStyle(ThemeButtonStyle(prominent: true))
-
-            Button {
-                openURL(MosqueInfo.websiteURL)
-            } label: {
-                Label("Website", systemImage: "globe")
-            }
-            .buttonStyle(ThemeButtonStyle(prominent: false))
         }
     }
 
@@ -283,9 +261,7 @@ private struct FooterView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label(MosqueInfo.address, systemImage: "mappin.and.ellipse")
             Label("Jumu'ah Khutbah every Friday at \(PrayerFormat.khutbahTime(on: .now))", systemImage: "building.columns")
-            #if PRIVACY_BUILD
-            Label("Private build — no external links, no tracking, nothing leaves this device.", systemImage: "lock.shield.fill")
-            #endif
+            Label("Privacy first — no external links, no tracking, nothing leaves this device.", systemImage: "lock.shield.fill")
             Text("Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.")
                 .font(.caption)
                 .padding(.top, 4)
@@ -658,18 +634,16 @@ private struct SettingsView: View {
             } icon: {
                 Image(systemName: "lock.shield.fill")
             }
-            #if PRIVACY_BUILD
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Private build")
-                    Text("This build removes the Directions and Website buttons, so nothing opens outside the app.")
+                    Text("No external links")
+                    Text("The app has no Directions or Website buttons, so nothing ever opens outside the app.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } icon: {
                 Image(systemName: "eye.slash.fill")
             }
-            #endif
         } header: {
             Text("Privacy")
         }
