@@ -13,6 +13,8 @@ class MosqueInfo {
   static const String address = '13070 113 St NW, Edmonton, AB';
   static const String directionsAddress = '13070 113 St NW, Edmonton, AB, Canada';
   static const String timeZoneIdentifier = 'America/Edmonton';
+  static const double latitude = 53.591189;
+  static const double longitude = -113.515598;
   static const int jumuahKhutbahHour = 13;
   static const int jumuahKhutbahMinute = 30;
   static const String websiteUrl = 'https://alrashidmosque.ca';
@@ -46,15 +48,55 @@ tz.Location edmontonLocation() {
 
 enum Prayer { fajr, sunrise, dhuhr, asr, maghrib, isha }
 
-extension PrayerInfo on Prayer {
-  String get displayName => switch (this) {
-        Prayer.fajr => 'Fajr',
-        Prayer.sunrise => 'Sunrise',
-        Prayer.dhuhr => 'Dhuhr',
-        Prayer.asr => 'Asr',
-        Prayer.maghrib => 'Maghrib',
-        Prayer.isha => 'Isha',
+/// The app's built-in languages (v1.1.0), mirroring iOS.
+enum AppLanguage { en, ar, fr }
+
+extension AppLanguageInfo on AppLanguage {
+  bool get isRTL => this == AppLanguage.ar;
+  String get localeTag =>
+      switch (this) { AppLanguage.en => 'en_US', AppLanguage.ar => 'ar', AppLanguage.fr => 'fr_FR' };
+  String get nativeName =>
+      switch (this) { AppLanguage.en => 'English', AppLanguage.ar => 'العربية', AppLanguage.fr => 'Français' };
+}
+
+/// Holder for the current language so model code (prayer names, date
+/// formats, the Hijri string) can localize without a BuildContext.
+/// AppSettings keeps it in sync.
+class LanguageState {
+  static AppLanguage current = AppLanguage.en;
+}
+
+/// The text-size choice (v1.1.0), mirroring iOS.
+enum AppTextSize { standard, large, extraLarge }
+
+extension AppTextSizeInfo on AppTextSize {
+  double get scale => switch (this) {
+        AppTextSize.standard => 1.0,
+        AppTextSize.large => 1.22,
+        AppTextSize.extraLarge => 1.45,
       };
+  String get l10nKey => 'textSize.${name == 'extraLarge' ? 'extraLarge' : name}';
+}
+
+extension PrayerInfo on Prayer {
+  String get displayName => switch ((this, LanguageState.current)) {
+        (Prayer.fajr, AppLanguage.ar) => 'الفجر',
+        (Prayer.sunrise, AppLanguage.ar) => 'الشروق',
+        (Prayer.dhuhr, AppLanguage.ar) => 'الظهر',
+        (Prayer.asr, AppLanguage.ar) => 'العصر',
+        (Prayer.maghrib, AppLanguage.ar) => 'المغرب',
+        (Prayer.isha, AppLanguage.ar) => 'العشاء',
+        (Prayer.sunrise, AppLanguage.fr) => 'Lever du soleil',
+        (Prayer.fajr, _) => 'Fajr',
+        (Prayer.sunrise, _) => 'Sunrise',
+        (Prayer.dhuhr, _) => 'Dhuhr',
+        (Prayer.asr, _) => 'Asr',
+        (Prayer.maghrib, _) => 'Maghrib',
+        (Prayer.isha, _) => 'Isha',
+      };
+
+  static String jumuahName() =>
+      LanguageState.current == AppLanguage.ar ? 'الجمعة' : "Jumu'ah";
 
   /// Sunrise is shown in the schedule but is not a prayer
   /// (no Iqamah, never "next prayer").
@@ -84,8 +126,13 @@ class PrayerSlot {
     required this.isJumuah,
   });
 
-  String get name => isJumuah ? "Jumu'ah" : prayer.displayName;
-  String get iqamahLabel => isJumuah ? 'Khutbah' : 'Iqamah';
+  String get name => isJumuah ? PrayerInfo.jumuahName() : prayer.displayName;
+  String get iqamahLabel => switch ((isJumuah, LanguageState.current)) {
+        (true, AppLanguage.ar) => 'الخطبة',
+        (true, _) => 'Khutbah',
+        (false, AppLanguage.ar) => 'الإقامة',
+        (false, _) => 'Iqamah',
+      };
 }
 
 class PrayerDay {
@@ -257,15 +304,17 @@ class PrayerProvider {
 
 class PrayerFormat {
   /// "1:18 PM"
-  static String time(tz.TZDateTime date) => DateFormat.jm('en_US').format(date);
+  static String time(tz.TZDateTime date) =>
+      DateFormat.jm(LanguageState.current.localeTag).format(date);
 
   /// "Tuesday, October 27, 2026"
   static String longDate(tz.TZDateTime date) =>
-      DateFormat('EEEE, MMMM d, y', 'en_US').format(date);
+      DateFormat('EEEE, MMMM d, y', LanguageState.current.localeTag)
+          .format(date);
 
   /// "Tue, Oct 27"
   static String shortDate(tz.TZDateTime date) =>
-      DateFormat('EEE, MMM d', 'en_US').format(date);
+      DateFormat('EEE, MMM d', LanguageState.current.localeTag).format(date);
 
   /// Jumu'ah Khutbah time (1:30 PM local).
   static String khutbahTime() {
