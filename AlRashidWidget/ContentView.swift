@@ -37,6 +37,14 @@ struct ContentView: View {
     @AppStorage(AppTextSize.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var textSizeRaw: String = AppTextSize.standard.rawValue
     @State private var showSettings = false
+    /// Bumped by Settings on every change — and again when the sheet
+    /// closes — to force this screen to rebuild with the new values
+    /// (v1.1.1). Cross-view @AppStorage observation of the App Group
+    /// suite proved unreliable on device: Settings wrote the new theme,
+    /// but this screen kept the old one until the app was relaunched.
+    /// A @State change in THIS view always re-renders it, and the stamp
+    /// below rebuilds the timeline with colors re-read from the suite.
+    @State private var appearanceGeneration = 0
     private let provider = PrayerProvider.standard
 
     /// Changes whenever any appearance value changes.
@@ -65,18 +73,21 @@ struct ContentView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .id(appearanceStamp)
+        .id("\(appearanceStamp)#\(appearanceGeneration)")
         .background { AppBackground() }
         .preferredColorScheme(AppAppearance.Mode(rawValue: modeRaw)?.colorScheme)
         .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
         .environment(\.locale, AppLanguage.current.locale)
         .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
+        .sheet(isPresented: $showSettings, onDismiss: { appearanceGeneration += 1 }) {
+            SettingsView { appearanceGeneration += 1 }
         }
         .onAppear { refreshWidgets() }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active { refreshWidgets() }
+            if newPhase == .active {
+                appearanceGeneration += 1
+                refreshWidgets()
+            }
         }
     }
 
@@ -475,6 +486,10 @@ private struct AlertsCard: View {
 /// notes, and Reset to Defaults. Everything is stored in the App Group,
 /// so the Home Screen widgets and the Live Activity follow along.
 private struct SettingsView: View {
+    /// Called on every settings change so the main screen behind the
+    /// sheet rebuilds immediately (v1.1.1 — see ContentView).
+    let onSettingsChanged: () -> Void
+
     @Environment(\.dismiss) private var dismiss
 
     private static var suite: UserDefaults {
@@ -640,6 +655,7 @@ private struct SettingsView: View {
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(.primary)
                         }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
@@ -672,6 +688,10 @@ private struct SettingsView: View {
                                 .foregroundStyle(Theme.adaptiveGold)
                         }
                     }
+                    // The whole row is the tap target — the text, the
+                    // empty space beside it, everything (v1.1.1).
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -712,6 +732,8 @@ private struct SettingsView: View {
                                 .foregroundStyle(Theme.adaptiveGold)
                         }
                     }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -786,6 +808,7 @@ private struct SettingsView: View {
     // MARK: Actions
 
     private func settingsChanged() {
+        onSettingsChanged()
         PrayerProvider.standard.refreshCache()
         WidgetCenter.shared.reloadAllTimelines()
         AppServices.refresh()
@@ -1022,6 +1045,11 @@ private struct ThemeChoiceRow: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            // Whole-row tap target (v1.1.1): with the plain button
+            // style only the chip and text were hittable, so most taps
+            // on a theme row silently did nothing.
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -1044,13 +1072,29 @@ private struct PrayerAlertRow: View {
     }
 
     var body: some View {
-        Toggle(isOn: $isOn) {
-            Label {
-                Text(prayer == .dhuhr ? L10n.t("dhuhrFriday") : prayer.displayName)
-            } icon: {
-                Image(systemName: prayer.symbolName)
+        // The whole row toggles — tapping the prayer's name or the
+        // empty space beside it works, not just the switch (v1.1.1).
+        // The switch is drawn by a non-interactive Toggle so every
+        // tap lands on this button.
+        Button {
+            isOn.toggle()
+        } label: {
+            HStack(spacing: 12) {
+                Label {
+                    Text(prayer == .dhuhr ? L10n.t("dhuhrFriday") : prayer.displayName)
+                } icon: {
+                    Image(systemName: prayer.symbolName)
+                }
+                .foregroundStyle(.primary)
+                Spacer(minLength: 8)
+                Toggle("", isOn: $isOn)
+                    .labelsHidden()
+                    .allowsHitTesting(false)
             }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .onChange(of: isOn) { _, _ in onToggle() }
     }
 }
