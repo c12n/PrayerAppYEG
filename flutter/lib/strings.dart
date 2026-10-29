@@ -1,0 +1,103 @@
+// Built-in UI strings (v1.1.0) — English, Arabic, French, mirroring
+// the iOS app's L10n table. The current language lives in
+// LanguageState (prayer_models.dart), set from AppSettings; widgets
+// rebuild on settings changes, so lookups happen at build time.
+
+import 'prayer_models.dart';
+
+class S {
+  static String t(String key) =>
+      _table[key]?[LanguageState.current] ?? key;
+
+  /// Format with named placeholders: S.f('untilAdhan', {'name': 'Fajr'}).
+  static String f(String key, Map<String, String> args) {
+    var out = t(key);
+    args.forEach((k, v) => out = out.replaceAll('{$k}', v));
+    return out;
+  }
+
+  static const Map<String, Map<AppLanguage, String>> _table = {
+    'greeting': {AppLanguage.en: 'Assalamu Alaikum', AppLanguage.ar: 'السلام عليكم', AppLanguage.fr: 'Assalamu Alaikum'},
+    'settings': {AppLanguage.en: 'Settings', AppLanguage.ar: 'الإعدادات', AppLanguage.fr: 'Réglages'},
+    'nextPrayer': {AppLanguage.en: 'Next prayer', AppLanguage.ar: 'الصلاة التالية', AppLanguage.fr: 'Prochaine prière'},
+    'nextPrayerTomorrow': {AppLanguage.en: 'Next prayer · Tomorrow', AppLanguage.ar: 'الصلاة التالية · غدًا', AppLanguage.fr: 'Prochaine prière · Demain'},
+    'todayTimes': {AppLanguage.en: "Today's Prayer Times", AppLanguage.ar: 'مواقيت صلاة اليوم', AppLanguage.fr: "Heures de prière d'aujourd'hui"},
+    'tomorrowTimes': {AppLanguage.en: "Tomorrow's Prayer Times", AppLanguage.ar: 'مواقيت صلاة الغد', AppLanguage.fr: 'Heures de prière de demain'},
+    'colPrayer': {AppLanguage.en: 'PRAYER', AppLanguage.ar: 'الصلاة', AppLanguage.fr: 'PRIÈRE'},
+    'colAdhan': {AppLanguage.en: 'ADHAN', AppLanguage.ar: 'الأذان', AppLanguage.fr: 'ADHAN'},
+    'colIqamah': {AppLanguage.en: 'IQAMAH', AppLanguage.ar: 'الإقامة', AppLanguage.fr: 'IQAMAH'},
+    'jumuahBadge': {AppLanguage.en: "JUMU'AH", AppLanguage.ar: 'الجمعة', AppLanguage.fr: "JUMU'AH"},
+    'at': {AppLanguage.en: 'at', AppLanguage.ar: 'في', AppLanguage.fr: 'à'},
+    'untilAdhan': {AppLanguage.en: 'until {name} Adhan', AppLanguage.ar: 'حتى أذان {name}', AppLanguage.fr: "jusqu'à l'Adhan de {name}"},
+    'khutbahShown': {AppLanguage.en: 'Khutbah time shown', AppLanguage.ar: 'يُعرض وقت الخطبة', AppLanguage.fr: 'Heure de la Khutbah affichée'},
+    'jumuahReplaces': {AppLanguage.en: "Jumu'ah replaces Dhuhr · Khutbah at {time}", AppLanguage.ar: 'تحلّ الجمعة محلّ الظهر · الخطبة في {time}', AppLanguage.fr: "Jumu'ah remplace Dhuhr · Khutbah à {time}"},
+    'jumuahWeeklyAt': {AppLanguage.en: "Jumu'ah Khutbah every Friday at {time}", AppLanguage.ar: 'خطبة الجمعة كل يوم جمعة في {time}', AppLanguage.fr: "Khutbah de Jumu'ah chaque vendredi à {time}"},
+    'footerPrivacy': {AppLanguage.en: 'Privacy first — no external links, no tracking, nothing leaves this device.', AppLanguage.ar: 'الخصوصية أولًا — لا روابط خارجية، لا تتبّع، لا شيء يغادر هذا الجهاز.', AppLanguage.fr: "La confidentialité d'abord — aucun lien externe, aucun suivi, rien ne quitte cet appareil."},
+    'footerCalc': {AppLanguage.en: "Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.", AppLanguage.ar: 'تُحسب أوقات الأذان على الجهاز وتُعايَر وفق الجدول المنشور لمسجد الراشد. أوقات الإقامة إزاحات ثابتة من الأذان — يُرجى التأكد من الجدول الرسمي للمسجد.', AppLanguage.fr: "Les heures de l'Adhan sont calculées sur l'appareil et calibrées sur le calendrier publié par la mosquée Al Rashid. Les heures d'Iqamah sont des décalages fixes après l'Adhan — veuillez les confirmer avec le calendrier officiel de la mosquée."},
+    // Settings
+    'appearance': {AppLanguage.en: 'Appearance', AppLanguage.ar: 'المظهر', AppLanguage.fr: 'Apparence'},
+    'appearanceNote': {AppLanguage.en: "System follows your phone's Light/Dark setting. Light keeps the background white; Dark keeps it black.", AppLanguage.ar: 'يتبع «النظام» إعداد فاتح/داكن في هاتفك. يُبقي «فاتح» الخلفية بيضاء و«داكن» يُبقيها سوداء.', AppLanguage.fr: "« Système » suit le réglage Clair/Sombre de votre téléphone. « Clair » garde le fond blanc ; « Sombre » le garde noir."},
+    'mode.system': {AppLanguage.en: 'System', AppLanguage.ar: 'النظام', AppLanguage.fr: 'Système'},
+    'mode.light': {AppLanguage.en: 'Light', AppLanguage.ar: 'فاتح', AppLanguage.fr: 'Clair'},
+    'mode.dark': {AppLanguage.en: 'Dark', AppLanguage.ar: 'داكن', AppLanguage.fr: 'Sombre'},
+    'themeColors': {AppLanguage.en: 'Theme Colors', AppLanguage.ar: 'ألوان السمة', AppLanguage.fr: 'Couleurs du thème'},
+    'mainColor': {AppLanguage.en: 'Main color', AppLanguage.ar: 'اللون الرئيسي', AppLanguage.fr: 'Couleur principale'},
+    'mainColorCaption': {AppLanguage.en: 'Cards and buttons (the green)', AppLanguage.ar: 'البطاقات والأزرار (الأخضر)', AppLanguage.fr: 'Cartes et boutons (le vert)'},
+    'accentColor': {AppLanguage.en: 'Accent color', AppLanguage.ar: 'لون التمييز', AppLanguage.fr: "Couleur d'accent"},
+    'accentColorCaption': {AppLanguage.en: 'Countdowns and highlights (the gold)', AppLanguage.ar: 'العدّادات والإبرازات (الذهبي)', AppLanguage.fr: 'Comptes à rebours et éléments mis en avant (le doré)'},
+    'textColor': {AppLanguage.en: 'Text color', AppLanguage.ar: 'لون النص', AppLanguage.fr: 'Couleur du texte'},
+    'textColorCaption': {AppLanguage.en: 'Text on the colored cards', AppLanguage.ar: 'النص على البطاقات الملوّنة', AppLanguage.fr: 'Texte sur les cartes colorées'},
+    'colorsNote': {AppLanguage.en: 'Tap a circle for a preset, or the color wheel for any color. Text is automatically adjusted when needed so it always stays easy to read. The widgets use the same accent color.', AppLanguage.ar: 'انقر دائرة لاختيار لون جاهز، أو عجلة الألوان لأي لون. يُعدَّل النص تلقائيًا عند الحاجة ليبقى سهل القراءة دائمًا. تستخدم الأدوات لون التمييز نفسه.', AppLanguage.fr: "Touchez un cercle pour un préréglage, ou la roue chromatique pour n'importe quelle couleur. Le texte est ajusté automatiquement au besoin pour rester toujours lisible. Les widgets utilisent la même couleur d'accent."},
+    'themes': {AppLanguage.en: 'Themes', AppLanguage.ar: 'السمات', AppLanguage.fr: 'Thèmes'},
+    'themesNote': {AppLanguage.en: 'Themes are ready-made color sets designed to look good together — main color, accent and text in one tap. Tapping a theme applies it right away: watch the preview card above change.', AppLanguage.ar: 'السمات مجموعات ألوان جاهزة مصممة لتبدو متناسقة معًا — اللون الرئيسي والتمييز والنص بنقرة واحدة. نقر أي سمة يطبّقها فورًا: شاهد بطاقة المعاينة أعلاه تتغيّر.', AppLanguage.fr: "Les thèmes sont des ensembles de couleurs prêts à l'emploi, conçus pour bien aller ensemble — couleur principale, accent et texte en un toucher. Toucher un thème l'applique aussitôt : regardez la carte d'aperçu ci-dessus changer."},
+    'designedTheme': {AppLanguage.en: 'Designed theme', AppLanguage.ar: 'سمة مصممة', AppLanguage.fr: 'Thème conçu'},
+    'savedTheme': {AppLanguage.en: 'Your saved theme', AppLanguage.ar: 'سمتك المحفوظة', AppLanguage.fr: 'Votre thème enregistré'},
+    'saveCurrentTheme': {AppLanguage.en: 'Save current colors as a theme', AppLanguage.ar: 'احفظ الألوان الحالية كسمة', AppLanguage.fr: 'Enregistrer les couleurs actuelles comme thème'},
+    'saveTheme': {AppLanguage.en: 'Save Theme', AppLanguage.ar: 'حفظ السمة', AppLanguage.fr: 'Enregistrer le thème'},
+    'themeName': {AppLanguage.en: 'Theme name', AppLanguage.ar: 'اسم السمة', AppLanguage.fr: 'Nom du thème'},
+    'cancel': {AppLanguage.en: 'Cancel', AppLanguage.ar: 'إلغاء', AppLanguage.fr: 'Annuler'},
+    'save': {AppLanguage.en: 'Save', AppLanguage.ar: 'حفظ', AppLanguage.fr: 'Enregistrer'},
+    'nextPrayerPreview': {AppLanguage.en: 'NEXT PRAYER · PREVIEW', AppLanguage.ar: 'الصلاة التالية · معاينة', AppLanguage.fr: 'PROCHAINE PRIÈRE · APERÇU'},
+    'widgetCountdown': {AppLanguage.en: 'Widget Countdown', AppLanguage.ar: 'عدّاد الأدوات', AppLanguage.fr: 'Compte à rebours des widgets'},
+    'widgetCountdownNote': {AppLanguage.en: 'Choose which times the countdown moves to, in the app and in the home-screen widgets. Sunrise is off by default — turn it on to count down to the end of Fajr time too. Changes reach the widgets at their next refresh.', AppLanguage.ar: 'اختر الأوقات التي ينتقل إليها العدّاد، في التطبيق وفي أدوات الشاشة الرئيسية. الشروق متوقف افتراضيًا — فعّله للعدّ التنازلي حتى نهاية وقت الفجر أيضًا. تصل التغييرات إلى الأدوات عند تحديثها التالي.', AppLanguage.fr: "Choisissez les heures vers lesquelles le compte à rebours avance, dans l'app et dans les widgets de l'écran d'accueil. Le lever du soleil est désactivé par défaut — activez-le pour compter aussi jusqu'à la fin du temps du Fajr. Les changements atteignent les widgets à leur prochaine actualisation."},
+    'dhuhrFriday': {AppLanguage.en: "Dhuhr (Jumu'ah on Fridays)", AppLanguage.ar: 'الظهر (الجمعة يوم الجمعة)', AppLanguage.fr: "Dhuhr (Jumu'ah le vendredi)"},
+    'privacy': {AppLanguage.en: 'Privacy', AppLanguage.ar: 'الخصوصية', AppLanguage.fr: 'Confidentialité'},
+    'noDataCollected': {AppLanguage.en: 'No data collected', AppLanguage.ar: 'لا تُجمع أي بيانات', AppLanguage.fr: 'Aucune donnée collectée'},
+    'noDataBody': {AppLanguage.en: 'No accounts, no tracking, no ads, no analytics.', AppLanguage.ar: 'لا حسابات، لا تتبّع، لا إعلانات، لا تحليلات.', AppLanguage.fr: 'Aucun compte, aucun suivi, aucune pub, aucune analyse.'},
+    'staysOnDevice': {AppLanguage.en: 'Everything stays on this device', AppLanguage.ar: 'كل شيء يبقى على هذا الجهاز', AppLanguage.fr: 'Tout reste sur cet appareil'},
+    'staysOnDeviceBody': {AppLanguage.en: 'Prayer times are calculated on your phone. Your settings never leave the device — the widgets read them locally.', AppLanguage.ar: 'تُحسب أوقات الصلاة على هاتفك. إعداداتك لا تغادر الجهاز أبدًا — الأدوات تقرؤها محليًا.', AppLanguage.fr: "Les heures de prière sont calculées sur votre téléphone. Vos réglages ne quittent jamais l'appareil — les widgets les lisent localement."},
+    'noExternalLinks': {AppLanguage.en: 'No external links', AppLanguage.ar: 'لا روابط خارجية', AppLanguage.fr: 'Aucun lien externe'},
+    'noExternalLinksBody': {AppLanguage.en: 'The app has no Directions or Website buttons, so nothing ever opens outside the app.', AppLanguage.ar: 'لا يحتوي التطبيق على أزرار اتجاهات أو موقع إلكتروني، فلا يُفتح أي شيء خارج التطبيق أبدًا.', AppLanguage.fr: "L'app n'a ni bouton Itinéraire ni bouton Site web : rien ne s'ouvre jamais en dehors de l'app."},
+    'resetHeader': {AppLanguage.en: 'Reset', AppLanguage.ar: 'إعادة التعيين', AppLanguage.fr: 'Réinitialiser'},
+    'reset': {AppLanguage.en: 'Reset to Defaults', AppLanguage.ar: 'إعادة تعيين إلى الافتراضي', AppLanguage.fr: 'Réinitialiser par défaut'},
+    'resetNote': {AppLanguage.en: 'Restores the original appearance, colors and countdown choices. Your saved themes are kept.', AppLanguage.ar: 'يستعيد المظهر والألوان وخيارات العدّاد الأصلية. تُحفظ سماتك المحفوظة.', AppLanguage.fr: "Rétablit l'apparence, les couleurs et les choix de compte à rebours d'origine. Vos thèmes enregistrés sont conservés."},
+    'resetDialogTitle': {AppLanguage.en: 'Reset to Defaults?', AppLanguage.ar: 'إعادة التعيين إلى الافتراضي؟', AppLanguage.fr: 'Réinitialiser par défaut ?'},
+    'resetDialogContent': {AppLanguage.en: 'This restores the original appearance, colors and countdown choices. Your saved themes are kept.', AppLanguage.ar: 'سيستعيد هذا المظهر والألوان وخيارات العدّاد الأصلية. تُحفظ سماتك المحفوظة.', AppLanguage.fr: "Ceci rétablit l'apparence, les couleurs et les choix de compte à rebours d'origine. Vos thèmes enregistrés sont conservés."},
+    'resetButton': {AppLanguage.en: 'Reset', AppLanguage.ar: 'إعادة تعيين', AppLanguage.fr: 'Réinitialiser'},
+    'pickColor': {AppLanguage.en: 'Pick a color', AppLanguage.ar: 'اختر لونًا', AppLanguage.fr: 'Choisir une couleur'},
+    'useThisColor': {AppLanguage.en: 'Use this color', AppLanguage.ar: 'استخدم هذا اللون', AppLanguage.fr: 'Utiliser cette couleur'},
+    'customColorTooltip': {AppLanguage.en: 'Pick a custom color', AppLanguage.ar: 'اختر لونًا مخصصًا', AppLanguage.fr: 'Choisir une couleur personnalisée'},
+    'deleteTheme': {AppLanguage.en: 'Delete theme', AppLanguage.ar: 'حذف السمة', AppLanguage.fr: 'Supprimer le thème'},
+    'hue': {AppLanguage.en: 'Hue', AppLanguage.ar: 'الصبغة', AppLanguage.fr: 'Teinte'},
+    'saturation': {AppLanguage.en: 'Saturation', AppLanguage.ar: 'التشبع', AppLanguage.fr: 'Saturation'},
+    'brightness': {AppLanguage.en: 'Brightness', AppLanguage.ar: 'السطوع', AppLanguage.fr: 'Luminosité'},
+    // Language & text size (v1.1.0)
+    'language': {AppLanguage.en: 'Language', AppLanguage.ar: 'اللغة', AppLanguage.fr: 'Langue'},
+    'languageNote': {AppLanguage.en: 'Arabic is shown right-to-left. Prayer names, times and dates follow the chosen language in the app and the widgets.', AppLanguage.ar: 'تُعرض العربية من اليمين إلى اليسار. تتبع أسماء الصلوات والأوقات والتواريخ اللغة المختارة في التطبيق والأدوات.', AppLanguage.fr: "L'arabe s'affiche de droite à gauche. Les noms des prières, les heures et les dates suivent la langue choisie dans l'app et les widgets."},
+    'textSize': {AppLanguage.en: 'Text Size', AppLanguage.ar: 'حجم النص', AppLanguage.fr: 'Taille du texte'},
+    'textSize.standard': {AppLanguage.en: 'Standard', AppLanguage.ar: 'قياسي', AppLanguage.fr: 'Standard'},
+    'textSize.large': {AppLanguage.en: 'Large', AppLanguage.ar: 'كبير', AppLanguage.fr: 'Grand'},
+    'textSize.extraLarge': {AppLanguage.en: 'Extra Large', AppLanguage.ar: 'كبير جدًا', AppLanguage.fr: 'Très grand'},
+    'textSizeNote': {AppLanguage.en: 'Makes prayer times, countdowns and labels bigger across the app. The widgets keep their standard size.', AppLanguage.ar: 'يجعل أوقات الصلاة والعدّادات والعناوين أكبر في كل التطبيق. تبقى الأدوات بحجمها القياسي.', AppLanguage.fr: "Agrandit les heures de prière, les comptes à rebours et les libellés dans toute l'app. Les widgets gardent leur taille standard."},
+    // Qibla (v1.1.0)
+    'qibla': {AppLanguage.en: 'Qibla', AppLanguage.ar: 'القبلة', AppLanguage.fr: 'Qibla'},
+    'qiblaFromMosque': {AppLanguage.en: 'Direction from Al Rashid Mosque', AppLanguage.ar: 'الاتجاه من مسجد الراشد', AppLanguage.fr: 'Direction depuis la mosquée Al Rashid'},
+    'facingQibla': {AppLanguage.en: 'You are facing the Qibla', AppLanguage.ar: 'أنت تواجه القبلة', AppLanguage.fr: 'Vous faites face à la Qibla'},
+    'qiblaHint': {AppLanguage.en: 'Hold the phone flat and turn slowly. Compass accuracy improves away from metal and electronics.', AppLanguage.ar: 'أمسك الهاتف مستويًا وأدِره ببطء. تتحسن دقة البوصلة بعيدًا عن المعادن والإلكترونيات.', AppLanguage.fr: 'Tenez le téléphone à plat et tournez lentement. La boussole est plus précise loin du métal et des appareils électroniques.'},
+    'fromNorth': {AppLanguage.en: 'from North', AppLanguage.ar: 'من الشمال', AppLanguage.fr: 'du Nord'},
+    'dir.n': {AppLanguage.en: 'N', AppLanguage.ar: 'ش', AppLanguage.fr: 'N'},
+    'dir.e': {AppLanguage.en: 'E', AppLanguage.ar: 'ق', AppLanguage.fr: 'E'},
+    'dir.s': {AppLanguage.en: 'S', AppLanguage.ar: 'ج', AppLanguage.fr: 'S'},
+    'dir.w': {AppLanguage.en: 'W', AppLanguage.ar: 'غ', AppLanguage.fr: 'O'},
+  };
+}
