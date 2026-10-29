@@ -63,6 +63,7 @@ struct ContentView: View {
                     }
                     NextPrayerCard(snapshot: snapshot)
                     ScheduleCard(snapshot: snapshot)
+                    DailyVerseCard()
                     QiblaCard()
                     AlertsCard()
                     FooterView()
@@ -514,6 +515,7 @@ private struct SettingsView: View {
 
     @State private var savedThemes: [AppAppearance.ThemeChoice] = AppAppearance.savedThemes
     @State private var showSaveTheme = false
+    @State private var showRestartPrompt = false
     @State private var newThemeName = ""
     @State private var currentIconName: String? = nil
     @State private var iconError: String? = nil
@@ -560,6 +562,12 @@ private struct SettingsView: View {
                 Button(L10n.t("cancel"), role: .cancel) { newThemeName = "" }
             } message: {
                 Text(L10n.t("saveThemeMessage"))
+            }
+            .alert(L10n.t("restartRequired"), isPresented: $showRestartPrompt) {
+                Button(L10n.t("later"), role: .cancel) {}
+                Button(L10n.t("restart")) { restartApp() }
+            } message: {
+                Text(L10n.t("restartMessage"))
             }
             .confirmationDialog(
                 L10n.t("resetConfirm"),
@@ -873,6 +881,20 @@ private struct SettingsView: View {
         accentHex = Int(theme.accentHex)
         textHex = Int(theme.textHex)
         settingsChanged()
+        // Offer a full restart so the new theme reaches every surface
+        // (widgets, Live Activity) exactly the way a fresh launch
+        // would apply it (v1.1.1, at Youssef's request).
+        showRestartPrompt = true
+    }
+
+    /// "Restart" from the theme-applied prompt: close Settings, then
+    /// terminate — iOS gives apps no relaunch API, so the app closes
+    /// and the user reopens it to a fully re-themed fresh launch.
+    private func restartApp() {
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            exit(0)
+        }
     }
 
     private func saveCurrentTheme() {
@@ -1096,6 +1118,46 @@ private struct PrayerAlertRow: View {
         }
         .buttonStyle(.plain)
         .onChange(of: isOn) { _, _ in onToggle() }
+    }
+}
+
+// MARK: - Quran quote of the day (v1.1.1)
+
+/// A card under the prayer times with today's verse: the Arabic text,
+/// the translation in the chosen language, and the reference. The
+/// verse is picked by the day, so it changes at midnight — the
+/// timeline rebuild picks the new one up on its own.
+private struct DailyVerseCard: View {
+    var body: some View {
+        let language = AppLanguage.current
+        let verse = DailyVerses.verse(for: .now)
+        VStack(spacing: 10) {
+            Label(L10n.t("dailyVerse"), systemImage: "book.closed.fill")
+                .font(.headline)
+                .foregroundStyle(Theme.onSurface)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(verse.arabic)
+                .font(.title3.weight(.semibold))
+                .lineSpacing(6)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Theme.onSurface)
+            if let translation = verse.translation(for: language) {
+                Text(translation)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.onSurfaceSecondary)
+            }
+            Text(verse.reference(for: language))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.adaptiveGold)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .adaptiveCard(cornerRadius: 26)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(L10n.t("dailyVerse")): \(verse.arabic) \(verse.translation(for: language) ?? "") \(verse.reference(for: language))"
+        )
     }
 }
 
