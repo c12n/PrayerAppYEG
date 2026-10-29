@@ -114,6 +114,12 @@ class SettingsPage extends StatelessWidget {
                 subtitle: Text(
                     'Prayer times are calculated on your phone. Your settings never leave the device — the widgets read them locally.'),
               ),
+              const ListTile(
+                leading: Icon(Icons.link_off),
+                title: Text('No external links'),
+                subtitle: Text(
+                    'The app has no Directions or Website buttons, so nothing ever opens outside the app.'),
+              ),
               _sectionHeader(context, 'Reset'),
               ListTile(
                 leading: const Icon(Icons.restart_alt, color: Colors.red),
