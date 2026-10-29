@@ -1,7 +1,7 @@
 name: alrashidwidget
 description: "Al Rashid Prayer — Al Rashid Mosque Edmonton prayer times (Adhan calibrated to the mosque's published timetable), Iqamah, Umm al-Qura Hijri date, next-prayer countdown and home-screen widgets. Flutter edition; same times and design as the native iOS app."
 publish_to: 'none'
-version: 1.0.5+6
+version: 1.0.7+8
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -12,7 +12,6 @@ dependencies:
     sdk: flutter
   timezone: ^0.10.1
   intl: ^0.20.2
-  url_launcher: ^6.3.1
   shared_preferences: ^2.3.2
 
 dev_dependencies:
