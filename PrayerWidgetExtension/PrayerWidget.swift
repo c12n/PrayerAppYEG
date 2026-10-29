@@ -58,6 +58,8 @@ struct PrayerWidgetEntryView: View {
         // included, so widgets always match the app.
         content
             .environment(\.colorScheme, AppAppearance.resolvedColorScheme(system: systemColorScheme))
+            .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+            .environment(\.locale, AppLanguage.current.locale)
     }
 
     @ViewBuilder
@@ -109,7 +111,7 @@ struct SmallPrayerWidgetView: View {
                 Image(systemName: next.symbolName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.adaptiveGold)
-                Text(snapshot.isShowingTomorrow ? "TOMORROW" : "NEXT PRAYER")
+                Text(snapshot.isShowingTomorrow ? L10n.t("tomorrow") : L10n.t("nextPrayerCaps"))
                     .font(.system(size: 11.5, weight: .bold))
                     .tracking(0.8)
                     .foregroundStyle(Theme.onSurfaceMuted)
@@ -193,7 +195,7 @@ struct WidgetHeaderView: View {
     }
 
     private var hijriText: String {
-        snapshot.isShowingTomorrow ? "Tomorrow · \(snapshot.day.hijriDate)" : snapshot.day.hijriDate
+        snapshot.isShowingTomorrow ? L10n.f("tomorrowHijri", snapshot.day.hijriDate) : snapshot.day.hijriDate
     }
 }
 
@@ -203,7 +205,7 @@ struct CompactNextPrayerPanel: View {
     var body: some View {
         let next = snapshot.next
         VStack(alignment: .leading, spacing: 1.5) {
-            Text("NEXT PRAYER")
+            Text(L10n.t("nextPrayerCaps"))
                 .font(.system(size: 10, weight: .bold))
                 .tracking(0.7)
                 .foregroundStyle(Theme.onSurfaceMuted)
@@ -255,9 +257,9 @@ struct PrayerTableView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
-                Text("PRAYER").frame(maxWidth: .infinity, alignment: .leading)
-                Text("ADHAN").frame(width: timeColumnWidth, alignment: .trailing)
-                Text("IQAMAH").frame(width: timeColumnWidth, alignment: .trailing)
+                Text(L10n.t("colPrayer")).frame(maxWidth: .infinity, alignment: .leading)
+                Text(L10n.t("colAdhan")).frame(width: timeColumnWidth, alignment: .trailing)
+                Text(L10n.t("colIqamah")).frame(width: timeColumnWidth, alignment: .trailing)
             }
             .font(.system(size: max(fontSize - 3, 8.5), weight: .bold))
             .tracking(0.5)
@@ -406,7 +408,7 @@ struct LargeNextPrayerBanner: View {
                     .frame(width: 34, height: 34)
                     .background(Theme.panelFill, in: Circle())
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(snapshot.isShowingTomorrow ? "NEXT PRAYER · TOMORROW" : "NEXT PRAYER")
+                    Text(snapshot.isShowingTomorrow ? L10n.t("nextPrayerTomorrowCaps") : L10n.t("nextPrayerCaps"))
                         .font(.system(size: 10.5, weight: .bold))
                         .tracking(0.7)
                         .foregroundStyle(Theme.onSurfaceMuted)
@@ -443,7 +445,7 @@ struct LargeNextPrayerBanner: View {
 
     private var detailText: String {
         let next = snapshot.next
-        let adhan = "Adhan \(PrayerFormat.time(next.adhan))"
+        let adhan = L10n.f("adhanAt", PrayerFormat.time(next.adhan))
         guard let iqamah = next.iqamah else { return adhan }
         return "\(adhan) · \(next.iqamahLabel) \(PrayerFormat.time(iqamah))"
     }
@@ -479,9 +481,10 @@ struct LargeFooterView: View {
 
     private var jumuahNote: String {
         let khutbah = PrayerFormat.khutbahTime(on: snapshot.day.date)
+        let label = snapshot.day.slots.first(where: { $0.isJumuah })?.iqamahLabel ?? "Khutbah"
         return snapshot.day.isFriday
-            ? "Jumu'ah today · Khutbah \(khutbah)"
-            : "Jumu'ah every Friday · Khutbah \(khutbah)"
+            ? "\(L10n.t("jumuahToday")) · \(label) \(khutbah)"
+            : "\(L10n.t("jumuahWeekly")) · \(label) \(khutbah)"
     }
 }
 
@@ -563,8 +566,8 @@ struct PrayerWidget: Widget {
         StaticConfiguration(kind: kind, provider: PrayerTimelineProvider()) { entry in
             PrayerWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Al Rashid Prayer Times")
-        .description("Next prayer with a live countdown, plus today's Adhan and Iqamah times for Al Rashid Mosque.")
+        .configurationDisplayName(L10n.t("widgetName"))
+        .description(L10n.t("widgetDescription"))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryCircular])
     }
 }
@@ -625,7 +628,7 @@ struct PrayerLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
-                        Text("Adhan \(PrayerFormat.time(state.adhan))")
+                        Text(L10n.f("adhanAt", PrayerFormat.time(state.adhan)))
                         Spacer()
                         if let iqamah = state.iqamah {
                             Text("\(state.iqamahLabel) \(PrayerFormat.time(iqamah))")
@@ -661,6 +664,8 @@ private struct LiveActivityRootView: View {
     var body: some View {
         LiveActivityLockScreenView(state: state)
             .environment(\.colorScheme, AppAppearance.resolvedColorScheme(system: systemColorScheme))
+            .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+            .environment(\.locale, AppLanguage.current.locale)
     }
 }
 
@@ -689,7 +694,7 @@ private struct LiveActivityLockScreenView: View {
                     Image(systemName: state.symbolName)
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(Theme.adaptiveGold)
-                    Text(state.isTomorrow ? "\(state.prayerName) · Tomorrow" : state.prayerName)
+                    Text(state.isTomorrow ? L10n.f("nameTomorrow", state.prayerName) : state.prayerName)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(Theme.onSurface)
                         .lineLimit(1)
@@ -714,7 +719,7 @@ private struct LiveActivityLockScreenView: View {
                 }
                 if let followingName = state.followingName,
                    let followingAdhan = state.followingAdhan {
-                    Text("Then \(followingName) · \(PrayerFormat.time(followingAdhan))")
+                    Text(L10n.f("thenPattern", followingName, PrayerFormat.time(followingAdhan)))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Theme.onSurfaceMuted)
                         .lineLimit(1)
