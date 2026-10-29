@@ -91,6 +91,8 @@ class S {
     'textSizeNote': {AppLanguage.en: 'Makes prayer times, countdowns and labels bigger across the app. The widgets keep their standard size.', AppLanguage.ar: 'يجعل أوقات الصلاة والعدّادات والعناوين أكبر في كل التطبيق. تبقى الأدوات بحجمها القياسي.', AppLanguage.fr: "Agrandit les heures de prière, les comptes à rebours et les libellés dans toute l'app. Les widgets gardent leur taille standard."},
     // Qibla (v1.1.0)
     'qibla': {AppLanguage.en: 'Qibla', AppLanguage.ar: 'القبلة', AppLanguage.fr: 'Qibla'},
+    'dailyVerse': {AppLanguage.en: 'Quran Quote of the Day', AppLanguage.ar: 'آية اليوم', AppLanguage.fr: 'Verset du jour'},
+    'surah': {AppLanguage.en: 'Surah', AppLanguage.ar: 'سورة', AppLanguage.fr: 'Sourate'},
     'qiblaFromMosque': {AppLanguage.en: 'Direction from Al Rashid Mosque', AppLanguage.ar: 'الاتجاه من مسجد الراشد', AppLanguage.fr: 'Direction depuis la mosquée Al Rashid'},
     'facingQibla': {AppLanguage.en: 'You are facing the Qibla', AppLanguage.ar: 'أنت تواجه القبلة', AppLanguage.fr: 'Vous faites face à la Qibla'},
     'qiblaHint': {AppLanguage.en: 'Hold the phone flat and turn slowly. Compass accuracy improves away from metal and electronics.', AppLanguage.ar: 'أمسك الهاتف مستويًا وأدِره ببطء. تتحسن دقة البوصلة بعيدًا عن المعادن والإلكترونيات.', AppLanguage.fr: 'Tenez le téléphone à plat et tournez lentement. La boussole est plus précise loin du métal et des appareils électroniques.'},
