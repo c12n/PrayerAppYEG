@@ -5,9 +5,11 @@
 // (shared_preferences) and the home-screen widgets read the same values.
 
 import 'package:flutter/material.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 import 'app_settings.dart';
 import 'prayer_models.dart';
+import 'strings.dart';
 
 class SettingsPage extends StatelessWidget {
   final AppSettings settings;
@@ -19,44 +21,56 @@ class SettingsPage extends StatelessWidget {
       animation: settings,
       builder: (context, _) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Settings')),
+          appBar: AppBar(title: Text(S.t('settings'))),
           body: ListView(
             padding: const EdgeInsets.only(bottom: 32),
             children: [
-              _sectionHeader(context, 'Appearance'),
+              _sectionHeader(context, S.t('language')),
+              for (final language in AppLanguage.values)
+                ListTile(
+                  title: Text(language.nativeName),
+                  trailing: settings.language == language
+                      ? Icon(Icons.check_circle,
+                          color: accentFor(
+                              Theme.of(context).brightness, settings))
+                      : null,
+                  onTap: () =>
+                      settings.update(() => settings.language = language),
+                ),
+              _sectionNote(context, S.t('languageNote')),
+              _sectionHeader(context, S.t('appearance')),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto)),
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode)),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode)),
+                  segments: [
+                    ButtonSegment(value: ThemeMode.system, label: Text(S.t('mode.system')), icon: const Icon(Icons.brightness_auto)),
+                    ButtonSegment(value: ThemeMode.light, label: Text(S.t('mode.light')), icon: const Icon(Icons.light_mode)),
+                    ButtonSegment(value: ThemeMode.dark, label: Text(S.t('mode.dark')), icon: const Icon(Icons.dark_mode)),
                   ],
                   selected: {settings.mode},
                   onSelectionChanged: (sel) =>
                       settings.update(() => settings.mode = sel.first),
                 ),
               ),
-              _sectionNote(context,
-                  "System follows your phone's Light/Dark setting. Light keeps the background white; Dark keeps it black."),
-              _sectionHeader(context, 'Theme Colors'),
+              _sectionNote(context, S.t('appearanceNote')),
+              _sectionHeader(context, S.t('themeColors')),
               _ColorRow(
-                title: 'Main color',
-                caption: 'Cards and buttons (the green)',
+                title: S.t('mainColor'),
+                caption: S.t('mainColorCaption'),
                 presets: primaryPresets,
                 currentHex: settings.primaryHex,
                 onPick: (hex) => settings.update(() => settings.primaryHex = hex),
               ),
               _ColorRow(
-                title: 'Accent color',
-                caption: 'Countdowns and highlights (the gold)',
+                title: S.t('accentColor'),
+                caption: S.t('accentColorCaption'),
                 presets: accentPresets,
                 currentHex: settings.accentHex,
                 onPick: (hex) => settings.update(() => settings.accentHex = hex),
               ),
               _ColorRow(
-                title: 'Text color',
-                caption: 'Text on the colored cards',
+                title: S.t('textColor'),
+                caption: S.t('textColorCaption'),
                 presets: textPresets,
                 currentHex: settings.textHex,
                 onPick: (hex) => settings.update(() {
@@ -64,21 +78,20 @@ class SettingsPage extends StatelessWidget {
                   settings.textIsCustom = true;
                 }),
               ),
-              _sectionNote(context,
-                  'Tap a circle for a preset, or the color wheel for any color. Text is automatically adjusted when needed so it always stays easy to read. The widgets use the same accent color.'),
-              _sectionHeader(context, 'Themes'),
+              _sectionNote(context, S.t('colorsNote')),
+              _sectionHeader(context, S.t('themes')),
               _themePreview(context, settings),
               for (final theme in presetThemes)
                 _ThemeRow(
                   theme: theme,
-                  subtitle: 'Designed theme',
+                  subtitle: S.t('designedTheme'),
                   isActive: settings.isActiveTheme(theme),
                   onTap: () => settings.applyTheme(theme),
                 ),
               for (final theme in settings.savedThemes)
                 _ThemeRow(
                   theme: theme,
-                  subtitle: 'Your saved theme',
+                  subtitle: S.t('savedTheme'),
                   isActive: settings.isActiveTheme(theme),
                   onTap: () => settings.applyTheme(theme),
                   onDelete: () => settings.update(() =>
@@ -87,51 +100,61 @@ class SettingsPage extends StatelessWidget {
                 ),
               ListTile(
                 leading: const Icon(Icons.bookmark_add),
-                title: const Text('Save current colors as a theme'),
+                title: Text(S.t('saveCurrentTheme')),
                 onTap: () => _saveTheme(context),
               ),
-              _sectionNote(context,
-                  'Themes are ready-made color sets designed to look good together — main color, accent and text in one tap. Tapping a theme applies it right away: watch the preview card above change.'),
-              _sectionHeader(context, 'Widget Countdown'),
+              _sectionNote(context, S.t('themesNote')),
+              _sectionHeader(context, S.t('textSize')),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SegmentedButton<AppTextSize>(
+                  segments: [
+                    for (final size in AppTextSize.values)
+                      ButtonSegment(
+                          value: size, label: Text(S.t(size.l10nKey))),
+                  ],
+                  selected: {settings.textSize},
+                  onSelectionChanged: (sel) =>
+                      settings.update(() => settings.textSize = sel.first),
+                ),
+              ),
+              _sectionNote(context, S.t('textSizeNote')),
+              _sectionHeader(context, S.t('widgetCountdown')),
               for (final prayer in Prayer.values)
                 SwitchListTile(
                   secondary: Icon(_prayerIcon(prayer)),
                   title: Text(prayer == Prayer.dhuhr
-                      ? "Dhuhr (Jumu'ah on Fridays)"
+                      ? S.t('dhuhrFriday')
                       : prayer.displayName),
                   value: settings.alerts[prayer] ?? false,
                   onChanged: (v) =>
                       settings.update(() => settings.alerts[prayer] = v),
                 ),
-              _sectionNote(context,
-                  'Choose which times the countdown moves to, in the app and in the home-screen widgets. Sunrise is off by default — turn it on to count down to the end of Fajr time too. Changes reach the widgets at their next refresh.'),
-              _sectionHeader(context, 'Privacy'),
-              const ListTile(
-                leading: Icon(Icons.pan_tool),
-                title: Text('No data collected'),
-                subtitle: Text('No accounts, no tracking, no ads, no analytics.'),
+              _sectionNote(context, S.t('widgetCountdownNote')),
+              _sectionHeader(context, S.t('privacy')),
+              ListTile(
+                leading: const Icon(Icons.pan_tool),
+                title: Text(S.t('noDataCollected')),
+                subtitle: Text(S.t('noDataBody')),
               ),
-              const ListTile(
-                leading: Icon(Icons.lock),
-                title: Text('Everything stays on this device'),
-                subtitle: Text(
-                    'Prayer times are calculated on your phone. Your settings never leave the device — the widgets read them locally.'),
+              ListTile(
+                leading: const Icon(Icons.lock),
+                title: Text(S.t('staysOnDevice')),
+                subtitle: Text(S.t('staysOnDeviceBody')),
               ),
-              const ListTile(
-                leading: Icon(Icons.link_off),
-                title: Text('No external links'),
-                subtitle: Text(
-                    'The app has no Directions or Website buttons, so nothing ever opens outside the app.'),
+              ListTile(
+                leading: const Icon(Icons.link_off),
+                title: Text(S.t('noExternalLinks')),
+                subtitle: Text(S.t('noExternalLinksBody')),
               ),
-              _sectionHeader(context, 'Reset'),
+              _sectionHeader(context, S.t('resetHeader')),
               ListTile(
                 leading: const Icon(Icons.restart_alt, color: Colors.red),
-                title: const Text('Reset to Defaults',
-                    style: TextStyle(color: Colors.red)),
+                title: Text(S.t('reset'),
+                    style: const TextStyle(color: Colors.red)),
                 onTap: () => _confirmReset(context),
               ),
-              _sectionNote(context,
-                  'Restores the original appearance, colors and countdown choices. Your saved themes are kept.'),
+              _sectionNote(context, S.t('resetNote')),
             ],
           ),
         );
@@ -144,19 +167,19 @@ class SettingsPage extends StatelessWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Save Theme'),
+        title: Text(S.t('saveTheme')),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Theme name'),
+          decoration: InputDecoration(labelText: S.t('themeName')),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(S.t('cancel'))),
           FilledButton(
               onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Save')),
+              child: Text(S.t('save'))),
         ],
       ),
     );
@@ -180,16 +203,15 @@ class SettingsPage extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset to Defaults?'),
-        content: const Text(
-            'This restores the original appearance, colors and countdown choices. Your saved themes are kept.'),
+        title: Text(S.t('resetDialogTitle')),
+        content: Text(S.t('resetDialogContent')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(S.t('cancel'))),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Reset')),
+              child: Text(S.t('resetButton'))),
         ],
       ),
     );
@@ -219,7 +241,7 @@ Widget _themePreview(BuildContext context, AppSettings settings) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('NEXT PRAYER · PREVIEW',
+          Text(S.t('nextPrayerPreview'),
               style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -230,13 +252,13 @@ Widget _themePreview(BuildContext context, AppSettings settings) {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('Fajr',
+              Text(Prayer.fajr.displayName,
                   style: TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.bold,
                       color: onPrimary)),
               const Spacer(),
-              Text('6:28 AM',
+              Text(PrayerFormat.time(tz.TZDateTime(edmontonLocation(), 2026, 1, 2, 6, 28)),
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -330,7 +352,7 @@ class _ColorRow extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.color_lens),
-                tooltip: 'Pick a custom color',
+                tooltip: S.t('customColorTooltip'),
                 onPressed: () async {
                   final hex = await showDialog<int>(
                     context: context,
@@ -398,7 +420,7 @@ class _HsvPickerDialogState extends State<_HsvPickerDialog> {
   Widget build(BuildContext context) {
     final color = _hsv.toColor();
     return AlertDialog(
-      title: const Text('Pick a color'),
+      title: Text(S.t('pickColor')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -412,21 +434,21 @@ class _HsvPickerDialogState extends State<_HsvPickerDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          _slider('Hue', _hsv.hue, 360,
+          _slider(S.t('hue'), _hsv.hue, 360,
               (v) => setState(() => _hsv = _hsv.withHue(v))),
-          _slider('Saturation', _hsv.saturation, 1,
+          _slider(S.t('saturation'), _hsv.saturation, 1,
               (v) => setState(() => _hsv = _hsv.withSaturation(v))),
-          _slider('Brightness', _hsv.value, 1,
+          _slider(S.t('brightness'), _hsv.value, 1,
               (v) => setState(() => _hsv = _hsv.withValue(v))),
         ],
       ),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(S.t('cancel'))),
         FilledButton(
             onPressed: () => Navigator.pop(context, hexFromColor(color)),
-            child: const Text('Use this color')),
+            child: Text(S.t('useThisColor'))),
       ],
     );
   }
@@ -501,7 +523,7 @@ class _ThemeRow extends StatelessWidget {
         ),
       ),
       title: Text(theme.name),
-      subtitle: Text('$subtitle · ${theme.mode.name[0].toUpperCase()}${theme.mode.name.substring(1)}'),
+      subtitle: Text('$subtitle · ${S.t('mode.${theme.mode.name}')}'),
       trailing: onDelete != null
           ? Row(
               mainAxisSize: MainAxisSize.min,
@@ -511,7 +533,7 @@ class _ThemeRow extends StatelessWidget {
                       color: colorFromHex(theme.accentHex)),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  tooltip: 'Delete theme',
+                  tooltip: S.t('deleteTheme'),
                   onPressed: onDelete,
                 ),
               ],
