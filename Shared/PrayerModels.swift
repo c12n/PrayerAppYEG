@@ -51,15 +51,29 @@ enum Prayer: String, Codable, CaseIterable, Sendable, Identifiable {
 
     var id: String { rawValue }
 
-    var displayName: String {
-        switch self {
-        case .fajr: "Fajr"
-        case .sunrise: "Sunrise"
-        case .dhuhr: "Dhuhr"
-        case .asr: "Asr"
-        case .maghrib: "Maghrib"
-        case .isha: "Isha"
+    var displayName: String { displayName(in: AppLanguage.current) }
+
+    func displayName(in language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.fajr, .ar): "الفجر"
+        case (.sunrise, .ar): "الشروق"
+        case (.dhuhr, .ar): "الظهر"
+        case (.asr, .ar): "العصر"
+        case (.maghrib, .ar): "المغرب"
+        case (.isha, .ar): "العشاء"
+        case (.sunrise, .fr): "Lever du soleil"
+        case (.fajr, _): "Fajr"
+        case (.sunrise, _): "Sunrise"
+        case (.dhuhr, _): "Dhuhr"
+        case (.asr, _): "Asr"
+        case (.maghrib, _): "Maghrib"
+        case (.isha, _): "Isha"
         }
+    }
+
+    /// "Jumu'ah" in the given language (replaces Dhuhr on Fridays).
+    static func jumuahName(in language: AppLanguage) -> String {
+        language == .ar ? "الجمعة" : "Jumu'ah"
     }
 
     var shortName: String {
@@ -134,9 +148,16 @@ struct PrayerSlot: Codable, Sendable, Hashable, Identifiable {
     let isJumuah: Bool
 
     var id: String { "\(prayer.rawValue)-\(Int(adhan.timeIntervalSince1970))" }
-    var name: String { isJumuah ? "Jumu'ah" : prayer.displayName }
+    var name: String { isJumuah ? Prayer.jumuahName(in: AppLanguage.current) : prayer.displayName }
     var shortName: String { isJumuah ? "JUMU'AH" : prayer.shortName }
-    var iqamahLabel: String { isJumuah ? "Khutbah" : "Iqamah" }
+    var iqamahLabel: String {
+        switch (isJumuah, AppLanguage.current) {
+        case (true, .ar): "الخطبة"
+        case (true, _): "Khutbah"
+        case (false, .ar): "الإقامة"
+        case (false, _): "Iqamah"
+        }
+    }
     var symbolName: String { isJumuah ? "building.columns.fill" : prayer.symbolName }
 }
 
@@ -341,7 +362,8 @@ struct PrayerProvider: Sendable {
             c.asrMethod.rawValue, c.highLatitudeRule.rawValue, c.timeZone.identifier,
             String(iqamahConfig.fajr), String(iqamahConfig.dhuhr), String(iqamahConfig.asr),
             String(iqamahConfig.maghrib), String(iqamahConfig.isha),
-            String(MosqueInfo.jumuahKhutbahHour), String(MosqueInfo.jumuahKhutbahMinute)
+            String(MosqueInfo.jumuahKhutbahHour), String(MosqueInfo.jumuahKhutbahMinute),
+            AppLanguage.current.rawValue
         ]
         return parts.joined(separator: "|")
     }
@@ -434,7 +456,18 @@ struct PrayerProvider: Sendable {
               let hijri = UmmAlQuraCalendar.hijri(year: year, month: month, day: day) else {
             return ""
         }
-        return "\(hijri.day) \(UmmAlQuraCalendar.monthNames[hijri.month - 1]) \(hijri.year) AH"
+        let language = AppLanguage.current
+        let monthName = UmmAlQuraCalendar.monthNames(for: language)[hijri.month - 1]
+        let suffix = language == .ar ? "هـ" : "AH"
+        if language == .ar {
+            // Arabic-Indic digits for the day and year.
+            let formatter = NumberFormatter()
+            formatter.locale = language.locale
+            let d = formatter.string(from: NSNumber(value: hijri.day)) ?? "\(hijri.day)"
+            let y = formatter.string(from: NSNumber(value: hijri.year)) ?? "\(hijri.year)"
+            return "\(d) \(monthName) \(y) \(suffix)"
+        }
+        return "\(hijri.day) \(monthName) \(hijri.year) \(suffix)"
     }
 }
 
@@ -450,6 +483,20 @@ enum UmmAlQuraCalendar {
         "Muharram", "Safar", "Rabi I", "Rabi II", "Jumada I", "Jumada II",
         "Rajab", "Shaban", "Ramadan", "Shawwal", "Dhul Qadah", "Dhul Hijjah"
     ]
+
+    static func monthNames(for language: AppLanguage) -> [String] {
+        switch language {
+        case .en: monthNames
+        case .ar: [
+            "محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة",
+            "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"
+        ]
+        case .fr: [
+            "Mouharram", "Safar", "Rabi I", "Rabi II", "Joumada I", "Joumada II",
+            "Rajab", "Chaabane", "Ramadan", "Chawwal", "Dhoul Qada", "Dhoul Hijja"
+        ]
+        }
+    }
 
     static let monthStarts: [Int] = [
         28607, 28636, 28665, 28695, 28724, 28754, 28783, 28813, 28843, 28872, 28901, 28931,
@@ -634,6 +681,7 @@ enum PrayerFormat {
     static func time(_ date: Date) -> String {
         var style = Date.FormatStyle(date: .omitted, time: .shortened)
         style.timeZone = timeZone
+        style.locale = AppLanguage.current.locale
         return date.formatted(style)
     }
 
@@ -641,6 +689,7 @@ enum PrayerFormat {
     static func compactTime(_ date: Date) -> String {
         var style = Date.FormatStyle().hour(.defaultDigits(amPM: .omitted)).minute(.twoDigits)
         style.timeZone = timeZone
+        style.locale = AppLanguage.current.locale
         return date.formatted(style)
     }
 
@@ -648,6 +697,7 @@ enum PrayerFormat {
     static func longDate(_ date: Date) -> String {
         var style = Date.FormatStyle().weekday(.wide).month(.wide).day().year()
         style.timeZone = timeZone
+        style.locale = AppLanguage.current.locale
         return date.formatted(style)
     }
 
@@ -655,6 +705,7 @@ enum PrayerFormat {
     static func shortDate(_ date: Date) -> String {
         var style = Date.FormatStyle().weekday(.abbreviated).month(.abbreviated).day()
         style.timeZone = timeZone
+        style.locale = AppLanguage.current.locale
         return date.formatted(style)
     }
 
@@ -1256,4 +1307,218 @@ struct PrayerActivityAttributes: ActivityAttributes {
     }
 
     var mosqueName: String
+}
+
+// MARK: - Language (v1.1.0)
+
+/// The app's built-in languages. Chosen in Settings, stored in the App
+/// Group so the widgets and Live Activity follow. Arabic renders the
+/// whole UI right-to-left.
+enum AppLanguage: String, CaseIterable, Sendable, Identifiable {
+    case en, ar, fr
+
+    var id: String { rawValue }
+    static let storageKey = "language.code"
+
+    static var current: AppLanguage {
+        let raw = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier)?
+            .string(forKey: storageKey)
+        return AppLanguage(rawValue: raw ?? "") ?? .en
+    }
+
+    var locale: Locale {
+        switch self {
+        case .en: Locale(identifier: "en_US")
+        case .ar: Locale(identifier: "ar")
+        case .fr: Locale(identifier: "fr_FR")
+        }
+    }
+
+    var isRTL: Bool { self == .ar }
+
+    /// The language's own name for itself, shown in the picker.
+    var nativeName: String {
+        switch self {
+        case .en: "English"
+        case .ar: "العربية"
+        case .fr: "Français"
+        }
+    }
+}
+
+/// Every user-facing string in the app, widgets and notifications, in
+/// the three built-in languages. Views read the current language at
+/// render time; the root views observe the setting so a change
+/// re-renders everything (including layout direction for Arabic).
+enum L10n {
+    static func t(_ key: String) -> String {
+        t(key, in: AppLanguage.current)
+    }
+
+    static func t(_ key: String, in language: AppLanguage) -> String {
+        (table[key] ?? moreTable[key])?[language] ?? key
+    }
+
+    private static let table: [String: [AppLanguage: String]] = [
+        // Greeting & main screen
+        "greeting": [.en: "Assalamu Alaikum", .ar: "السلام عليكم", .fr: "Assalamu Alaikum"],
+        "nextPrayer": [.en: "Next prayer", .ar: "الصلاة التالية", .fr: "Prochaine prière"],
+        "nextPrayerTomorrow": [.en: "Next prayer · Tomorrow", .ar: "الصلاة التالية · غدًا", .fr: "Prochaine prière · Demain"],
+        "tomorrow": [.en: "Tomorrow", .ar: "غدًا", .fr: "Demain"],
+        "todayTimes": [.en: "Today's Prayer Times", .ar: "مواقيت صلاة اليوم", .fr: "Heures de prière d'aujourd'hui"],
+        "tomorrowTimes": [.en: "Tomorrow's Prayer Times", .ar: "مواقيت صلاة الغد", .fr: "Heures de prière de demain"],
+        "colPrayer": [.en: "PRAYER", .ar: "الصلاة", .fr: "PRIÈRE"],
+        "colAdhan": [.en: "ADHAN", .ar: "الأذان", .fr: "ADHAN"],
+        "colIqamah": [.en: "IQAMAH", .ar: "الإقامة", .fr: "IQAMAH"],
+        "jumuahBadge": [.en: "JUMU'AH", .ar: "الجمعة", .fr: "JUMU'AH"],
+        "alerts": [.en: "Alerts", .ar: "التنبيهات", .fr: "Alertes"],
+        "adhanNotifications": [.en: "Adhan notifications", .ar: "إشعارات الأذان", .fr: "Notifications de l'Adhan"],
+        "liveActivity": [.en: "Live Activity", .ar: "النشاط المباشر", .fr: "Activité en direct"],
+        "notificationsBody": [.en: "A notification with sound at every prayer time, scheduled 7 days ahead and refreshed whenever you open the app.", .ar: "إشعار بصوت عند كل وقت صلاة، يُجدوَل لسبعة أيام مقدمًا ويُحدَّث كلما فتحت التطبيق.", .fr: "Une notification avec son à chaque heure de prière, programmée 7 jours à l'avance et actualisée à chaque ouverture de l'app."],
+        "liveActivityBody": [.en: "A live countdown to the next prayer on your Lock Screen and Dynamic Island. It moves on to the following prayer by itself when a prayer time arrives, and also refreshes whenever you open the app.", .ar: "عدّاد مباشر للصلاة التالية على شاشة القفل وDynamic Island. ينتقل بنفسه إلى الصلاة التي بعدها عند حلول وقت الصلاة، ويُحدَّث أيضًا كلما فتحت التطبيق.", .fr: "Un compte à rebours en direct vers la prochaine prière sur l'écran verrouillé et la Dynamic Island. Il passe tout seul à la prière suivante à l'heure venue, et s'actualise à chaque ouverture de l'app."],
+        "notificationsOffWarning": [.en: "Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", .ar: "الإشعارات متوقفة لهذا التطبيق في إعدادات iOS — فعّلها هناك لسماع تنبيهات الأذان.", .fr: "Les notifications sont désactivées pour cette app dans les Réglages iOS — activez-les pour entendre les alertes de l'Adhan."],
+        "footerPrivacy": [.en: "Privacy first — no external links, no tracking, nothing leaves this device.", .ar: "الخصوصية أولًا — لا روابط خارجية، لا تتبّع، لا شيء يغادر هذا الجهاز.", .fr: "La confidentialité d'abord — aucun lien externe, aucun suivi, rien ne quitte cet appareil."],
+        "footerCalc": [.en: "Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.", .ar: "تُحسب أوقات الأذان على الجهاز وتُعايَر وفق الجدول المنشور لمسجد الراشد. أوقات الإقامة إزاحات ثابتة من الأذان — يُرجى التأكد من الجدول الرسمي للمسجد.", .fr: "Les heures de l'Adhan sont calculées sur l'appareil et calibrées sur le calendrier publié par la mosquée Al Rashid. Les heures d'Iqamah sont des décalages fixes après l'Adhan — veuillez les confirmer avec le calendrier officiel de la mosquée."],
+        // Settings chrome
+        "settings": [.en: "Settings", .ar: "الإعدادات", .fr: "Réglages"],
+        "done": [.en: "Done", .ar: "تم", .fr: "Terminé"],
+        "cancel": [.en: "Cancel", .ar: "إلغاء", .fr: "Annuler"],
+        "save": [.en: "Save", .ar: "حفظ", .fr: "Enregistrer"],
+        "appearance": [.en: "Appearance", .ar: "المظهر", .fr: "Apparence"],
+        "appearanceFooter": [.en: "System follows your iPhone's Light/Dark setting. Light keeps the background white; Dark keeps it black. The app icon follows too when your Home Screen icons are set to Auto.", .ar: "يتبع «النظام» إعداد فاتح/داكن في جهاز iPhone. يُبقي «فاتح» الخلفية بيضاء و«داكن» يُبقيها سوداء. وتتبع أيقونة التطبيق أيضًا عندما تكون أيقونات الشاشة الرئيسية على «تلقائي».", .fr: "« Système » suit le réglage Clair/Sombre de votre iPhone. « Clair » garde le fond blanc ; « Sombre » le garde noir. L'icône de l'app suit aussi lorsque les icônes de l'écran d'accueil sont en mode Auto."],
+        "mode.system": [.en: "System", .ar: "النظام", .fr: "Système"],
+        "mode.light": [.en: "Light", .ar: "فاتح", .fr: "Clair"],
+        "mode.dark": [.en: "Dark", .ar: "داكن", .fr: "Sombre"],
+        "themeColors": [.en: "Theme Colors", .ar: "ألوان السمة", .fr: "Couleurs du thème"],
+        "mainColor": [.en: "Main color", .ar: "اللون الرئيسي", .fr: "Couleur principale"],
+        "mainColorCaption": [.en: "Cards and buttons (the green)", .ar: "البطاقات والأزرار (الأخضر)", .fr: "Cartes et boutons (le vert)"],
+        "accentColor": [.en: "Accent color", .ar: "لون التمييز", .fr: "Couleur d'accent"],
+        "accentColorCaption": [.en: "Countdowns and highlights (the gold)", .ar: "العدّادات والإبرازات (الذهبي)", .fr: "Comptes à rebours et éléments mis en avant (le doré)"],
+        "textColor": [.en: "Text color", .ar: "لون النص", .fr: "Couleur du texte"],
+        "textColorCaption": [.en: "Text on the colored cards", .ar: "النص على البطاقات الملوّنة", .fr: "Texte sur les cartes colorées"],
+        "colorsFooter": [.en: "Tap a circle for a preset, or use the color wheel on the right for any color. Text is automatically adjusted when needed so it always stays easy to read. The widgets use the same colors.", .ar: "انقر دائرة لاختيار لون جاهز، أو استخدم عجلة الألوان لأي لون. يُعدَّل النص تلقائيًا عند الحاجة ليبقى سهل القراءة دائمًا. تستخدم الأدوات الألوان نفسها.", .fr: "Touchez un cercle pour un préréglage, ou la roue chromatique pour n'importe quelle couleur. Le texte est ajusté automatiquement au besoin pour rester toujours lisible. Les widgets utilisent les mêmes couleurs."],
+        "themes": [.en: "Themes", .ar: "السمات", .fr: "Thèmes"],
+        "themesFooter": [.en: "Themes are ready-made color sets designed to look good together — main color, accent and text in one tap. Tapping a theme applies it right away: watch the preview card above change.", .ar: "السمات مجموعات ألوان جاهزة مصممة لتبدو متناسقة معًا — اللون الرئيسي والتمييز والنص بنقرة واحدة. نقر أي سمة يطبّقها فورًا: شاهد بطاقة المعاينة أعلاه تتغيّر.", .fr: "Les thèmes sont des ensembles de couleurs prêts à l'emploi, conçus pour bien aller ensemble — couleur principale, accent et texte en un toucher. Toucher un thème l'applique aussitôt : regardez la carte d'aperçu ci-dessus changer."],
+        "designedTheme": [.en: "Designed theme", .ar: "سمة مصممة", .fr: "Thème conçu"],
+        "savedTheme": [.en: "Your saved theme", .ar: "سمتك المحفوظة", .fr: "Votre thème enregistré"],
+        "saveCurrentTheme": [.en: "Save current colors as a theme", .ar: "احفظ الألوان الحالية كسمة", .fr: "Enregistrer les couleurs actuelles comme thème"],
+        "saveThemeTitle": [.en: "Save Theme", .ar: "حفظ السمة", .fr: "Enregistrer le thème"],
+        "saveThemeMessage": [.en: "Save the current colors as a theme you can re-apply any time.", .ar: "احفظ الألوان الحالية كسمة يمكنك إعادة تطبيقها في أي وقت.", .fr: "Enregistrez les couleurs actuelles comme thème que vous pourrez réappliquer à tout moment."],
+        "themeName": [.en: "Theme name", .ar: "اسم السمة", .fr: "Nom du thème"],
+        "delete": [.en: "Delete", .ar: "حذف", .fr: "Supprimer"],
+        "nextPrayerPreview": [.en: "NEXT PRAYER · PREVIEW", .ar: "الصلاة التالية · معاينة", .fr: "PROCHAINE PRIÈRE · APERÇU"],
+        "appIcon": [.en: "App Icon", .ar: "أيقونة التطبيق", .fr: "Icône de l'app"],
+        "appIconFooter": [.en: "Pick the icon you like best. Changing the icon needs an installer that supports alternate icons.", .ar: "اختر الأيقونة التي تعجبك أكثر. تغيير الأيقونة يتطلب مثبّتًا يدعم الأيقونات البديلة.", .fr: "Choisissez l'icône que vous préférez. Changer l'icône nécessite un installateur prenant en charge les icônes alternatives."],
+        "icon.classic": [.en: "Classic", .ar: "كلاسيكية", .fr: "Classique"],
+        "icon.midnight": [.en: "Midnight", .ar: "منتصف الليل", .fr: "Minuit"],
+        "icon.desert": [.en: "Desert", .ar: "الصحراء", .fr: "Désert"],
+        "icon.rose": [.en: "Rose", .ar: "الورد", .fr: "Rose"],
+        "icon.royal": [.en: "Royal", .ar: "الملكي", .fr: "Royal"],
+        "iconUnsupported": [.en: "This install doesn't support alternate icons.", .ar: "هذا التثبيت لا يدعم الأيقونات البديلة.", .fr: "Cette installation ne prend pas en charge les icônes alternatives."],
+        "prayerAlerts": [.en: "Prayer Alerts", .ar: "تنبيهات الصلاة", .fr: "Alertes de prière"],
+        "prayerAlertsFooter": [.en: "Choose which times play an alert. Sunrise is off by default — turn it on if you want a marker for the end of Fajr time. These work together with the Adhan notifications switch on the main screen.", .ar: "اختر الأوقات التي يُشغَّل لها تنبيه. الشروق متوقف افتراضيًا — فعّله إن أردت علامة لانتهاء وقت الفجر. تعمل هذه مع مفتاح إشعارات الأذان في الشاشة الرئيسية.", .fr: "Choisissez les heures qui jouent une alerte. Le lever du soleil est désactivé par défaut — activez-le pour marquer la fin du temps du Fajr. Ces réglages fonctionnent avec l'interrupteur des notifications de l'Adhan sur l'écran principal."],
+        "dhuhrFriday": [.en: "Dhuhr (Jumu'ah on Fridays)", .ar: "الظهر (الجمعة يوم الجمعة)", .fr: "Dhuhr (Jumu'ah le vendredi)"],
+        "khutbahShown": [.en: "Khutbah time shown", .ar: "يُعرض وقت الخطبة", .fr: "Heure de la Khutbah affichée"],
+        "privacy": [.en: "Privacy", .ar: "الخصوصية", .fr: "Confidentialité"],
+        "noDataCollected": [.en: "No data collected", .ar: "لا تُجمع أي بيانات", .fr: "Aucune donnée collectée"],
+        "noDataBody": [.en: "No accounts, no tracking, no ads, no analytics.", .ar: "لا حسابات، لا تتبّع، لا إعلانات، لا تحليلات.", .fr: "Aucun compte, aucun suivi, aucune pub, aucune analyse."],
+        "staysOnDevice": [.en: "Everything stays on this device", .ar: "كل شيء يبقى على هذا الجهاز", .fr: "Tout reste sur cet appareil"],
+        "staysOnDeviceBody": [.en: "Prayer times are calculated on your iPhone. The app makes no network connections of its own, and your settings never leave the device.", .ar: "تُحسب أوقات الصلاة على جهاز iPhone الخاص بك. لا يُجري التطبيق أي اتصالات شبكية من تلقاء نفسه، وإعداداتك لا تغادر الجهاز أبدًا.", .fr: "Les heures de prière sont calculées sur votre iPhone. L'app n'établit aucune connexion réseau par elle-même, et vos réglages ne quittent jamais l'appareil."],
+        "noExternalLinks": [.en: "No external links", .ar: "لا روابط خارجية", .fr: "Aucun lien externe"],
+        "noExternalLinksBody": [.en: "The app has no Directions or Website buttons, so nothing ever opens outside the app.", .ar: "لا يحتوي التطبيق على أزرار اتجاهات أو موقع إلكتروني، فلا يُفتح أي شيء خارج التطبيق أبدًا.", .fr: "L'app n'a ni bouton Itinéraire ni bouton Site web : rien ne s'ouvre jamais en dehors de l'app."],
+        "reset": [.en: "Reset to Defaults", .ar: "إعادة تعيين إلى الافتراضي", .fr: "Réinitialiser par défaut"],
+        "resetFooter": [.en: "Restores the original appearance, colors, icon and prayer alerts. Your saved themes are kept.", .ar: "يستعيد المظهر والألوان والأيقونة وتنبيهات الصلاة الأصلية. تُحفظ سماتك المحفوظة.", .fr: "Rétablit l'apparence, les couleurs, l'icône et les alertes de prière d'origine. Vos thèmes enregistrés sont conservés."],
+        "resetConfirm": [.en: "Reset all appearance and alert settings to the defaults?", .ar: "إعادة تعيين كل إعدادات المظهر والتنبيهات إلى الافتراضية؟", .fr: "Réinitialiser tous les réglages d'apparence et d'alertes par défaut ?"],
+    ]
+}
+
+extension L10n {
+    private static let moreTable: [String: [AppLanguage: String]] = [
+        // Language / text size / sound (Settings, v1.1.0)
+        "language": [.en: "Language", .ar: "اللغة", .fr: "Langue"],
+        "languageFooter": [.en: "Arabic is shown right-to-left. Prayer names, times and dates follow the chosen language in the app, the widgets and the Live Activity.", .ar: "تُعرض العربية من اليمين إلى اليسار. تتبع أسماء الصلوات والأوقات والتواريخ اللغة المختارة في التطبيق والأدوات والنشاط المباشر.", .fr: "L'arabe s'affiche de droite à gauche. Les noms des prières, les heures et les dates suivent la langue choisie dans l'app, les widgets et l'Activité en direct."],
+        "textSize": [.en: "Text Size", .ar: "حجم النص", .fr: "Taille du texte"],
+        "textSize.standard": [.en: "Standard", .ar: "قياسي", .fr: "Standard"],
+        "textSize.large": [.en: "Large", .ar: "كبير", .fr: "Grand"],
+        "textSize.extraLarge": [.en: "Extra Large", .ar: "كبير جدًا", .fr: "Très grand"],
+        "textSizeFooter": [.en: "Makes prayer times, countdowns and labels bigger across the app. The widgets keep their standard size.", .ar: "يجعل أوقات الصلاة والعدّادات والعناوين أكبر في كل التطبيق. تبقى الأدوات بحجمها القياسي.", .fr: "Agrandit les heures de prière, les comptes à rebours et les libellés dans toute l'app. Les widgets gardent leur taille standard."],
+        "alertSound": [.en: "Alert Sound", .ar: "صوت التنبيه", .fr: "Son d'alerte"],
+        "sound.default": [.en: "Default", .ar: "الافتراضي", .fr: "Par défaut"],
+        "sound.silent": [.en: "Silent", .ar: "صامت", .fr: "Silencieux"],
+        "sound.chime": [.en: "Gentle Chime", .ar: "رنين لطيف", .fr: "Carillon doux"],
+        "sound.bell": [.en: "Soft Bell", .ar: "جرس خفيف", .fr: "Cloche douce"],
+        "alertSoundFooter": [.en: "The sound played with Adhan notifications. Silent still shows the notification, just without sound.", .ar: "الصوت الذي يُشغَّل مع إشعارات الأذان. «صامت» يُظهر الإشعار من دون صوت.", .fr: "Le son joué avec les notifications de l'Adhan. « Silencieux » affiche la notification, sans le son."],
+        // Qibla (v1.1.0)
+        "qibla": [.en: "Qibla", .ar: "القبلة", .fr: "Qibla"],
+        "qiblaFromMosque": [.en: "Direction from Al Rashid Mosque", .ar: "الاتجاه من مسجد الراشد", .fr: "Direction depuis la mosquée Al Rashid"],
+        "facingQibla": [.en: "You are facing the Qibla", .ar: "أنت تواجه القبلة", .fr: "Vous faites face à la Qibla"],
+        "qiblaHint": [.en: "Hold the phone flat and turn slowly. Compass accuracy improves away from metal and electronics.", .ar: "أمسك الهاتف مستويًا وأدِره ببطء. تتحسن دقة البوصلة بعيدًا عن المعادن والإلكترونيات.", .fr: "Tenez le téléphone à plat et tournez lentement. La boussole est plus précise loin du métal et des appareils électroniques."],
+        "fromNorth": [.en: "from North", .ar: "من الشمال", .fr: "du Nord"],
+        // Widgets & Live Activity
+        "nextPrayerCaps": [.en: "NEXT PRAYER", .ar: "الصلاة التالية", .fr: "PROCHAINE PRIÈRE"],
+        "nextPrayerTomorrowCaps": [.en: "NEXT PRAYER · TOMORROW", .ar: "الصلاة التالية · غدًا", .fr: "PROCHAINE PRIÈRE · DEMAIN"],
+        "widgetName": [.en: "Al Rashid Prayer Times", .ar: "مواقيت صلاة الراشد", .fr: "Heures de prière Al Rashid"],
+        "widgetDescription": [.en: "Next prayer with a live countdown, plus today's Adhan and Iqamah times for Al Rashid Mosque.", .ar: "الصلاة التالية مع عدّاد مباشر، بالإضافة إلى أوقات الأذان والإقامة اليوم لمسجد الراشد.", .fr: "Prochaine prière avec compte à rebours en direct, plus les heures d'Adhan et d'Iqamah du jour pour la mosquée Al Rashid."],
+        "jumuahToday": [.en: "Jumu'ah today", .ar: "الجمعة اليوم", .fr: "Jumu'ah aujourd'hui"],
+        "jumuahWeekly": [.en: "Jumu'ah every Friday", .ar: "الجمعة كل يوم جمعة", .fr: "Jumu'ah chaque vendredi"],
+        // Notifications
+        "notif.sunriseBody": [.en: "The time for Fajr prayer has ended.", .ar: "انتهى وقت صلاة الفجر.", .fr: "Le temps de la prière du Fajr est terminé."],
+        "notif.adhanAt": [.en: "Adhan now", .ar: "الأذان الآن", .fr: "Adhan maintenant"],
+    ]
+}
+
+extension L10n {
+    private static let formatTable: [String: [AppLanguage: String]] = [
+        "at": [.en: "at", .ar: "في", .fr: "à"],
+        "untilAdhan": [.en: "until %@ Adhan", .ar: "حتى أذان %@", .fr: "jusqu'à l'Adhan de %@"],
+        "inMinutes": [.en: "%@ in %lld minutes", .ar: "%@ بعد %lld دقيقة", .fr: "%@ dans %lld minutes"],
+        "jumuahReplaces": [.en: "Jumu'ah replaces Dhuhr · Khutbah at %@", .ar: "تحلّ الجمعة محلّ الظهر · الخطبة في %@", .fr: "Jumu'ah remplace Dhuhr · Khutbah à %@"],
+        "jumuahWeeklyAt": [.en: "Jumu'ah Khutbah every Friday at %@", .ar: "خطبة الجمعة كل يوم جمعة في %@", .fr: "Khutbah de Jumu'ah chaque vendredi à %@"],
+        "adhanAt": [.en: "Adhan %@", .ar: "الأذان %@", .fr: "Adhan %@"],
+        "thenPattern": [.en: "Then %@ · %@", .ar: "ثم %@ · %@", .fr: "Puis %@ · %@"],
+        "nameTomorrow": [.en: "%@ · Tomorrow", .ar: "%@ · غدًا", .fr: "%@ · Demain"],
+        "tomorrowHijri": [.en: "Tomorrow · %@", .ar: "غدًا · %@", .fr: "Demain · %@"],
+        "labelAtTime": [.en: "%@ at %@", .ar: "%@ في %@", .fr: "%@ à %@"],
+        "adhanAtTime": [.en: "Adhan at %@", .ar: "الأذان في %@", .fr: "Adhan à %@"],
+        "notifTitle": [.en: "%@ Adhan — %@", .ar: "أذان %@ — %@", .fr: "Adhan %@ — %@"],
+        "mosqueTitle": [.en: "%@ — %@", .ar: "%@ — %@", .fr: "%@ — %@"],
+        "sunriseBody": [.en: "Sunrise at %@ — the time for Fajr has ended.", .ar: "الشروق في %@ — انتهى وقت صلاة الفجر.", .fr: "Lever du soleil à %@ — le temps de la prière du Fajr est terminé."],
+        "customColor": [.en: "Pick a custom %@", .ar: "اختر لونًا مخصصًا: %@", .fr: "Choisir une couleur personnalisée : %@"],
+        "iconError": [.en: "Couldn't change the icon: %@", .ar: "تعذّر تغيير الأيقونة: %@", .fr: "Impossible de changer l'icône : %@"],
+        "dir.n": [.en: "N", .ar: "ش", .fr: "N"],
+        "dir.e": [.en: "E", .ar: "ق", .fr: "E"],
+        "dir.s": [.en: "S", .ar: "ج", .fr: "S"],
+        "dir.w": [.en: "W", .ar: "غ", .fr: "O"],
+    ]
+
+    static func f(_ key: String, _ args: CVarArg...) -> String {
+        let pattern = (table[key] ?? moreTable[key] ?? formatTable[key])?[AppLanguage.current] ?? key
+        return String(format: pattern, locale: AppLanguage.current.locale, arguments: args)
+    }
+}
+
+/// The in-app text size choice (Settings, v1.1.0). Standard follows
+/// the system; Large / Extra Large scale the app's text up for easier
+/// reading. Stored in the App Group.
+enum AppTextSize: String, CaseIterable, Sendable, Identifiable {
+    case standard, large, extraLarge
+
+    var id: String { rawValue }
+    static let storageKey = "appearance.textSize"
+
+    static var current: AppTextSize {
+        let raw = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier)?
+            .string(forKey: storageKey)
+        return AppTextSize(rawValue: raw ?? "") ?? .standard
+    }
+
+    var dynamicTypeSize: DynamicTypeSize {
+        switch self {
+        case .standard: .large
+        case .large: .xxLarge
+        case .extraLarge: .accessibility1
+        }
+    }
+
+    var l10nKey: String { "textSize.\(rawValue)" }
 }
