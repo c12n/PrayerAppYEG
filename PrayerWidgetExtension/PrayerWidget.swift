@@ -607,52 +607,42 @@ struct PrayerLiveActivity: Widget {
             let state = context.state
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    ActivityPhaseView(state: state) { phase in
-                        HStack(spacing: 6) {
-                            Image(systemName: phase.symbolName)
-                                .foregroundStyle(Theme.adaptiveGold)
-                            Text(phase.name)
-                                .font(.headline)
-                                .foregroundStyle(Color.white)
-                        }
-                        .padding(.leading, 6)
+                    HStack(spacing: 6) {
+                        Image(systemName: state.symbolName)
+                            .foregroundStyle(Theme.adaptiveGold)
+                        Text(state.prayerName)
+                            .font(.headline)
+                            .foregroundStyle(Color.white)
                     }
+                    .padding(.leading, 6)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    ActivityPhaseView(state: state) { phase in
-                        Text(phase.adhan, style: .timer)
-                            .font(.title3.weight(.bold).monospacedDigit())
-                            .foregroundStyle(Theme.adaptiveGold)
-                            .frame(maxWidth: 92, alignment: .trailing)
-                            .padding(.trailing, 6)
-                    }
+                    Text(state.adhan, style: .timer)
+                        .font(.title3.weight(.bold).monospacedDigit())
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .frame(maxWidth: 92, alignment: .trailing)
+                        .padding(.trailing, 6)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    ActivityPhaseView(state: state) { phase in
-                        HStack {
-                            Text("Adhan \(PrayerFormat.time(phase.adhan))")
-                            Spacer()
-                            if let iqamah = phase.iqamah {
-                                Text("\(phase.iqamahLabel) \(PrayerFormat.time(iqamah))")
-                            }
+                    HStack {
+                        Text("Adhan \(PrayerFormat.time(state.adhan))")
+                        Spacer()
+                        if let iqamah = state.iqamah {
+                            Text("\(state.iqamahLabel) \(PrayerFormat.time(iqamah))")
                         }
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.white.opacity(0.85))
-                        .padding(.horizontal, 6)
                     }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.white.opacity(0.85))
+                    .padding(.horizontal, 6)
                 }
             } compactLeading: {
-                ActivityPhaseView(state: state) { phase in
-                    Image(systemName: phase.symbolName)
-                        .foregroundStyle(Theme.adaptiveGold)
-                }
+                Image(systemName: state.symbolName)
+                    .foregroundStyle(Theme.adaptiveGold)
             } compactTrailing: {
-                ActivityPhaseView(state: state) { phase in
-                    Text(phase.adhan, style: .timer)
-                        .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundStyle(Theme.adaptiveGold)
-                        .frame(maxWidth: 64, alignment: .trailing)
-                }
+                Text(state.adhan, style: .timer)
+                    .font(.caption.weight(.bold).monospacedDigit())
+                    .foregroundStyle(Theme.adaptiveGold)
+                    .frame(maxWidth: 64, alignment: .trailing)
             } minimal: {
                 Image(systemName: state.symbolName)
                     .foregroundStyle(Theme.adaptiveGold)
@@ -678,124 +668,68 @@ private struct LiveActivityLockScreenView: View {
     let state: PrayerActivityAttributes.ContentState
 
     var body: some View {
-        ActivityPhaseView(state: state) { phase in
-            ZStack {
-                AdaptiveSurfaceBackground()
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "moon.stars.fill")
-                            .foregroundStyle(Theme.adaptiveGold)
-                        Text(MosqueInfo.name)
-                            .font(.caption.weight(.bold))
-                            .tracking(0.6)
+        ZStack {
+            AdaptiveSurfaceBackground()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.stars.fill")
+                        .foregroundStyle(Theme.adaptiveGold)
+                    Text(MosqueInfo.name)
+                        .font(.caption.weight(.bold))
+                        .tracking(0.6)
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                    Spacer()
+                    Text("\(PrayerFormat.shortDate(state.adhan)) · \(state.hijri)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.onSurfaceMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: state.symbolName)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(Theme.adaptiveGold)
+                    Text(state.isTomorrow ? "\(state.prayerName) · Tomorrow" : state.prayerName)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(Theme.onSurface)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Spacer(minLength: 8)
+                    Text(PrayerFormat.time(state.adhan))
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Theme.onSurface)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(state.adhan, style: .timer)
+                        .font(.system(size: 36, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Spacer(minLength: 8)
+                    if let iqamah = state.iqamah {
+                        Text("\(state.iqamahLabel) \(PrayerFormat.time(iqamah))")
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.onSurfaceSecondary)
-                        Spacer()
-                        Text("\(PrayerFormat.shortDate(phase.adhan)) · \(state.hijri)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.onSurfaceMuted)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                    }
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Image(systemName: phase.symbolName)
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(Theme.adaptiveGold)
-                        Text(title(for: phase))
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(Theme.onSurface)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                        Spacer(minLength: 8)
-                        Text(PrayerFormat.time(phase.adhan))
-                            .font(.title3.weight(.semibold).monospacedDigit())
-                            .foregroundStyle(Theme.onSurface)
-                    }
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(phase.adhan, style: .timer)
-                            .font(.system(size: 36, weight: .bold, design: .rounded).monospacedDigit())
-                            .foregroundStyle(Theme.adaptiveGold)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                        Spacer(minLength: 8)
-                        if let iqamah = phase.iqamah {
-                            Text("\(phase.iqamahLabel) \(PrayerFormat.time(iqamah))")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.onSurfaceSecondary)
-                        }
-                    }
-                    if !phase.isPromoted,
-                       let followingName = state.followingName,
-                       let followingAdhan = state.followingAdhan {
-                        Text("Then \(followingName) · \(PrayerFormat.time(followingAdhan))")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Theme.onSurfaceMuted)
-                            .lineLimit(1)
                     }
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 14)
+                if let followingName = state.followingName,
+                   let followingAdhan = state.followingAdhan {
+                    Text("Then \(followingName) · \(PrayerFormat.time(followingAdhan))")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.onSurfaceMuted)
+                        .lineLimit(1)
+                }
             }
-        }
-    }
-
-    private func title(for phase: ActivityPhase) -> String {
-        if phase.isPromoted {
-            return phase.promotedIsTomorrow ? "\(phase.name) · Tomorrow" : phase.name
-        }
-        return state.isTomorrow ? "\(phase.name) · Tomorrow" : phase.name
-    }
-}
-
-/// Which prayer the Live Activity presents at a given moment (v1.0.6).
-/// Before the staged prayer's Adhan it is that prayer; from the Adhan on
-/// it is the pre-staged following prayer — so the Lock Screen and Dynamic
-/// Island switch at the Adhan itself, without waiting for the background
-/// refresh (which then re-stages fresh content for the next boundary).
-private struct ActivityPhase {
-    let name: String
-    let symbolName: String
-    let adhan: Date
-    let iqamah: Date?
-    let iqamahLabel: String
-    let isPromoted: Bool
-    let promotedIsTomorrow: Bool
-
-    init(state: PrayerActivityAttributes.ContentState, now: Date) {
-        if let followingName = state.followingName,
-           let followingAdhan = state.followingAdhan,
-           now >= state.adhan {
-            name = followingName
-            symbolName = state.followingSymbolName ?? state.symbolName
-            adhan = followingAdhan
-            iqamah = state.followingIqamah
-            iqamahLabel = state.followingIqamahLabel ?? "Iqamah"
-            isPromoted = true
-            promotedIsTomorrow = !Calendar.current.isDate(followingAdhan, inSameDayAs: state.adhan)
-        } else {
-            name = state.prayerName
-            symbolName = state.symbolName
-            adhan = state.adhan
-            iqamah = state.iqamah
-            iqamahLabel = state.iqamahLabel
-            isPromoted = false
-            promotedIsTomorrow = false
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
         }
     }
 }
 
-/// Re-renders its content at the staged Adhan boundaries so the phase
-/// above flips exactly on time.
-private struct ActivityPhaseView<Content: View>: View {
-    let state: PrayerActivityAttributes.ContentState
-    @ViewBuilder let content: (ActivityPhase) -> Content
-
-    var body: some View {
-        TimelineView(.explicit(phaseDates)) { context in
-            content(ActivityPhase(state: state, now: context.date))
-        }
-    }
-
-    private var phaseDates: [Date] {
-        [state.adhan, state.followingAdhan].compactMap { $0 }.sorted()
-    }
-}
+/// The Live Activity views render the staged ContentState directly
+/// (v1.0.8). v1.0.6 tried to promote the pre-staged following prayer at
+/// the Adhan via a TimelineView context date, but in a Live Activity an
+/// explicit TimelineView is rendered as of its first scheduled date —
+/// so the following prayer appeared hours early (Dhuhr shown all night
+/// instead of Fajr). Rollover is the background refresh's job: it is
+/// scheduled for 15 s after each Adhan and re-stages the next prayer.
