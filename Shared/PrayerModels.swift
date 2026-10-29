@@ -471,6 +471,118 @@ struct PrayerProvider: Sendable {
     }
 }
 
+// MARK: - Quran quote of the day
+
+/// One daily verse: the Arabic text, public-domain-style English and
+/// French renderings, and its reference. The list is embedded so the
+/// feature works fully offline — nothing is fetched, in keeping with
+/// the app's privacy promise.
+struct DailyVerse {
+    let arabic: String
+    let english: String
+    let french: String
+    /// Transliterated surah name (used for English and French).
+    let surahEnglish: String
+    let surahArabic: String
+    let chapter: Int
+    let verse: Int
+
+    /// The translation to show under the Arabic. Arabic readers get
+    /// the verse itself, so there is no second line for them.
+    func translation(for language: AppLanguage) -> String? {
+        switch language {
+        case .en: return english
+        case .fr: return french
+        case .ar: return nil
+        }
+    }
+
+    /// e.g. "Surah Al-Baqarah · 2:152" / "سورة البقرة · ٢:١٥٢".
+    func reference(for language: AppLanguage) -> String {
+        let name = language == .ar ? surahArabic : surahEnglish
+        let numbers: String
+        if language == .ar {
+            let formatter = NumberFormatter()
+            formatter.locale = language.locale
+            let c = formatter.string(from: NSNumber(value: chapter)) ?? "\(chapter)"
+            let v = formatter.string(from: NSNumber(value: verse)) ?? "\(verse)"
+            numbers = "\(c):\(v)"
+        } else {
+            numbers = "\(chapter):\(verse)"
+        }
+        return "\(L10n.t("surah")) \(name) · \(numbers)"
+    }
+}
+
+enum DailyVerses {
+    static let all: [DailyVerse] = [
+        DailyVerse(arabic: "فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ",
+                   english: "Therefore remember Me, I will remember you. Give thanks to Me, and reject not Me.",
+                   french: "Souvenez-vous de Moi, Je me souviendrai de vous. Soyez reconnaissants envers Moi et ne soyez pas ingrats envers Moi.",
+                   surahEnglish: "Al-Baqarah", surahArabic: "البقرة", chapter: 2, verse: 152),
+        DailyVerse(arabic: "لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا",
+                   english: "Allah tasketh not a soul beyond its scope.",
+                   french: "Dieu n'impose à aucune âme une charge supérieure à sa capacité.",
+                   surahEnglish: "Al-Baqarah", surahArabic: "البقرة", chapter: 2, verse: 286),
+        DailyVerse(arabic: "إِنَّ مَعَ الْعُسْرِ يُسْرًا",
+                   english: "Lo! with hardship goeth ease.",
+                   french: "Certes, avec la difficulté vient la facilité.",
+                   surahEnglish: "Ash-Sharh", surahArabic: "الشرح", chapter: 94, verse: 6),
+        DailyVerse(arabic: "وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ",
+                   english: "And whosoever putteth his trust in Allah, He will suffice him.",
+                   french: "Quiconque place sa confiance en Dieu, Dieu lui suffit.",
+                   surahEnglish: "At-Talaq", surahArabic: "الطلاق", chapter: 65, verse: 3),
+        DailyVerse(arabic: "يَا أَيُّهَا الَّذِينَ آمَنُوا اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ۚ إِنَّ اللَّهَ مَعَ الصَّابِرِينَ",
+                   english: "O ye who believe! Seek help in steadfastness and prayer. Lo! Allah is with the steadfast.",
+                   french: "Ô vous qui croyez ! Cherchez secours dans la patience et la prière, car Dieu est avec les patients.",
+                   surahEnglish: "Al-Baqarah", surahArabic: "البقرة", chapter: 2, verse: 153),
+        DailyVerse(arabic: "وَلَا تَهِنُوا وَلَا تَحْزَنُوا وَأَنتُمُ الْأَعْلَوْنَ إِن كُنتُم مُّؤْمِنِينَ",
+                   english: "Faint not nor grieve, for ye will overcome them if ye are (indeed) believers.",
+                   french: "Ne faiblissez pas et ne vous affligez pas, car vous aurez le dessus si vous êtes croyants.",
+                   surahEnglish: "Aal-e-Imran", surahArabic: "آل عمران", chapter: 3, verse: 139),
+        DailyVerse(arabic: "لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ",
+                   english: "If ye give thanks, I will give you more.",
+                   french: "Si vous êtes reconnaissants, J'augmenterai très certainement Mes bienfaits pour vous.",
+                   surahEnglish: "Ibrahim", surahArabic: "إبراهيم", chapter: 14, verse: 7),
+        DailyVerse(arabic: "إِنِّي قَرِيبٌ ۖ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ",
+                   english: "I am near. I answer the prayer of the suppliant when he crieth unto Me.",
+                   french: "Je suis proche. Je réponds à l'appel de celui qui M'invoque quand il M'invoque.",
+                   surahEnglish: "Al-Baqarah", surahArabic: "البقرة", chapter: 2, verse: 186),
+        DailyVerse(arabic: "لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ ۚ إِنَّ اللَّهَ يَغْفِرُ الذُّنُوبَ جَمِيعًا",
+                   english: "Despair not of the mercy of Allah, Who forgiveth all sins.",
+                   french: "Ne désespérez pas de la miséricorde de Dieu, car Dieu pardonne tous les péchés.",
+                   surahEnglish: "Az-Zumar", surahArabic: "الزمر", chapter: 39, verse: 53),
+        DailyVerse(arabic: "وَالَّذِينَ جَاهَدُوا فِينَا لَنَهْدِيَنَّهُمْ سُبُلَنَا ۚ وَإِنَّ اللَّهَ لَمَعَ الْمُحْسِنِينَ",
+                   english: "As for those who strive in Us, We surely guide them to Our paths. And lo! Allah is with the good.",
+                   french: "Ceux qui luttent pour Notre cause, Nous les guiderons sur Nos sentiers. Dieu est certes avec ceux qui font le bien.",
+                   surahEnglish: "Al-Ankabut", surahArabic: "العنكبوت", chapter: 29, verse: 69),
+        DailyVerse(arabic: "وَعَسَىٰ أَن تَكْرَهُوا شَيْئًا وَهُوَ خَيْرٌ لَّكُمْ",
+                   english: "It may be that ye hate a thing, and it is good for you.",
+                   french: "Il se peut que vous détestiez une chose alors qu'elle est bonne pour vous.",
+                   surahEnglish: "Al-Baqarah", surahArabic: "البقرة", chapter: 2, verse: 216),
+        DailyVerse(arabic: "وَقُل رَّبِّ زِدْنِي عِلْمًا",
+                   english: "And say: My Lord! Increase me in knowledge.",
+                   french: "Et dis : Mon Seigneur, augmente ma connaissance.",
+                   surahEnglish: "Ta-Ha", surahArabic: "طه", chapter: 20, verse: 114),
+        DailyVerse(arabic: "أَلَا إِنَّ أَوْلِيَاءَ اللَّهِ لَا خَوْفٌ عَلَيْهِمْ وَلَا هُمْ يَحْزَنُونَ",
+                   english: "Lo! verily the friends of Allah — no fear shall be on them, nor shall they grieve.",
+                   french: "En vérité, les amis de Dieu n'éprouveront ni crainte ni tristesse.",
+                   surahEnglish: "Yunus", surahArabic: "يونس", chapter: 10, verse: 62),
+        DailyVerse(arabic: "وَاسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ۚ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى الْخَاشِعِينَ",
+                   english: "Seek help in patience and prayer; and truly it is hard, save for the humble-minded.",
+                   french: "Cherchez secours dans la patience et la prière ; elle est certes lourde, sauf pour ceux qui sont humbles.",
+                   surahEnglish: "Al-Baqarah", surahArabic: "البقرة", chapter: 2, verse: 45),
+    ]
+
+    /// The same verse all day, changing at local midnight: the day's
+    /// ordinal number picks the verse, so it never repeats two days
+    /// running and cycles through the whole list.
+    static func verse(for date: Date) -> DailyVerse {
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: date) ?? 0
+        return all[day % all.count]
+    }
+}
+
 // MARK: - Umm al-Qura Hijri conversion
 
 /// Gregorian -> Hijri conversion using the official Umm al-Qura month
@@ -1426,6 +1538,10 @@ enum L10n {
         "staysOnDeviceBody": [.en: "Prayer times are calculated on your iPhone. The app makes no network connections of its own, and your settings never leave the device.", .ar: "تُحسب أوقات الصلاة على جهاز iPhone الخاص بك. لا يُجري التطبيق أي اتصالات شبكية من تلقاء نفسه، وإعداداتك لا تغادر الجهاز أبدًا.", .fr: "Les heures de prière sont calculées sur votre iPhone. L'app n'établit aucune connexion réseau par elle-même, et vos réglages ne quittent jamais l'appareil."],
         "noExternalLinks": [.en: "No external links", .ar: "لا روابط خارجية", .fr: "Aucun lien externe"],
         "noExternalLinksBody": [.en: "The app has no Directions or Website buttons, so nothing ever opens outside the app.", .ar: "لا يحتوي التطبيق على أزرار اتجاهات أو موقع إلكتروني، فلا يُفتح أي شيء خارج التطبيق أبدًا.", .fr: "L'app n'a ni bouton Itinéraire ni bouton Site web : rien ne s'ouvre jamais en dehors de l'app."],
+        "restartRequired": [.en: "Restart required", .ar: "يلزم إعادة التشغيل", .fr: "Redémarrage requis"],
+        "restartMessage": [.en: "You must restart the app to apply this theme", .ar: "يجب إعادة تشغيل التطبيق لتطبيق هذه السمة", .fr: "Vous devez redémarrer l'application pour appliquer ce thème"],
+        "later": [.en: "Later", .ar: "لاحقاً", .fr: "Plus tard"],
+        "restart": [.en: "Restart", .ar: "إعادة التشغيل", .fr: "Redémarrer"],
         "reset": [.en: "Reset to Defaults", .ar: "إعادة تعيين إلى الافتراضي", .fr: "Réinitialiser par défaut"],
         "resetFooter": [.en: "Restores the original appearance, colors, icon and prayer alerts. Your saved themes are kept.", .ar: "يستعيد المظهر والألوان والأيقونة وتنبيهات الصلاة الأصلية. تُحفظ سماتك المحفوظة.", .fr: "Rétablit l'apparence, les couleurs, l'icône et les alertes de prière d'origine. Vos thèmes enregistrés sont conservés."],
         "resetConfirm": [.en: "Reset all appearance and alert settings to the defaults?", .ar: "إعادة تعيين كل إعدادات المظهر والتنبيهات إلى الافتراضية؟", .fr: "Réinitialiser tous les réglages d'apparence et d'alertes par défaut ?"],
@@ -1450,6 +1566,8 @@ extension L10n {
         "alertSoundFooter": [.en: "The sound played with Adhan notifications. Silent still shows the notification, just without sound.", .ar: "الصوت الذي يُشغَّل مع إشعارات الأذان. «صامت» يُظهر الإشعار من دون صوت.", .fr: "Le son joué avec les notifications de l'Adhan. « Silencieux » affiche la notification, sans le son."],
         // Qibla (v1.1.0)
         "qibla": [.en: "Qibla", .ar: "القبلة", .fr: "Qibla"],
+        "dailyVerse": [.en: "Quran Quote of the Day", .ar: "آية اليوم", .fr: "Verset du jour"],
+        "surah": [.en: "Surah", .ar: "سورة", .fr: "Sourate"],
         "qiblaFromMosque": [.en: "Direction from Al Rashid Mosque", .ar: "الاتجاه من مسجد الراشد", .fr: "Direction depuis la mosquée Al Rashid"],
         "facingQibla": [.en: "You are facing the Qibla", .ar: "أنت تواجه القبلة", .fr: "Vous faites face à la Qibla"],
         "qiblaHint": [.en: "Hold the phone flat and turn slowly. Compass accuracy improves away from metal and electronics.", .ar: "أمسك الهاتف مستويًا وأدِره ببطء. تتحسن دقة البوصلة بعيدًا عن المعادن والإلكترونيات.", .fr: "Tenez le téléphone à plat et tournez lentement. La boussole est plus précise loin du métal et des appareils électroniques."],
