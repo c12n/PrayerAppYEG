@@ -16,8 +16,25 @@ struct ContentView: View {
     /// what makes the whole UI actually follow the in-app setting.
     @AppStorage(AppAppearance.modeKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var modeRaw: String = AppAppearance.Mode.system.rawValue
+    /// The theme colors, observed here as well as in Settings (v1.0.9).
+    /// Until now the main screen only observed the Light/Dark mode, so a
+    /// color change written by Settings never re-rendered this view —
+    /// the cards kept the old main color until the app was relaunched.
+    /// Watching the same keys makes every change repaint instantly, and
+    /// the stamp below rebuilds the timeline content with the new colors.
+    @AppStorage(AppAppearance.primaryKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var primaryHex: Int = Int(AppAppearance.defaultPrimaryHex)
+    @AppStorage(AppAppearance.accentKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var accentHex: Int = Int(AppAppearance.defaultAccentHex)
+    @AppStorage(AppAppearance.textKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var textHex: Int = Int(AppAppearance.defaultTextHex)
     @State private var showSettings = false
     private let provider = PrayerProvider.standard
+
+    /// Changes whenever any appearance value changes.
+    private var appearanceStamp: String {
+        "\(modeRaw)-\(primaryHex)-\(accentHex)-\(textHex)"
+    }
 
     var body: some View {
         TimelineView(.everyMinute) { context in
@@ -39,6 +56,7 @@ struct ContentView: View {
             }
             .scrollIndicators(.hidden)
         }
+        .id(appearanceStamp)
         .background { AppBackground() }
         .preferredColorScheme(AppAppearance.Mode(rawValue: modeRaw)?.colorScheme)
         .sheet(isPresented: $showSettings) {
