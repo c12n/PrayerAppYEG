@@ -33,6 +33,10 @@ object WidgetPrefs {
     /// The user's accent color (Settings → Theme Colors), adjusted for
     /// the current appearance the same way the apps do it: brightened on
     /// dark surfaces, deepened on light ones. Null = not picked yet.
+    /// The app's language (Settings → Language), "en"/"ar"/"fr".
+    fun language(context: Context): String =
+        prefs(context).getString("flutter.language.code", null) ?: "en"
+
     fun accentColor(context: Context): Int? {
         val raw = prefs(context).getLong("flutter.appearance.accentHex", -1L)
         if (raw < 0) return null
@@ -49,6 +53,76 @@ object WidgetPrefs {
         }
         return Color.HSVToColor(hsv)
     }
+}
+
+/// Localized widget strings (v1.1.0). Internal logic keeps English
+/// prayer keys; only display strings go through here.
+object WidgetStrings {
+    private fun arabicDigits(input: String): String {
+        val digits = "٠١٢٣٤٥٦٧٨٩"
+        return input.map { ch -> if (ch in '0'..'9') digits[ch - '0'] else ch }
+            .joinToString("")
+    }
+
+    fun locale(language: String): Locale = when (language) {
+        "ar" -> Locale("ar")
+        "fr" -> Locale("fr")
+        else -> Locale.US
+    }
+
+    fun prayerName(english: String, language: String): String = when (language) {
+        "ar" -> when (english) {
+            "Fajr" -> "الفجر"; "Sunrise" -> "الشروق"; "Dhuhr" -> "الظهر"
+            "Asr" -> "العصر"; "Maghrib" -> "المغرب"; "Isha" -> "العشاء"
+            else -> english
+        }
+        "fr" -> if (english == "Sunrise") "Lever du soleil" else english
+        else -> english
+    }
+
+    fun jumuah(language: String): String =
+        if (language == "ar") "الجمعة" else "Jumu'ah"
+
+    fun iqamahLabel(isJumuah: Boolean, language: String): String = when {
+        isJumuah && language == "ar" -> "الخطبة"
+        isJumuah -> "Khutbah"
+        language == "ar" -> "الإقامة"
+        else -> "Iqamah"
+    }
+
+    fun at(language: String): String = when (language) {
+        "ar" -> "في"; "fr" -> "à"; else -> "at"
+    }
+
+    fun nextCaption(tomorrow: Boolean, caps: Boolean, language: String): String =
+        when (language) {
+            "ar" -> if (tomorrow) "الصلاة التالية · غدًا" else "الصلاة التالية"
+            "fr" -> if (caps) {
+                if (tomorrow) "PROCHAINE · DEMAIN" else "PROCHAINE PRIÈRE"
+            } else {
+                if (tomorrow) "Prochaine prière · Demain" else "Prochaine prière"
+            }
+            else -> if (caps) {
+                if (tomorrow) "NEXT · TOMORROW" else "NEXT PRAYER"
+            } else {
+                if (tomorrow) "Next prayer · Tomorrow" else "Next prayer"
+            }
+        }
+
+    fun countdown(now: Boolean, h: Long, m: Long, language: String): String =
+        when (language) {
+            "ar" -> if (now) "الآن" else "متبقي " + arabicDigits("%d:%02d".format(h, m))
+            "fr" -> if (now) "maintenant" else when {
+                h > 0 && m > 0 -> "dans ${h}h ${m}m"
+                h > 0 -> "dans ${h}h"
+                else -> "dans ${m}m"
+            }
+            else -> if (now) "now" else when {
+                h > 0 && m > 0 -> "in ${h}h ${m}m"
+                h > 0 -> "in ${h}h"
+                else -> "in ${m}m"
+            }
+        }
 }
 
 /// Shared data builder for the home-screen widgets: computes today's
@@ -78,10 +152,13 @@ object WidgetData {
         val nextAdhanMillis: Long
     )
 
-    private val timeFmt = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
-    private val dateFmt = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.US)
+    private fun timeFmt(language: String) =
+        DateTimeFormatter.ofPattern("h:mm a", WidgetStrings.locale(language))
+    private fun dateFmt(language: String) =
+        DateTimeFormatter.ofPattern("EEE, MMM d", WidgetStrings.locale(language))
 
-    fun formatTime(t: ZonedDateTime): String = timeFmt.format(t)
+    fun formatTime(t: ZonedDateTime, language: String = "en"): String =
+        timeFmt(language).format(t)
 
     private fun iqamahOffset(name: String): Int? = when (name) {
         "Fajr" -> 20
@@ -124,6 +201,7 @@ object WidgetData {
         context: Context,
         now: ZonedDateTime = ZonedDateTime.now(PrayerCalculator.ZONE)
     ): Model {
+        val language = WidgetPrefs.language(context)
         // The countdown rotation honors the user's Widget Countdown
         // choices (v1.0.5): prayers they turned off are skipped, and
         // Sunrise joins the rotation when they turned it on. If they
@@ -156,16 +234,19 @@ object WidgetData {
             if (found) break
         }
 
+        val isJumuahNext = nextDay.isFriday && nextName == "Dhuhr"
         val displayName =
-            if (nextDay.isFriday && nextName == "Dhuhr") "Jumu'ah" else nextName
+            if (isJumuahNext) WidgetStrings.jumuah(language)
+            else WidgetStrings.prayerName(nextName, language)
         val nextAdhan = nextDay.adhan(nextName)
         val nextIqamah = nextDay.iqamah(nextName)
-        val iqamahLabel = if (nextDay.isFriday && nextName == "Dhuhr") "Khutbah" else "Iqamah"
+        val iqamahLabel = WidgetStrings.iqamahLabel(isJumuahNext, language)
 
         val rows = allNames.map { name ->
             val jumuah = nextDay.isFriday && name == "Dhuhr"
             Row(
-                name = if (jumuah) "Jumu'ah" else name,
+                name = if (jumuah) WidgetStrings.jumuah(language)
+                       else WidgetStrings.prayerName(name, language),
                 adhan = nextDay.adhan(name),
                 iqamah = nextDay.iqamah(name),
                 isNext = name == nextName,
@@ -175,13 +256,16 @@ object WidgetData {
 
         return Model(
             hijri = UmmAlQuraCalendar.hijriString(
-                nextDay.date.year, nextDay.date.monthValue, nextDay.date.dayOfMonth
+                nextDay.date.year, nextDay.date.monthValue, nextDay.date.dayOfMonth,
+                language
             ),
-            dateText = dateFmt.format(nextDay.date),
+            dateText = dateFmt(language).format(nextDay.date),
             nextName = displayName,
-            nextTime = formatTime(nextAdhan),
-            nextIqamahText = nextIqamah?.let { "$iqamahLabel at ${formatTime(it)}" },
-            countdownText = countdownText(now, nextAdhan),
+            nextTime = formatTime(nextAdhan, language),
+            nextIqamahText = nextIqamah?.let {
+                "$iqamahLabel ${WidgetStrings.at(language)} ${formatTime(it, language)}"
+            },
+            countdownText = countdownText(now, nextAdhan, language),
             showingTomorrow = nextDay.date.isAfter(today),
             rows = rows,
             isFriday = nextDay.isFriday,
@@ -189,16 +273,14 @@ object WidgetData {
         )
     }
 
-    private fun countdownText(now: ZonedDateTime, target: ZonedDateTime): String {
+    private fun countdownText(
+        now: ZonedDateTime, target: ZonedDateTime, language: String
+    ): String {
         val d = Duration.between(now, target)
-        if (d.isNegative || d.toMinutes() == 0L) return "now"
-        val h = d.toHours()
-        val m = d.toMinutes() % 60
-        return when {
-            h > 0 && m > 0 -> "in ${h}h ${m}m"
-            h > 0 -> "in ${h}h"
-            else -> "in ${m}m"
+        if (d.isNegative || d.toMinutes() == 0L) {
+            return WidgetStrings.countdown(true, 0, 0, language)
         }
+        return WidgetStrings.countdown(false, d.toHours(), d.toMinutes() % 60, language)
     }
 }
 
@@ -260,7 +342,7 @@ class NextPrayerWidgetProvider : BaseWidgetProvider() {
     override fun buildViews(context: Context, model: WidgetData.Model): RemoteViews {
         val views = RemoteViews(context.packageName, layoutId())
         views.setTextViewText(R.id.widget_caption,
-            if (model.showingTomorrow) "NEXT · TOMORROW" else "NEXT PRAYER")
+            WidgetStrings.nextCaption(model.showingTomorrow, true, WidgetPrefs.language(context)))
         views.setTextViewText(R.id.widget_date, model.dateText)
         views.setTextViewText(R.id.widget_next_name, model.nextName)
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
@@ -319,10 +401,11 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
                     else -> primary
                 }
                 views.setTextViewText(nameIds[i], row.name)
-                views.setTextViewText(adhanIds[i], WidgetData.formatTime(row.adhan))
+                val language = WidgetPrefs.language(context)
+                views.setTextViewText(adhanIds[i], WidgetData.formatTime(row.adhan, language))
                 views.setTextViewText(
                     iqamahIds[i],
-                    row.iqamah?.let { WidgetData.formatTime(it) } ?: "—"
+                    row.iqamah?.let { WidgetData.formatTime(it, language) } ?: "—"
                 )
                 views.setTextColor(nameIds[i], color)
                 views.setTextColor(adhanIds[i], color)
@@ -340,7 +423,7 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
         val views = RemoteViews(context.packageName, layoutId())
         views.setTextViewText(R.id.widget_hijri, "${model.dateText} · ${model.hijri}")
         views.setTextViewText(R.id.widget_next_label,
-            if (model.showingTomorrow) "Next prayer · Tomorrow" else "Next prayer")
+            WidgetStrings.nextCaption(model.showingTomorrow, false, WidgetPrefs.language(context)))
         views.setTextViewText(R.id.widget_next_name, model.nextName)
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
