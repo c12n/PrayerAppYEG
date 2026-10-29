@@ -143,6 +143,14 @@ class AppSettings extends ChangeNotifier {
           if (alerts[p] ?? false) p,
       };
 
+  /// True when the current mode + colors exactly match a theme — its
+  /// settings row then shows a checkmark instead of the chevron.
+  bool isActiveTheme(SavedTheme theme) =>
+      mode == theme.mode &&
+      primaryHex == theme.primaryHex &&
+      accentHex == theme.accentHex &&
+      textHex == theme.textHex;
+
   void applyTheme(SavedTheme theme) => update(() {
         primaryHex = theme.primaryHex;
         accentHex = theme.accentHex;
