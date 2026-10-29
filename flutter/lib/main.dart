@@ -13,18 +13,23 @@
 //    tomorrow's schedules side by side (iPad / Android tablets).
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'app_settings.dart';
 import 'prayer_models.dart';
 import 'settings_page.dart';
+import 'strings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz_data.initializeTimeZones();
+  await initializeDateFormatting();
   final settings = await AppSettings.load();
   runApp(AlRashidApp(settings: settings));
 }
@@ -79,6 +84,18 @@ class AlRashidApp extends StatelessWidget {
           theme: AppTheme.light(settings),
           darkTheme: AppTheme.dark(settings),
           themeMode: settings.mode,
+          locale: Locale(settings.language.name),
+          builder: (context, child) => Directionality(
+            textDirection: settings.language.isRTL
+                ? TextDirection.rtl
+                : TextDirection.ltr,
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(settings.textSize.scale),
+              ),
+              child: child!,
+            ),
+          ),
           home: const HomePage(),
         ),
       ),
@@ -172,6 +189,8 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
           ScheduleCard(snapshot: snapshot),
           const SizedBox(height: 20),
+          const QiblaCard(),
+          const SizedBox(height: 20),
           const FooterSection(),
         ],
       ),
@@ -195,6 +214,8 @@ class _HomePageState extends State<HomePage> {
                   HeaderSection(today: today, now: _now),
                   const SizedBox(height: 20),
                   NextPrayerCard(snapshot: snapshot),
+                  const SizedBox(height: 20),
+                  const QiblaCard(),
                 ],
               ),
             ),
@@ -238,6 +259,8 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 24),
                       NextPrayerCard(snapshot: snapshot),
                       const SizedBox(height: 24),
+                      const QiblaCard(),
+                      const SizedBox(height: 24),
                       const FooterSection(),
                     ],
                   ),
@@ -254,7 +277,7 @@ class _HomePageState extends State<HomePage> {
                 child: SingleChildScrollView(
                   child: ScheduleCard.forDay(
                     day: tomorrow,
-                    title: "Tomorrow's Prayer Times",
+                    title: S.t('tomorrowTimes'),
                     large: true,
                   ),
                 ),
@@ -286,7 +309,7 @@ class HeaderSection extends StatelessWidget {
             Icon(Icons.nightlight_round, size: 20, color: accent),
             const SizedBox(width: 8),
             Text(
-              'Assalamu Alaikum',
+              S.t('greeting'),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -296,7 +319,7 @@ class HeaderSection extends StatelessWidget {
             const Spacer(),
             IconButton(
               icon: const Icon(Icons.settings),
-              tooltip: 'Settings',
+              tooltip: S.t('settings'),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -437,8 +460,9 @@ class NextPrayerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final next = snapshot.next;
-    final caption =
-        snapshot.isShowingTomorrow ? 'Next prayer · Tomorrow' : 'Next prayer';
+    final caption = snapshot.isShowingTomorrow
+        ? S.t('nextPrayerTomorrow')
+        : S.t('nextPrayer');
     final remaining = next.adhan.difference(snapshot.date);
     final c = SurfaceColors.of(context);
     return AdaptiveCard(
@@ -467,7 +491,7 @@ class NextPrayerCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    "JUMU'AH",
+                    S.t('jumuahBadge'),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -510,7 +534,7 @@ class NextPrayerCard extends StatelessWidget {
                 Icon(Icons.groups, size: 16, color: c.secondary),
                 const SizedBox(width: 6),
                 Text(
-                  '${next.iqamahLabel} at ${PrayerFormat.time(next.iqamah!)}',
+                  '${next.iqamahLabel} ${S.t('at')} ${PrayerFormat.time(next.iqamah!)}',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -542,7 +566,7 @@ class NextPrayerCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'until ${next.name} Adhan',
+            S.f('untilAdhan', {'name': next.name}),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -569,8 +593,8 @@ class ScheduleCard extends StatelessWidget {
     this.large = false,
   })  : day = snapshot.day,
         title = snapshot.isShowingTomorrow
-            ? "Tomorrow's Prayer Times"
-            : "Today's Prayer Times",
+            ? S.t('tomorrowTimes')
+            : S.t('todayTimes'),
         highlight = snapshot.next;
 
   const ScheduleCard.forDay({
@@ -618,13 +642,13 @@ class ScheduleCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                const Expanded(child: _ColumnHeader('PRAYER')),
+                Expanded(child: _ColumnHeader(S.t('colPrayer'))),
                 SizedBox(
                     width: large ? 104 : 86,
-                    child: const _ColumnHeader('ADHAN', right: true)),
+                    child: _ColumnHeader(S.t('colAdhan'), right: true)),
                 SizedBox(
                     width: large ? 104 : 86,
-                    child: const _ColumnHeader('IQAMAH', right: true)),
+                    child: _ColumnHeader(S.t('colIqamah'), right: true)),
               ],
             ),
           ),
@@ -647,7 +671,7 @@ class ScheduleCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    "Jumu'ah replaces Dhuhr · Khutbah at ${PrayerFormat.khutbahTime()}",
+                    S.f('jumuahReplaces', {'time': PrayerFormat.khutbahTime()}),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -733,7 +757,7 @@ class _ScheduleRow extends StatelessWidget {
                 ),
                 if (slot.isJumuah)
                   Text(
-                    'Khutbah time shown',
+                    S.t('khutbahShown'),
                     style: TextStyle(
                       fontSize: 11,
                       color: c.muted,
@@ -801,18 +825,18 @@ class FooterSection extends StatelessWidget {
         const SizedBox(height: 8),
         _FooterLine(
           icon: Icons.mosque,
-          text: "Jumu'ah Khutbah every Friday at ${PrayerFormat.khutbahTime()}",
+          text: S.f('jumuahWeeklyAt', {'time': PrayerFormat.khutbahTime()}),
           style: style,
         ),
         const SizedBox(height: 8),
         _FooterLine(
           icon: Icons.lock,
-          text: 'Privacy first — no external links, no tracking, nothing leaves this device.',
+          text: S.t('footerPrivacy'),
           style: style,
         ),
         const SizedBox(height: 12),
         Text(
-          "Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.",
+          S.t('footerCalc'),
           style: TextStyle(
             fontSize: 12,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -838,6 +862,235 @@ class _FooterLine extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: style)),
       ],
+    );
+  }
+}
+
+// MARK: - Qibla compass (v1.1.0)
+
+/// Qibla bearing math: initial great-circle bearing from the mosque
+/// to the Kaaba, plus Edmonton's magnetic declination (degrees East)
+/// so the phone's magnetic compass can be corrected to true north.
+class QiblaMath {
+  static const kaabaLatitude = 21.422487;
+  static const kaabaLongitude = 39.826206;
+  static const magneticDeclination = 12.6;
+
+  static double get bearingFromMosque {
+    final lat1 = MosqueInfo.latitude * math.pi / 180;
+    final lat2 = kaabaLatitude * math.pi / 180;
+    final dLon = (kaabaLongitude - MosqueInfo.longitude) * math.pi / 180;
+    final y = math.sin(dLon);
+    final x = math.cos(lat1) * math.tan(lat2) - math.sin(lat1) * math.cos(dLon);
+    final bearing = math.atan2(y, x) * 180 / math.pi;
+    return (bearing + 360) % 360;
+  }
+}
+
+/// The Qibla card: a live compass dial fed by the native heading
+/// EventChannel (MainActivity), the bearing from the mosque, and a
+/// "facing the Qibla" state within 3 degrees. No location permission
+/// is used — the bearing is computed from the mosque's fixed position.
+class QiblaCard extends StatefulWidget {
+  const QiblaCard({super.key});
+
+  @override
+  State<QiblaCard> createState() => _QiblaCardState();
+}
+
+class _QiblaCardState extends State<QiblaCard> {
+  static const _channel = EventChannel('alrashid/heading');
+  StreamSubscription<dynamic>? _sub;
+  double? _heading; // true-north compass heading, degrees
+  bool _facing = false;
+
+  double get _bearing => QiblaMath.bearingFromMosque;
+
+  double? get _offset {
+    final heading = _heading;
+    if (heading == null) return null;
+    var diff = (_bearing - heading) % 360;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    return diff;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = _channel.receiveBroadcastStream().listen((event) {
+      if (!mounted) return;
+      final magnetic = (event as num).toDouble();
+      setState(() {
+        _heading = (magnetic + QiblaMath.magneticDeclination) % 360;
+      });
+      final offset = _offset;
+      final facing = offset != null && offset.abs() <= 3;
+      if (facing && !_facing) HapticFeedback.lightImpact();
+      _facing = facing;
+    }, onError: (_) {});
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = SurfaceColors.of(context);
+    final offset = _offset;
+    final facing = offset != null && offset.abs() <= 3;
+    return AdaptiveCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.explore, size: 20, color: c.accent),
+              const SizedBox(width: 8),
+              Text(
+                S.t('qibla'),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: c.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _dial(c),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_bearing.round()}°',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: c.accent,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    Text(
+                      S.t('fromNorth'),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: c.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      S.t('qiblaFromMosque'),
+                      style: TextStyle(fontSize: 13, color: c.secondary),
+                    ),
+                    if (facing) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle, size: 18, color: c.accent),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              S.t('facingQibla'),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: c.accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            S.t('qiblaHint'),
+            style: TextStyle(fontSize: 12, color: c.muted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The dial rotates against the phone's heading; the Kaaba marker
+  /// sits at the Qibla bearing, the fixed triangle at the top is where
+  /// the phone points. Letters orbit via full-size rotated containers
+  /// (their centers are the dial's center).
+  Widget _dial(SurfaceColors c) {
+    const size = 148.0;
+    final headingRad = -(_heading ?? 0) * math.pi / 180;
+    final letters = [S.t('dir.n'), S.t('dir.e'), S.t('dir.s'), S.t('dir.w')];
+    return SizedBox(
+      width: size,
+      height: size + 14,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Icon(Icons.arrow_drop_up, size: 20, color: c.accent),
+          Positioned(
+            top: 14,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c.panelTrack.withValues(alpha: 0.35),
+                border: Border.all(color: c.muted.withValues(alpha: 0.35)),
+              ),
+              child: Transform.rotate(
+                angle: headingRad,
+                child: Stack(
+                  children: [
+                    for (var q = 0; q < 4; q++)
+                      Transform.rotate(
+                        angle: q * math.pi / 2,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Text(
+                              letters[q],
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.secondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Transform.rotate(
+                      angle: _bearing * math.pi / 180,
+                      child: const Align(
+                        alignment: Alignment.topCenter,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Text('🕋', style: TextStyle(fontSize: 24)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
