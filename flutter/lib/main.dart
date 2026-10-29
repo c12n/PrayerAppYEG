@@ -17,7 +17,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:url_launcher/url_launcher.dart';
 
 import 'app_settings.dart';
 import 'prayer_models.dart';
@@ -173,8 +172,6 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
           ScheduleCard(snapshot: snapshot),
           const SizedBox(height: 20),
-          const ActionButtons(),
-          const SizedBox(height: 20),
           const FooterSection(),
         ],
       ),
@@ -198,8 +195,6 @@ class _HomePageState extends State<HomePage> {
                   HeaderSection(today: today, now: _now),
                   const SizedBox(height: 20),
                   NextPrayerCard(snapshot: snapshot),
-                  const SizedBox(height: 20),
-                  const ActionButtons(),
                 ],
               ),
             ),
@@ -242,8 +237,6 @@ class _HomePageState extends State<HomePage> {
                       HeaderSection(today: today, now: _now),
                       const SizedBox(height: 24),
                       NextPrayerCard(snapshot: snapshot),
-                      const SizedBox(height: 24),
-                      const ActionButtons(),
                       const SizedBox(height: 24),
                       const FooterSection(),
                     ],
@@ -790,120 +783,7 @@ IconData prayerIcon(Prayer prayer) => switch (prayer) {
       Prayer.isha => Icons.dark_mode,
     };
 
-// MARK: - Actions & footer
-
-class ActionButtons extends StatelessWidget {
-  const ActionButtons({super.key});
-
-  Future<void> _open(String url) async {
-    final uri = Uri.parse(url);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final settings = SettingsScope.of(context);
-    final primary = colorFromHex(settings.primaryHex);
-    final accent = colorFromHex(settings.accentHex);
-    return Row(
-      children: [
-        Expanded(
-          child: _GradientButton(
-            label: 'Directions',
-            icon: Icons.directions_car,
-            foreground: darkenColor(primary, 0.30),
-            colors: [lightenColor(accent, 0.25), accent],
-            onTap: () => _open(MosqueInfo.directionsUrl),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _GradientButton(
-            label: 'Website',
-            icon: Icons.language,
-            foreground: resolvedTextColor(darkSurface: true, s: settings),
-            colors: [
-              lightenColor(primary, 0.16),
-              primary,
-              darkenColor(primary, 0.30),
-            ],
-            borderColor: accent.withValues(alpha: 0.6),
-            onTap: () => _open(MosqueInfo.websiteUrl),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _GradientButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color foreground;
-  final List<Color> colors;
-  final Color? borderColor;
-  final VoidCallback onTap;
-
-  const _GradientButton({
-    required this.label,
-    required this.icon,
-    required this.foreground,
-    required this.colors,
-    required this.onTap,
-    this.borderColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: colors,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border:
-                borderColor != null ? Border.all(color: borderColor!) : null,
-            boxShadow: [
-              BoxShadow(
-                color: darkenColor(
-                        colorFromHex(SettingsScope.of(context).primaryHex),
-                        0.30)
-                    .withValues(alpha: 0.25),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 20, color: foreground),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: foreground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// MARK: - Footer
 
 class FooterSection extends StatelessWidget {
   const FooterSection({super.key});
@@ -922,6 +802,12 @@ class FooterSection extends StatelessWidget {
         _FooterLine(
           icon: Icons.mosque,
           text: "Jumu'ah Khutbah every Friday at ${PrayerFormat.khutbahTime()}",
+          style: style,
+        ),
+        const SizedBox(height: 8),
+        _FooterLine(
+          icon: Icons.lock,
+          text: 'Privacy first — no external links, no tracking, nothing leaves this device.',
           style: style,
         ),
         const SizedBox(height: 12),
