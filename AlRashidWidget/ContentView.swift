@@ -536,11 +536,11 @@ private struct SettingsView: View {
     private var themesSection: some View {
         Section {
             ForEach(AppAppearance.presetThemes) { theme in
-                ThemeChoiceRow(theme: theme, isSaved: false) { apply(theme) }
+                ThemeChoiceRow(theme: theme, isSaved: false, isActive: isActiveTheme(theme)) { apply(theme) }
             }
             if !savedThemes.isEmpty {
                 ForEach(savedThemes) { theme in
-                    ThemeChoiceRow(theme: theme, isSaved: true) { apply(theme) }
+                    ThemeChoiceRow(theme: theme, isSaved: true, isActive: isActiveTheme(theme)) { apply(theme) }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) { deleteSavedTheme(theme) } label: {
                                 Label("Delete", systemImage: "trash")
@@ -667,6 +667,15 @@ private struct SettingsView: View {
         PrayerProvider.standard.refreshCache()
         WidgetCenter.shared.reloadAllTimelines()
         AppServices.refresh()
+    }
+
+    /// True when the current mode + colors exactly match a theme — its
+    /// row then shows a checkmark instead of the chevron.
+    private func isActiveTheme(_ theme: AppAppearance.ThemeChoice) -> Bool {
+        theme.modeRaw == modeRaw
+            && Int(theme.primaryHex) == primaryHex
+            && Int(theme.accentHex) == accentHex
+            && Int(theme.textHex) == textHex
     }
 
     private func apply(_ theme: AppAppearance.ThemeChoice) {
@@ -806,6 +815,7 @@ private struct ColorSettingRow: View {
 private struct ThemeChoiceRow: View {
     let theme: AppAppearance.ThemeChoice
     let isSaved: Bool
+    let isActive: Bool
     let onApply: () -> Void
 
     var body: some View {
@@ -836,9 +846,15 @@ private struct ThemeChoiceRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
+                if isActive {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color(hex: theme.accentHex))
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .buttonStyle(.plain)
