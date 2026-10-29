@@ -97,6 +97,35 @@ enum AppServices {
     }
 }
 
+// MARK: - Adhan alert sound (v1.1.0)
+
+/// The sound played with Adhan notifications, chosen in Settings and
+/// stored in the App Group. The two tones are small synthesized files
+/// bundled with the app (no downloads, per the privacy promise).
+enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
+    case `default`, silent, chime, bell
+
+    var id: String { rawValue }
+    static let storageKey = "alerts.sound"
+
+    static var current: AdhanSound {
+        let raw = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier)?
+            .string(forKey: storageKey)
+        return AdhanSound(rawValue: raw ?? "") ?? .default
+    }
+
+    var l10nKey: String { "sound.\(rawValue)" }
+
+    var notificationSound: UNNotificationSound? {
+        switch self {
+        case .default: .default
+        case .silent: nil
+        case .chime: UNNotificationSound(named: UNNotificationSoundName("adhan_chime.wav"))
+        case .bell: UNNotificationSound(named: UNNotificationSoundName("adhan_bell.wav"))
+        }
+    }
+}
+
 // MARK: - Adhan local notifications
 
 enum AdhanNotifications {
@@ -142,20 +171,20 @@ enum AdhanNotifications {
             for slot in day.slots where slot.adhan > now && PrayerAlertSettings.isEnabled(slot.prayer) {
                 let content = UNMutableNotificationContent()
                 if slot.prayer == .sunrise {
-                    content.title = "Sunrise — \(MosqueInfo.name)"
-                    content.body = "Sunrise at \(PrayerFormat.time(slot.adhan)) — the time for Fajr has ended."
+                    content.title = L10n.f("mosqueTitle", slot.name, MosqueInfo.name)
+                    content.body = L10n.f("sunriseBody", PrayerFormat.time(slot.adhan))
                 } else if slot.isJumuah {
-                    content.title = "Jumu'ah — \(MosqueInfo.name)"
-                    content.body = "\(slot.iqamahLabel) at \(PrayerFormat.time(slot.iqamah ?? slot.adhan))"
+                    content.title = L10n.f("mosqueTitle", slot.name, MosqueInfo.name)
+                    content.body = L10n.f("labelAtTime", slot.iqamahLabel, PrayerFormat.time(slot.iqamah ?? slot.adhan))
                 } else {
-                    content.title = "\(slot.name) Adhan — \(MosqueInfo.name)"
+                    content.title = L10n.f("notifTitle", slot.name, MosqueInfo.name)
                     if let iqamah = slot.iqamah {
-                        content.body = "\(slot.iqamahLabel) at \(PrayerFormat.time(iqamah))"
+                        content.body = L10n.f("labelAtTime", slot.iqamahLabel, PrayerFormat.time(iqamah))
                     } else {
-                        content.body = "Adhan at \(PrayerFormat.time(slot.adhan))"
+                        content.body = L10n.f("adhanAtTime", PrayerFormat.time(slot.adhan))
                     }
                 }
-                content.sound = .default
+                content.sound = AdhanSound.current.notificationSound
                 let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: slot.adhan)
                 let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
                 let identifier = identifierPrefix + String(Int(slot.adhan.timeIntervalSince1970))
