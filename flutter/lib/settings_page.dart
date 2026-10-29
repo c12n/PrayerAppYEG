@@ -67,6 +67,7 @@ class SettingsPage extends StatelessWidget {
               _sectionNote(context,
                   'Tap a circle for a preset, or the color wheel for any color. Text is automatically adjusted when needed so it always stays easy to read. The widgets use the same accent color.'),
               _sectionHeader(context, 'Themes'),
+              _themePreview(context, settings),
               for (final theme in presetThemes)
                 _ThemeRow(
                   theme: theme,
@@ -90,7 +91,7 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _saveTheme(context),
               ),
               _sectionNote(context,
-                  'Themes are ready-made color sets designed to look good together — main color, accent and text in one tap.'),
+                  'Themes are ready-made color sets designed to look good together — main color, accent and text in one tap. Tapping a theme applies it right away: watch the preview card above change.'),
               _sectionHeader(context, 'Widget Countdown'),
               for (final prayer in Prayer.values)
                 SwitchListTile(
@@ -194,6 +195,65 @@ class SettingsPage extends StatelessWidget {
     );
     if (ok == true) settings.resetToDefaults();
   }
+}
+
+/// A miniature next-prayer card in the current colors. It rebuilds the
+/// instant a theme or color changes, so the effect of a tap is visible
+/// right here in Settings — no need to leave the page to see the theme.
+Widget _themePreview(BuildContext context, AppSettings settings) {
+  final primary = colorFromHex(settings.primaryHex);
+  final accent = colorFromHex(settings.accentHex);
+  final onPrimary = resolvedTextColor(darkSurface: true, s: settings);
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [lightenColor(primary, 0.16), primary],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('NEXT PRAYER · PREVIEW',
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: onPrimary.withValues(alpha: 0.75))),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text('Fajr',
+                  style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                      color: onPrimary)),
+              const Spacer(),
+              Text('6:28 AM',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: onPrimary)),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text('7:49:52',
+              style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: accent,
+                  fontFeatures: const [FontFeature.tabularFigures()])),
+        ],
+      ),
+    ),
+  );
 }
 
 Widget _sectionHeader(BuildContext context, String text) => Padding(
