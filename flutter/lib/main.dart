@@ -24,6 +24,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'app_settings.dart';
 import 'prayer_models.dart';
 import 'settings_page.dart';
+import 'daily_verse.dart';
 import 'strings.dart';
 
 Future<void> main() async {
@@ -189,6 +190,8 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
           ScheduleCard(snapshot: snapshot),
           const SizedBox(height: 20),
+          const DailyVerseCard(),
+          const SizedBox(height: 20),
           const QiblaCard(),
           const SizedBox(height: 20),
           const FooterSection(),
@@ -214,6 +217,8 @@ class _HomePageState extends State<HomePage> {
                   HeaderSection(today: today, now: _now),
                   const SizedBox(height: 20),
                   NextPrayerCard(snapshot: snapshot),
+                  const SizedBox(height: 20),
+                  const DailyVerseCard(),
                   const SizedBox(height: 20),
                   const QiblaCard(),
                 ],
@@ -258,6 +263,8 @@ class _HomePageState extends State<HomePage> {
                       HeaderSection(today: today, now: _now),
                       const SizedBox(height: 24),
                       NextPrayerCard(snapshot: snapshot),
+                      const SizedBox(height: 24),
+                      const DailyVerseCard(),
                       const SizedBox(height: 24),
                       const QiblaCard(),
                       const SizedBox(height: 24),
@@ -884,6 +891,72 @@ class QiblaMath {
     final x = math.cos(lat1) * math.tan(lat2) - math.sin(lat1) * math.cos(dLon);
     final bearing = math.atan2(y, x) * 180 / math.pi;
     return (bearing + 360) % 360;
+  }
+}
+
+/// The Quran quote of the day card (v1.1.1): today's verse in Arabic,
+/// its translation in the chosen language, and the reference. The
+/// verses are embedded (daily_verse.dart) — fully offline.
+class DailyVerseCard extends StatelessWidget {
+  const DailyVerseCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = SurfaceColors.of(context);
+    final language = LanguageState.current;
+    final verse = verseOfTheDay();
+    final translation = verse.translation(language);
+    return AdaptiveCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.menu_book, size: 20, color: c.accent),
+              const SizedBox(width: 8),
+              Text(
+                S.t('dailyVerse'),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: c.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            verse.arabic,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              height: 1.6,
+              color: c.primary,
+            ),
+          ),
+          if (translation != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              translation,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: c.secondary),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            verse.reference(language),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: c.accent,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
