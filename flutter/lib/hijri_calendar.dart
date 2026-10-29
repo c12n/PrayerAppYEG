@@ -291,10 +291,10 @@ class UmmAlQuraCalendar {
     final h = hijri(year, month, day);
     if (h == null) return '';
     final language = LanguageState.current;
-    final month = monthNamesFor(language)[h.month - 1];
+    final monthName = monthNamesFor(language)[h.month - 1];
     if (language == AppLanguage.ar) {
-      return arabicDigits('${h.day} $month ${h.year} هـ');
+      return arabicDigits('${h.day} $monthName ${h.year} هـ');
     }
-    return '${h.day} $month ${h.year} AH';
+    return '${h.day} $monthName ${h.year} AH';
   }
 }
