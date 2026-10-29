@@ -203,7 +203,10 @@ enum LiveActivityController {
             hijri: snapshot.day.hijriDate,
             isTomorrow: snapshot.isShowingTomorrow,
             followingName: following?.name,
-            followingAdhan: following?.adhan
+            followingAdhan: following?.adhan,
+            followingSymbolName: following?.symbolName,
+            followingIqamah: following?.iqamah,
+            followingIqamahLabel: following?.iqamahLabel
         )
         // Go stale shortly after the FOLLOWING prayer's Iqamah (or Adhan),
         // so the activity stays live across the automatic rollover at this
@@ -236,7 +239,12 @@ enum LiveActivityController {
 /// countdown rolls from Dhuhr to Asr (and so on) without the app ever
 /// being opened — the Adhan notifications are re-scheduled, and the next
 /// refresh is chained. The identifier must also be listed under
-/// BGTaskSchedulerPermittedIdentifiers in Info.plist.
+/// BGTaskSchedulerPermittedIdentifiers in Info.plist, AND Info.plist must
+/// declare the `fetch` background mode (UIBackgroundModes) — without it
+/// every submit() fails silently and the task never runs (the v1.0.4–
+/// v1.0.5 rollover bug, fixed in v1.0.6). The Lock Screen additionally
+/// promotes the pre-staged following prayer at the Adhan itself via a
+/// TimelineView, so the visible switch does not wait for this task.
 enum BackgroundRefresh {
     static let identifier = "com.c12n.alrashidwidget.refresh"
     private static var didRegister = false
@@ -268,12 +276,16 @@ enum BackgroundRefresh {
         // the following one, so this schedules the refresh after ITS Adhan.
         schedule()
 
+        // The Live Activity update goes FIRST (v1.0.6): the background
+        // budget is ~30 s, and rebuilding ~40 notification requests first
+        // could starve the one update the user actually sees. Notifications
+        // are refreshed last, as best-effort.
         let work = Task {
+            await LiveActivityController.refresh()
+            WidgetCenter.shared.reloadAllTimelines()
             if AlertSettings.notificationsEnabled {
                 await AdhanNotifications.reschedule()
             }
-            await LiveActivityController.refresh()
-            WidgetCenter.shared.reloadAllTimelines()
         }
         task.expirationHandler = { work.cancel() }
         Task {
