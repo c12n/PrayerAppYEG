@@ -57,6 +57,8 @@ class AppSettings extends ChangeNotifier {
   static const accentKey = 'appearance.accentHex';
   static const textKey = 'appearance.textHex';
   static const savedThemesKey = 'appearance.savedThemes';
+  static const languageKey = 'language.code';
+  static const textSizeKey = 'appearance.textSize';
   static String alertKey(Prayer p) => 'alerts.${p.name}';
 
   static const defaultPrimary = 0x0B3D2E;
@@ -72,6 +74,9 @@ class AppSettings extends ChangeNotifier {
   /// text color follows the defaults (white on colored surfaces, the
   /// deepened main color on white), exactly like the iOS app.
   bool textIsCustom = false;
+
+  AppLanguage language = AppLanguage.en;
+  AppTextSize textSize = AppTextSize.standard;
 
   List<SavedTheme> savedThemes = [];
   final Map<Prayer, bool> alerts = {
@@ -100,6 +105,11 @@ class AppSettings extends ChangeNotifier {
       final v = prefs.getBool(alertKey(p));
       if (v != null) s.alerts[p] = v;
     }
+    s.language = AppLanguage.values.asNameMap()[prefs.getString(languageKey)] ??
+        AppLanguage.en;
+    LanguageState.current = s.language;
+    s.textSize = AppTextSize.values.asNameMap()[prefs.getString(textSizeKey)] ??
+        AppTextSize.standard;
     final raw = prefs.getString(savedThemesKey);
     if (raw != null) {
       try {
@@ -129,6 +139,9 @@ class AppSettings extends ChangeNotifier {
     }
     await prefs.setString(
         savedThemesKey, jsonEncode(savedThemes.map((t) => t.toJson()).toList()));
+    await prefs.setString(languageKey, language.name);
+    await prefs.setString(textSizeKey, textSize.name);
+    LanguageState.current = language;
   }
 
   /// Applies a change, notifies the UI and persists everything.
