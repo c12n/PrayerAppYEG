@@ -10,6 +10,24 @@ object UmmAlQuraCalendar {
         "Rajab", "Shaban", "Ramadan", "Shawwal", "Dhul Qadah", "Dhul Hijjah"
     )
 
+    fun monthNamesFor(language: String): List<String> = when (language) {
+        "ar" -> listOf(
+            "محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة",
+            "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"
+        )
+        "fr" -> listOf(
+            "Mouharram", "Safar", "Rabi I", "Rabi II", "Joumada I", "Joumada II",
+            "Rajab", "Chaabane", "Ramadan", "Chawwal", "Dhoul Qada", "Dhoul Hijja"
+        )
+        else -> monthNames
+    }
+
+    private fun arabicDigits(input: String): String {
+        val digits = "٠١٢٣٤٥٦٧٨٩"
+        return input.map { ch -> if (ch in '0'..'9') digits[ch - '0'] else ch }
+            .joinToString("")
+    }
+
     private val monthStarts = intArrayOf(
         28607, 28636, 28665, 28695, 28724, 28754, 28783, 28813,
         28843, 28872, 28901, 28931, 28960, 28990, 29019, 29049,
@@ -263,8 +281,13 @@ object UmmAlQuraCalendar {
         return HijriDate(hijriYear, hijriMonth, hijriDay)
     }
 
-    fun hijriString(year: Int, month: Int, day: Int): String {
+    fun hijriString(year: Int, month: Int, day: Int, language: String = "en"): String {
         val h = hijri(year, month, day) ?: return ""
-        return "${h.day} ${monthNames[h.month - 1]} ${h.year} AH"
+        val month = monthNamesFor(language)[h.month - 1]
+        return if (language == "ar") {
+            arabicDigits("${h.day} $month ${h.year} هـ")
+        } else {
+            "${h.day} $month ${h.year} AH"
+        }
     }
 }
