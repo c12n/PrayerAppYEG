@@ -132,5 +132,9 @@
 	<array>
 		<string>com.c12n.alrashidwidget.refresh</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>
