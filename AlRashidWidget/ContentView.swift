@@ -5,6 +5,7 @@
 //  Target Membership: AlRashidWidget only.
 //
 
+import CoreMotion
 import SwiftUI
 import UIKit
 import WidgetKit
@@ -28,12 +29,19 @@ struct ContentView: View {
     private var accentHex: Int = Int(AppAppearance.defaultAccentHex)
     @AppStorage(AppAppearance.textKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var textHex: Int = Int(AppAppearance.defaultTextHex)
+    /// Language + text size (v1.1.0), observed here so a change in
+    /// Settings re-renders the whole screen — including the layout
+    /// direction for Arabic.
+    @AppStorage(AppLanguage.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var languageCode: String = AppLanguage.en.rawValue
+    @AppStorage(AppTextSize.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var textSizeRaw: String = AppTextSize.standard.rawValue
     @State private var showSettings = false
     private let provider = PrayerProvider.standard
 
     /// Changes whenever any appearance value changes.
     private var appearanceStamp: String {
-        "\(modeRaw)-\(primaryHex)-\(accentHex)-\(textHex)"
+        "\(modeRaw)-\(primaryHex)-\(accentHex)-\(textHex)-\(languageCode)-\(textSizeRaw)"
     }
 
     var body: some View {
@@ -47,6 +55,7 @@ struct ContentView: View {
                     }
                     NextPrayerCard(snapshot: snapshot)
                     ScheduleCard(snapshot: snapshot)
+                    QiblaCard()
                     AlertsCard()
                     FooterView()
                 }
@@ -59,6 +68,9 @@ struct ContentView: View {
         .id(appearanceStamp)
         .background { AppBackground() }
         .preferredColorScheme(AppAppearance.Mode(rawValue: modeRaw)?.colorScheme)
+        .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+        .environment(\.locale, AppLanguage.current.locale)
+        .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
@@ -89,7 +101,7 @@ private struct HeaderView: View {
                     Image(systemName: "moon.stars.fill")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Theme.adaptiveGold)
-                    Text("Assalamu Alaikum")
+                    Text(L10n.t("greeting"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -113,7 +125,7 @@ private struct HeaderView: View {
                     .background(Color(uiColor: .secondarySystemBackground), in: Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Settings")
+            .accessibilityLabel(L10n.t("settings"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -123,10 +135,12 @@ private struct HeaderView: View {
 
 private struct NextPrayerCard: View {
     let snapshot: PrayerSnapshot
+    @ScaledMetric(relativeTo: .largeTitle) private var nameSize: CGFloat = 40
+    @ScaledMetric(relativeTo: .largeTitle) private var countdownSize: CGFloat = 46
 
     var body: some View {
         let next = snapshot.next
-        let caption = snapshot.isShowingTomorrow ? "Next prayer · Tomorrow" : "Next prayer"
+        let caption = snapshot.isShowingTomorrow ? L10n.t("nextPrayerTomorrow") : L10n.t("nextPrayer")
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Label(caption, systemImage: next.symbolName)
@@ -134,7 +148,7 @@ private struct NextPrayerCard: View {
                     .foregroundStyle(Theme.adaptiveGold)
                 Spacer()
                 if next.isJumuah {
-                    Text("JUMU'AH")
+                    Text(L10n.t("jumuahBadge"))
                         .font(.caption2.weight(.heavy))
                         .tracking(0.8)
                         .foregroundStyle(Theme.adaptiveGold)
@@ -145,7 +159,7 @@ private struct NextPrayerCard: View {
             }
             HStack(alignment: .firstTextBaseline) {
                 Text(next.name)
-                    .font(.system(size: 40, weight: .bold))
+                    .font(.system(size: nameSize, weight: .bold))
                     .foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -156,18 +170,18 @@ private struct NextPrayerCard: View {
                     .lineLimit(1)
             }
             if let iqamah = next.iqamah {
-                Label("\(next.iqamahLabel) at \(PrayerFormat.time(iqamah))", systemImage: "person.3.fill")
+                Label("\(next.iqamahLabel) \(L10n.t("at")) \(PrayerFormat.time(iqamah))", systemImage: "person.3.fill")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Theme.onSurfaceSecondary)
             }
             VStack(alignment: .leading, spacing: 8) {
                 Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                    .font(.system(size: 46, weight: .bold, design: .rounded).monospacedDigit())
+                    .font(.system(size: countdownSize, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(Theme.adaptiveGold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 GoldProgressBar(range: snapshot.progressRange)
-                Text("until \(next.name) Adhan")
+                Text(L10n.f("untilAdhan", next.name))
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.onSurfaceMuted)
             }
@@ -175,6 +189,14 @@ private struct NextPrayerCard: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .adaptiveCard(cornerRadius: 26)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilitySummary)
+    }
+
+    /// "Maghrib in 42 minutes" — what VoiceOver announces for the card.
+    private var accessibilitySummary: String {
+        let minutes = max(0, Int(snapshot.next.adhan.timeIntervalSince(snapshot.date) / 60))
+        return L10n.f("inMinutes", snapshot.next.name, minutes)
     }
 }
 
@@ -186,7 +208,7 @@ private struct ScheduleCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text(snapshot.isShowingTomorrow ? "Tomorrow's Prayer Times" : "Today's Prayer Times")
+                Text(snapshot.isShowingTomorrow ? L10n.t("tomorrowTimes") : L10n.t("todayTimes"))
                     .font(.headline)
                     .foregroundStyle(Theme.onSurface)
                 Spacer(minLength: 8)
@@ -195,9 +217,9 @@ private struct ScheduleCard: View {
                     .foregroundStyle(Theme.onSurfaceSecondary)
             }
             HStack(spacing: 8) {
-                Text("PRAYER").frame(maxWidth: .infinity, alignment: .leading)
-                Text("ADHAN").frame(width: 86, alignment: .trailing)
-                Text("IQAMAH").frame(width: 86, alignment: .trailing)
+                Text(L10n.t("colPrayer")).frame(maxWidth: .infinity, alignment: .leading)
+                Text(L10n.t("colAdhan")).frame(width: 86, alignment: .trailing)
+                Text(L10n.t("colIqamah")).frame(width: 86, alignment: .trailing)
             }
             .font(.caption2.weight(.bold))
             .tracking(0.8)
@@ -209,7 +231,7 @@ private struct ScheduleCard: View {
                 }
             }
             if snapshot.day.isFriday {
-                Label("Jumu'ah replaces Dhuhr · Khutbah at \(PrayerFormat.khutbahTime(on: snapshot.day.date))", systemImage: "building.columns.fill")
+                Label(L10n.f("jumuahReplaces", PrayerFormat.khutbahTime(on: snapshot.day.date)), systemImage: "building.columns.fill")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.adaptiveGold)
             }
@@ -236,7 +258,7 @@ private struct ScheduleRow: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     if slot.isJumuah {
-                        Text("Khutbah time shown")
+                        Text(L10n.t("khutbahShown"))
                             .font(.caption2)
                             .foregroundStyle(Theme.onSurfaceMuted)
                     }
@@ -278,9 +300,9 @@ private struct FooterView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(MosqueInfo.address, systemImage: "mappin.and.ellipse")
-            Label("Jumu'ah Khutbah every Friday at \(PrayerFormat.khutbahTime(on: .now))", systemImage: "building.columns")
-            Label("Privacy first — no external links, no tracking, nothing leaves this device.", systemImage: "lock.shield.fill")
-            Text("Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.")
+            Label(L10n.f("jumuahWeeklyAt", PrayerFormat.khutbahTime(on: .now)), systemImage: "building.columns")
+            Label(L10n.t("footerPrivacy"), systemImage: "lock.shield.fill")
+            Text(L10n.t("footerCalc"))
                 .font(.caption)
                 .padding(.top, 4)
         }
@@ -388,16 +410,16 @@ private struct AlertsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Alerts", systemImage: "bell.badge.fill")
+            Label(L10n.t("alerts"), systemImage: "bell.badge.fill")
                 .font(.headline)
                 .foregroundStyle(Theme.onSurface)
 
             Toggle(isOn: $notificationsOn) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Adhan notifications")
+                    Text(L10n.t("adhanNotifications"))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Theme.onSurface)
-                    Text("A notification with sound at every prayer time, scheduled 7 days ahead and refreshed whenever you open the app.")
+                    Text(L10n.t("notificationsBody"))
                         .font(.caption)
                         .foregroundStyle(Theme.onSurfaceSecondary)
                 }
@@ -410,7 +432,7 @@ private struct AlertsCard: View {
             }
 
             if notificationsOn && notificationsDenied {
-                Label("Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", systemImage: "exclamationmark.triangle.fill")
+                Label(L10n.t("notificationsOffWarning"), systemImage: "exclamationmark.triangle.fill")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Theme.adaptiveGold)
             }
@@ -419,10 +441,10 @@ private struct AlertsCard: View {
 
             Toggle(isOn: $liveActivityOn) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Live Activity")
+                    Text(L10n.t("liveActivity"))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Theme.onSurface)
-                    Text("A live countdown to the next prayer on your Lock Screen and Dynamic Island. It moves on to the following prayer by itself when a prayer time arrives, and also refreshes whenever you open the app.")
+                    Text(L10n.t("liveActivityBody"))
                         .font(.caption)
                         .foregroundStyle(Theme.onSurfaceSecondary)
                 }
@@ -468,6 +490,13 @@ private struct SettingsView: View {
     @AppStorage(AppAppearance.textKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var textHex: Int = Int(AppAppearance.defaultTextHex)
 
+    @AppStorage(AppLanguage.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var languageCode: String = AppLanguage.en.rawValue
+    @AppStorage(AppTextSize.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var textSizeRaw: String = AppTextSize.standard.rawValue
+    @AppStorage(AdhanSound.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var soundRaw: String = AdhanSound.default.rawValue
+
     @State private var savedThemes: [AppAppearance.ThemeChoice] = AppAppearance.savedThemes
     @State private var showSaveTheme = false
     @State private var newThemeName = ""
@@ -479,42 +508,51 @@ private struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                languageSection
                 appearanceSection
                 colorsSection
                 themesSection
+                textSizeSection
                 iconSection
                 prayerAlertsSection
+                soundSection
                 privacySection
                 resetSection
             }
             .id(resetGeneration)
-            .navigationTitle("Settings")
+            .navigationTitle(L10n.t("settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.t("done")) { dismiss() }
                 }
             }
             .preferredColorScheme(AppAppearance.Mode(rawValue: modeRaw)?.colorScheme)
+            .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+            .environment(\.locale, AppLanguage.current.locale)
+            .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
             .onAppear { currentIconName = UIApplication.shared.alternateIconName }
             .onChange(of: modeRaw) { _, _ in settingsChanged() }
             .onChange(of: primaryHex) { _, _ in settingsChanged() }
             .onChange(of: accentHex) { _, _ in settingsChanged() }
             .onChange(of: textHex) { _, _ in settingsChanged() }
-            .alert("Save Theme", isPresented: $showSaveTheme) {
-                TextField("Theme name", text: $newThemeName)
-                Button("Save") { saveCurrentTheme() }
-                Button("Cancel", role: .cancel) { newThemeName = "" }
+            .onChange(of: languageCode) { _, _ in settingsChanged() }
+            .onChange(of: textSizeRaw) { _, _ in settingsChanged() }
+            .onChange(of: soundRaw) { _, _ in settingsChanged() }
+            .alert(L10n.t("saveThemeTitle"), isPresented: $showSaveTheme) {
+                TextField(L10n.t("themeName"), text: $newThemeName)
+                Button(L10n.t("save")) { saveCurrentTheme() }
+                Button(L10n.t("cancel"), role: .cancel) { newThemeName = "" }
             } message: {
-                Text("Save the current colors as a theme you can re-apply any time.")
+                Text(L10n.t("saveThemeMessage"))
             }
             .confirmationDialog(
-                "Reset all appearance and alert settings to the defaults?",
+                L10n.t("resetConfirm"),
                 isPresented: $showResetConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Reset to Defaults", role: .destructive) { resetToDefaults() }
-                Button("Cancel", role: .cancel) {}
+                Button(L10n.t("reset"), role: .destructive) { resetToDefaults() }
+                Button(L10n.t("cancel"), role: .cancel) {}
             }
         }
     }
@@ -523,31 +561,31 @@ private struct SettingsView: View {
 
     private var appearanceSection: some View {
         Section {
-            Picker("Appearance", selection: $modeRaw) {
+            Picker(L10n.t("appearance"), selection: $modeRaw) {
                 ForEach(AppAppearance.Mode.allCases, id: \.rawValue) { mode in
-                    Text(mode.label).tag(mode.rawValue)
+                    Text(L10n.t("mode.\(mode.rawValue)")).tag(mode.rawValue)
                 }
             }
             .pickerStyle(.segmented)
         } header: {
-            Text("Appearance")
+            Text(L10n.t("appearance"))
         } footer: {
-            Text("System follows your iPhone's Light/Dark setting. Light keeps the background white; Dark keeps it black. The app icon follows too when your Home Screen icons are set to Auto.")
+            Text(L10n.t("appearanceFooter"))
         }
     }
 
     private var colorsSection: some View {
         Section {
-            ColorSettingRow(title: "Main color", caption: "Cards and buttons (the green)",
+            ColorSettingRow(title: L10n.t("mainColor"), caption: L10n.t("mainColorCaption"),
                             presets: AppAppearance.primaryPresets, hexValue: $primaryHex)
-            ColorSettingRow(title: "Accent color", caption: "Countdowns and highlights (the gold)",
+            ColorSettingRow(title: L10n.t("accentColor"), caption: L10n.t("accentColorCaption"),
                             presets: AppAppearance.presets, hexValue: $accentHex)
-            ColorSettingRow(title: "Text color", caption: "Text on the colored cards",
+            ColorSettingRow(title: L10n.t("textColor"), caption: L10n.t("textColorCaption"),
                             presets: AppAppearance.textPresets, hexValue: $textHex)
         } header: {
-            Text("Theme Colors")
+            Text(L10n.t("themeColors"))
         } footer: {
-            Text("Tap a circle for a preset, or use the color wheel on the right for any color. Text is automatically adjusted when needed so it always stays easy to read. The widgets use the same colors.")
+            Text(L10n.t("colorsFooter"))
         }
     }
 
@@ -562,7 +600,7 @@ private struct SettingsView: View {
                     ThemeChoiceRow(theme: theme, isSaved: true, isActive: isActiveTheme(theme)) { apply(theme) }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) { deleteSavedTheme(theme) } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label(L10n.t("delete"), systemImage: "trash")
                             }
                         }
                 }
@@ -571,12 +609,12 @@ private struct SettingsView: View {
                 newThemeName = ""
                 showSaveTheme = true
             } label: {
-                Label("Save current colors as a theme", systemImage: "bookmark.fill")
+                Label(L10n.t("saveCurrentTheme"), systemImage: "bookmark.fill")
             }
         } header: {
-            Text("Themes")
+            Text(L10n.t("themes"))
         } footer: {
-            Text("Themes are ready-made color sets designed to look good together — main color, accent and text in one tap. Tapping a theme applies it right away: watch the preview card above change.")
+            Text(L10n.t("themesFooter"))
         }
     }
 
@@ -598,7 +636,7 @@ private struct SettingsView: View {
                                             lineWidth: currentIconName == option.alternateName ? 2.5 : 1
                                         )
                                 }
-                            Text(option.displayName)
+                            Text(L10n.t(option.nameKey))
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(.primary)
                         }
@@ -613,9 +651,74 @@ private struct SettingsView: View {
                     .foregroundStyle(.red)
             }
         } header: {
-            Text("App Icon")
+            Text(L10n.t("appIcon"))
         } footer: {
-            Text("Pick the icon you like best. Changing the icon needs an installer that supports alternate icons.")
+            Text(L10n.t("appIconFooter"))
+        }
+    }
+
+    private var languageSection: some View {
+        Section {
+            ForEach(AppLanguage.allCases) { language in
+                Button {
+                    languageCode = language.rawValue
+                } label: {
+                    HStack {
+                        Text(language.nativeName)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if languageCode == language.rawValue {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.adaptiveGold)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        } header: {
+            Text(L10n.t("language"))
+        } footer: {
+            Text(L10n.t("languageFooter"))
+        }
+    }
+
+    private var textSizeSection: some View {
+        Section {
+            Picker(L10n.t("textSize"), selection: $textSizeRaw) {
+                ForEach(AppTextSize.allCases) { size in
+                    Text(L10n.t(size.l10nKey)).tag(size.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            Text(L10n.t("textSize"))
+        } footer: {
+            Text(L10n.t("textSizeFooter"))
+        }
+    }
+
+    private var soundSection: some View {
+        Section {
+            ForEach(AdhanSound.allCases) { sound in
+                Button {
+                    soundRaw = sound.rawValue
+                } label: {
+                    HStack {
+                        Text(L10n.t(sound.l10nKey))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if soundRaw == sound.rawValue {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.adaptiveGold)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        } header: {
+            Text(L10n.t("alertSound"))
+        } footer: {
+            Text(L10n.t("alertSoundFooter"))
         }
     }
 
@@ -625,9 +728,9 @@ private struct SettingsView: View {
                 PrayerAlertRow(prayer: prayer) { settingsChanged() }
             }
         } header: {
-            Text("Prayer Alerts")
+            Text(L10n.t("prayerAlerts"))
         } footer: {
-            Text("Choose which times play an alert. Sunrise is off by default — turn it on if you want a marker for the end of Fajr time. These work together with the Adhan notifications switch on the main screen.")
+            Text(L10n.t("prayerAlertsFooter"))
         }
     }
 
@@ -635,8 +738,8 @@ private struct SettingsView: View {
         Section {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("No data collected")
-                    Text("No accounts, no tracking, no ads, no analytics.")
+                    Text(L10n.t("noDataCollected"))
+                    Text(L10n.t("noDataBody"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -645,8 +748,8 @@ private struct SettingsView: View {
             }
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Everything stays on this device")
-                    Text("Prayer times are calculated on your iPhone. The app makes no network connections of its own, and your settings never leave the device.")
+                    Text(L10n.t("staysOnDevice"))
+                    Text(L10n.t("staysOnDeviceBody"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -655,8 +758,8 @@ private struct SettingsView: View {
             }
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("No external links")
-                    Text("The app has no Directions or Website buttons, so nothing ever opens outside the app.")
+                    Text(L10n.t("noExternalLinks"))
+                    Text(L10n.t("noExternalLinksBody"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -664,7 +767,7 @@ private struct SettingsView: View {
                 Image(systemName: "eye.slash.fill")
             }
         } header: {
-            Text("Privacy")
+            Text(L10n.t("privacy"))
         }
     }
 
@@ -673,10 +776,10 @@ private struct SettingsView: View {
             Button(role: .destructive) {
                 showResetConfirm = true
             } label: {
-                Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
+                Label(L10n.t("reset"), systemImage: "arrow.counterclockwise")
             }
         } footer: {
-            Text("Restores the original appearance, colors, icon and prayer alerts. Your saved themes are kept.")
+            Text(L10n.t("resetFooter"))
         }
     }
 
@@ -694,16 +797,16 @@ private struct SettingsView: View {
     /// reopen the app to see the new theme.
     private var themePreviewCard: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("NEXT PRAYER · PREVIEW")
+            Text(L10n.t("nextPrayerPreview"))
                 .font(.caption2.weight(.bold))
                 .tracking(0.8)
                 .foregroundStyle(Theme.onPrimaryText.opacity(0.75))
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Fajr")
+                Text(Prayer.fajr.displayName)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(Theme.onPrimaryText)
                 Spacer()
-                Text("6:28 AM")
+                Text(previewTime)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.onPrimaryText)
             }
@@ -721,6 +824,15 @@ private struct SettingsView: View {
         .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
+    }
+
+    /// A fixed clock time (today at 6:28) formatted in the current
+    /// language, for the theme preview card's sample Adhan time.
+    private var previewTime: String {
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: .now)
+        comps.hour = 6
+        comps.minute = 28
+        return PrayerFormat.time(Calendar.current.date(from: comps) ?? .now)
     }
 
     /// True when the current mode + colors exactly match a theme — its
@@ -762,12 +874,12 @@ private struct SettingsView: View {
     private func setIcon(_ option: IconOption) {
         iconError = nil
         guard UIApplication.shared.supportsAlternateIcons else {
-            iconError = "This install doesn't support alternate icons."
+            iconError = L10n.t("iconUnsupported")
             return
         }
         UIApplication.shared.setAlternateIconName(option.alternateName) { error in
             if let error {
-                iconError = "Couldn't change the icon: \(error.localizedDescription)"
+                iconError = L10n.f("iconError", error.localizedDescription)
             } else {
                 currentIconName = option.alternateName
             }
@@ -791,17 +903,17 @@ private struct SettingsView: View {
 
     private struct IconOption: Identifiable {
         let alternateName: String?
-        let displayName: String
+        let nameKey: String
         let previewImage: String
         var id: String { alternateName ?? "default" }
     }
 
     private static let iconOptions: [IconOption] = [
-        IconOption(alternateName: nil, displayName: "Classic", previewImage: "IconPreviewDefault"),
-        IconOption(alternateName: "AppIconMidnight", displayName: "Midnight", previewImage: "IconPreviewMidnight"),
-        IconOption(alternateName: "AppIconDesert", displayName: "Desert", previewImage: "IconPreviewDesert"),
-        IconOption(alternateName: "AppIconRose", displayName: "Rose", previewImage: "IconPreviewRose"),
-        IconOption(alternateName: "AppIconRoyal", displayName: "Royal", previewImage: "IconPreviewRoyal"),
+        IconOption(alternateName: nil, nameKey: "icon.classic", previewImage: "IconPreviewDefault"),
+        IconOption(alternateName: "AppIconMidnight", nameKey: "icon.midnight", previewImage: "IconPreviewMidnight"),
+        IconOption(alternateName: "AppIconDesert", nameKey: "icon.desert", previewImage: "IconPreviewDesert"),
+        IconOption(alternateName: "AppIconRose", nameKey: "icon.rose", previewImage: "IconPreviewRose"),
+        IconOption(alternateName: "AppIconRoyal", nameKey: "icon.royal", previewImage: "IconPreviewRoyal"),
     ]
 }
 
@@ -823,7 +935,7 @@ private struct ColorSettingRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
-                ColorPicker("Pick a custom \(title.lowercased())", selection: colorBinding, supportsOpacity: false)
+                ColorPicker(L10n.f("customColor", title), selection: colorBinding, supportsOpacity: false)
                     .labelsHidden()
             }
             ScrollView(.horizontal, showsIndicators: false) {
@@ -895,7 +1007,7 @@ private struct ThemeChoiceRow: View {
                     Text(theme.name)
                         .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
-                    Text(isSaved ? "Your saved theme · \(theme.mode.label)" : "Designed theme · \(theme.mode.label)")
+                    Text("\(L10n.t(isSaved ? "savedTheme" : "designedTheme")) · \(L10n.t("mode.\(theme.modeRaw)"))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -905,7 +1017,7 @@ private struct ThemeChoiceRow: View {
                         .font(.title3)
                         .foregroundStyle(Color(hex: theme.accentHex))
                 } else {
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "chevron.forward")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
                 }
@@ -934,11 +1046,158 @@ private struct PrayerAlertRow: View {
     var body: some View {
         Toggle(isOn: $isOn) {
             Label {
-                Text(prayer == .dhuhr ? "Dhuhr (Jumu'ah on Fridays)" : prayer.displayName)
+                Text(prayer == .dhuhr ? L10n.t("dhuhrFriday") : prayer.displayName)
             } icon: {
                 Image(systemName: prayer.symbolName)
             }
         }
         .onChange(of: isOn) { _, _ in onToggle() }
+    }
+}
+
+// MARK: - Qibla compass (v1.1.0)
+
+/// Qibla bearing math: the initial great-circle bearing from the
+/// mosque to the Kaaba, plus Edmonton's magnetic declination so the
+/// phone's magnetic compass can be corrected to true north.
+private enum QiblaMath {
+    static let kaabaLatitude = 21.422487
+    static let kaabaLongitude = 39.826206
+    /// Magnetic declination at Edmonton in 2026 (degrees East), slowly
+    /// decreasing; close enough for a phone compass.
+    static let magneticDeclination = 12.6
+
+    static var bearingFromMosque: Double {
+        let lat1 = MosqueInfo.latitude * .pi / 180
+        let lat2 = kaabaLatitude * .pi / 180
+        let dLon = (kaabaLongitude - MosqueInfo.longitude) * .pi / 180
+        let y = sin(dLon)
+        let x = cos(lat1) * tan(lat2) - sin(lat1) * cos(dLon)
+        let bearing = atan2(y, x) * 180 / .pi
+        return (bearing + 360).truncatingRemainder(dividingBy: 360)
+    }
+}
+
+/// Live compass heading from the motion coprocessor, referenced to
+/// magnetic north. No location permission is needed (or wanted — the
+/// app's privacy promise), and the bearing is computed from the
+/// mosque's fixed position, not the user's.
+private final class QiblaHeadingManager: ObservableObject {
+    @Published private(set) var heading: Double?
+    private let motion = CMMotionManager()
+
+    func start() {
+        guard motion.isDeviceMotionAvailable else { return }
+        motion.deviceMotionUpdateInterval = 1.0 / 30.0
+        motion.startDeviceMotionUpdates(using: .xMagneticNorthZVertical, to: .main) { [weak self] data, _ in
+            guard let yaw = data?.attitude.yaw else { return }
+            // Yaw is radians counter-clockwise from magnetic north;
+            // convert to a clockwise compass heading in degrees, then
+            // correct magnetic -> true north.
+            var degrees = -yaw * 180 / .pi + QiblaMath.magneticDeclination
+            degrees = degrees.truncatingRemainder(dividingBy: 360)
+            if degrees < 0 { degrees += 360 }
+            self?.heading = degrees
+        }
+    }
+
+    func stop() {
+        motion.stopDeviceMotionUpdates()
+    }
+}
+
+private struct QiblaCard: View {
+    @StateObject private var manager = QiblaHeadingManager()
+    @State private var facingQibla = false
+
+    private var bearing: Double { QiblaMath.bearingFromMosque }
+
+    /// Signed smallest angle between the phone's heading and the Qibla.
+    private var offset: Double? {
+        guard let heading = manager.heading else { return nil }
+        var diff = (bearing - heading).truncatingRemainder(dividingBy: 360)
+        if diff > 180 { diff -= 360 }
+        if diff < -180 { diff += 360 }
+        return diff
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label(L10n.t("qibla"), systemImage: "location.north.circle.fill")
+                .font(.headline)
+                .foregroundStyle(Theme.onSurface)
+            HStack(spacing: 18) {
+                dial
+                    .frame(width: 148, height: 148)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(Int(bearing.rounded()))°")
+                        .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.adaptiveGold)
+                    Text(L10n.t("fromNorth"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.onSurface)
+                    Text(L10n.t("qiblaFromMosque"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                    if let offset, abs(offset) <= 3 {
+                        Label(L10n.t("facingQibla"), systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(Theme.adaptiveGold)
+                    }
+                }
+            }
+            Text(L10n.t("qiblaHint"))
+                .font(.caption)
+                .foregroundStyle(Theme.onSurfaceMuted)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .adaptiveCard(cornerRadius: 26)
+        .onAppear { manager.start() }
+        .onDisappear { manager.stop() }
+        .onChange(of: offset.map { abs($0) <= 3 }) { _, isFacing in
+            let facing = isFacing ?? false
+            if facing && !facingQibla {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+            facingQibla = facing
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(L10n.t("qibla")): \(Int(bearing.rounded()))° \(L10n.t("fromNorth"))")
+    }
+
+    /// The dial rotates against the phone's heading; the gold marker is
+    /// the Qibla, the fixed triangle at the top is where the phone
+    /// points. North/East/South/West letters rotate with the dial.
+    private var dial: some View {
+        ZStack {
+            Circle()
+                .fill(Theme.panelFill)
+                .overlay { Circle().strokeBorder(Theme.hairline, lineWidth: 1) }
+            ZStack {
+                ForEach(0..<4, id: \.self) { quarter in
+                    Text(L10n.t(["dir.n", "dir.e", "dir.s", "dir.w"][quarter]))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .padding(.top, 10)
+                        .rotationEffect(.degrees(Double(quarter) * 90))
+                }
+                // Qibla marker on the rim.
+                Text("🕋")
+                    .font(.system(size: 24))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .padding(.top, 2)
+                    .rotationEffect(.degrees(bearing))
+                    .accessibilityHidden(true)
+            }
+            .rotationEffect(.degrees(-(manager.heading ?? 0)))
+            .animation(.linear(duration: 0.1), value: manager.heading)
+            // Fixed pointer at the top: where the phone is facing.
+            Image(systemName: "arrowtriangle.up.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.adaptiveGold)
+                .offset(y: -80)
+        }
     }
 }
