@@ -535,6 +535,7 @@ private struct SettingsView: View {
 
     private var themesSection: some View {
         Section {
+            themePreviewCard
             ForEach(AppAppearance.presetThemes) { theme in
                 ThemeChoiceRow(theme: theme, isSaved: false, isActive: isActiveTheme(theme)) { apply(theme) }
             }
@@ -557,7 +558,7 @@ private struct SettingsView: View {
         } header: {
             Text("Themes")
         } footer: {
-            Text("Themes are ready-made color sets designed to look good together — main color, accent and text in one tap.")
+            Text("Themes are ready-made color sets designed to look good together — main color, accent and text in one tap. Tapping a theme applies it right away: watch the preview card above change.")
         }
     }
 
@@ -667,6 +668,41 @@ private struct SettingsView: View {
         PrayerProvider.standard.refreshCache()
         WidgetCenter.shared.reloadAllTimelines()
         AppServices.refresh()
+    }
+
+    /// A miniature next-prayer card in the current colors. It redraws
+    /// the instant a theme or color changes, so the effect of a tap is
+    /// visible right here in Settings — no need to close the page and
+    /// reopen the app to see the new theme.
+    private var themePreviewCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("NEXT PRAYER · PREVIEW")
+                .font(.caption2.weight(.bold))
+                .tracking(0.8)
+                .foregroundStyle(Theme.onPrimaryText.opacity(0.75))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Fajr")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.onPrimaryText)
+                Spacer()
+                Text("6:28 AM")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.onPrimaryText)
+            }
+            Text("7:49:52")
+                .font(.system(size: 30, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(Theme.adaptiveGold)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(colors: [Theme.primaryBright, Theme.primary],
+                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     /// True when the current mode + colors exactly match a theme — its
