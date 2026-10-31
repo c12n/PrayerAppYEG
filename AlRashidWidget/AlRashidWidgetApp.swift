@@ -256,6 +256,14 @@ enum LiveActivityController {
             let attributes = PrayerActivityAttributes(mosqueName: MosqueInfo.name)
             if let activity = try? Activity.request(attributes: attributes, content: content, pushType: .token) {
                 LiveActivityPushSync.observe(activity)
+            } else if (try? Activity.request(attributes: attributes, content: content, pushType: .none)) != nil {
+                // v1.3.1: the push-type start can fail when the installed
+                // copy was re-signed without the aps-environment
+                // entitlement (a sideload profile created before the Push
+                // capability existed). Fall back to a local activity so
+                // the Lock Screen countdown still appears — the
+                // stale-date flip covers the prayer switch — and the next
+                // refresh retries the push-type start.
             }
         }
     }
