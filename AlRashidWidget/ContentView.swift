@@ -65,7 +65,6 @@ struct ContentView: View {
                     ScheduleCard(snapshot: snapshot)
                     DailyVerseCard()
                     QiblaCard()
-                    AlertsCard()
                     FooterView()
                 }
                 .padding(.horizontal, 20)
@@ -413,71 +412,6 @@ private extension View {
     ContentView()
 }
 
-// MARK: - Alerts settings
-
-private struct AlertsCard: View {
-    @AppStorage(AlertSettings.notificationsKey) private var notificationsOn = true
-    @AppStorage(AlertSettings.liveActivityKey) private var liveActivityOn = true
-    @State private var notificationsDenied = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label(L10n.t("alerts"), systemImage: "bell.badge.fill")
-                .font(.headline)
-                .foregroundStyle(Theme.onSurface)
-
-            Toggle(isOn: $notificationsOn) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.t("adhanNotifications"))
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Theme.onSurface)
-                    Text(L10n.t("notificationsBody"))
-                        .font(.caption)
-                        .foregroundStyle(Theme.onSurfaceSecondary)
-                }
-            }
-            .toggleStyle(.switch)
-            .tint(Theme.adaptiveGold)
-            .onChange(of: notificationsOn) { _, isOn in
-                AppServices.notificationsToggled(on: isOn)
-                refreshDeniedState()
-            }
-
-            if notificationsOn && notificationsDenied {
-                Label(L10n.t("notificationsOffWarning"), systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Theme.adaptiveGold)
-            }
-
-            Divider().overlay(Theme.hairline)
-
-            Toggle(isOn: $liveActivityOn) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.t("liveActivity"))
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Theme.onSurface)
-                    Text(L10n.t("liveActivityBody"))
-                        .font(.caption)
-                        .foregroundStyle(Theme.onSurfaceSecondary)
-                }
-            }
-            .toggleStyle(.switch)
-            .tint(Theme.adaptiveGold)
-            .onChange(of: liveActivityOn) { _, isOn in
-                AppServices.liveActivityToggled(on: isOn)
-            }
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .adaptiveCard(cornerRadius: 26)
-        .task { refreshDeniedState() }
-    }
-
-    private func refreshDeniedState() {
-        Task { notificationsDenied = await AdhanNotifications.authorizationDenied() }
-    }
-}
-
 // MARK: - Settings (v1.0.5)
 
 /// The dedicated Settings page: appearance (System/Light/Dark), theme
@@ -513,6 +447,13 @@ private struct SettingsView: View {
     @AppStorage(AdhanSound.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var soundRaw: String = AdhanSound.default.rawValue
 
+    /// The master alert switches, moved here from the Home screen's
+    /// Alerts card in v1.4. They live in UserDefaults.standard (the
+    /// store AlertSettings reads), NOT the App Group suite.
+    @AppStorage(AlertSettings.notificationsKey) private var notificationsOn = true
+    @AppStorage(AlertSettings.liveActivityKey) private var liveActivityOn = true
+    @State private var notificationsDenied = false
+
     @State private var savedThemes: [AppAppearance.ThemeChoice] = AppAppearance.savedThemes
     @State private var showSaveTheme = false
     @State private var showRestartPrompt = false
@@ -531,6 +472,7 @@ private struct SettingsView: View {
                 themesSection
                 textSizeSection
                 iconSection
+                alertsSection
                 prayerAlertsSection
                 soundSection
                 privacySection
@@ -750,6 +692,51 @@ private struct SettingsView: View {
         } footer: {
             Text(L10n.t("alertSoundFooter"))
         }
+    }
+
+    /// Master alert switches (v1.4 — moved from the Home screen's
+    /// Alerts card): Adhan notifications on/off with the
+    /// permission-denied warning, and the Live Activity on/off.
+    private var alertsSection: some View {
+        Section {
+            Toggle(isOn: $notificationsOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("adhanNotifications"))
+                    Text(L10n.t("notificationsBody"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onChange(of: notificationsOn) { _, isOn in
+                AppServices.notificationsToggled(on: isOn)
+                refreshDeniedState()
+            }
+
+            if notificationsOn && notificationsDenied {
+                Label(L10n.t("notificationsOffWarning"), systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Theme.adaptiveGold)
+            }
+
+            Toggle(isOn: $liveActivityOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("liveActivity"))
+                    Text(L10n.t("liveActivityBody"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onChange(of: liveActivityOn) { _, isOn in
+                AppServices.liveActivityToggled(on: isOn)
+            }
+        } header: {
+            Text(L10n.t("alerts"))
+        }
+        .task { refreshDeniedState() }
+    }
+
+    private func refreshDeniedState() {
+        Task { notificationsDenied = await AdhanNotifications.authorizationDenied() }
     }
 
     private var prayerAlertsSection: some View {
