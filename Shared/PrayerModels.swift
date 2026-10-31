@@ -295,7 +295,9 @@ struct PrayerProvider: Sendable {
             asrIqamah: iqamah(.asr, times.asr),
             maghribIqamah: iqamah(.maghrib, times.maghrib),
             ishaIqamah: iqamah(.isha, times.isha),
-            hijriDate: Self.hijriString(for: noon, timeZone: calendar.timeZone),
+            hijriDate: Self.hijriString(
+                for: calendar.date(byAdding: .day, value: HijriOffset.current, to: noon) ?? noon,
+                timeZone: calendar.timeZone),
             isFriday: isFriday,
             jumuahKhutbah: khutbah
         )
@@ -363,6 +365,7 @@ struct PrayerProvider: Sendable {
             String(iqamahConfig.fajr), String(iqamahConfig.dhuhr), String(iqamahConfig.asr),
             String(iqamahConfig.maghrib), String(iqamahConfig.isha),
             String(MosqueInfo.jumuahKhutbahHour), String(MosqueInfo.jumuahKhutbahMinute),
+            String(HijriOffset.current),
             AppLanguage.current.rawValue
         ]
         return parts.joined(separator: "|")
@@ -1244,6 +1247,26 @@ enum AppAppearance {
     }
 }
 
+// MARK: - Hijri date offset (v1.5)
+
+/// A user adjustment of −1/0/+1 days applied to the displayed Hijri
+/// date, for when the local moon sighting differs from the Umm al-Qura
+/// table. Stored in the App Group so the app and widget agree; part of
+/// the PrayerProvider cache signature, so changing it recomputes the
+/// cached day (and its Hijri string) everywhere.
+enum HijriOffset {
+    static let storageKey = "hijri.offsetDays"
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static var current: Int {
+        let stored = sharedDefaults.integer(forKey: storageKey)
+        return min(1, max(-1, stored))
+    }
+}
+
 // MARK: - Per-prayer alert settings (v1.0.5)
 
 /// Which prayers raise an Adhan notification. Stored per prayer in the
@@ -1568,6 +1591,19 @@ enum L10n {
         "notificationsBody": [.en: "A notification with sound at every prayer time, scheduled 7 days ahead and refreshed whenever you open the app.", .ar: "إشعار بصوت عند كل وقت صلاة، يُجدوَل لسبعة أيام مقدمًا ويُحدَّث كلما فتحت التطبيق.", .fr: "Une notification avec son à chaque heure de prière, programmée 7 jours à l'avance et actualisée à chaque ouverture de l'app."],
         "liveActivityBody": [.en: "A live countdown to the next prayer on your Lock Screen and Dynamic Island. It moves on to the following prayer by itself when a prayer time arrives, and also refreshes whenever you open the app.", .ar: "عدّاد مباشر للصلاة التالية على شاشة القفل وDynamic Island. ينتقل بنفسه إلى الصلاة التي بعدها عند حلول وقت الصلاة، ويُحدَّث أيضًا كلما فتحت التطبيق.", .fr: "Un compte à rebours en direct vers la prochaine prière sur l'écran verrouillé et la Dynamic Island. Il passe tout seul à la prière suivante à l'heure venue, et s'actualise à chaque ouverture de l'app."],
         "notificationsOffWarning": [.en: "Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", .ar: "الإشعارات متوقفة لهذا التطبيق في إعدادات iOS — فعّلها هناك لسماع تنبيهات الأذان.", .fr: "Les notifications sont désactivées pour cette app dans les Réglages iOS — activez-les pour entendre les alertes de l'Adhan."],
+        // Alerts extras (v1.5)
+        "reminder": [.en: "Pre-prayer reminder", .ar: "تذكير قبل الصلاة", .fr: "Rappel avant la prière"],
+        "reminderBody": [.en: "A gentle reminder a few minutes before each prayer time.", .ar: "تذكير لطيف قبل كل وقت صلاة ببضع دقائق.", .fr: "Un rappel en douceur quelques minutes avant chaque heure de prière."],
+        "minutesBefore": [.en: "%lld minutes before", .ar: "قبل %lld دقيقة", .fr: "%lld minutes avant"],
+        "jumuahReminder": [.en: "Jumu'ah reminder", .ar: "تذكير الجمعة", .fr: "Rappel du Jumu'ah"],
+        "jumuahReminderBody": [.en: "One hour before the Friday Khutbah at 1:30 PM.", .ar: "قبل خطبة الجمعة بساعة، الساعة ١:٣٠ ظهرًا.", .fr: "Une heure avant la Khutbah du vendredi à 13 h 30."],
+        "jumuahReminderNotif": [.en: "Khutbah at %@ — leave soon to catch it.", .ar: "الخطبة الساعة %@ — اخرج قريبًا لتلحق بها.", .fr: "Khutbah à %@ — partez bientôt pour y assister."],
+        "today": [.en: "Today", .ar: "اليوم", .fr: "Aujourd'hui"],
+        "share": [.en: "Share", .ar: "مشاركة", .fr: "Partager"],
+        "hijriDate": [.en: "Hijri Date", .ar: "التاريخ الهجري", .fr: "Date hégirienne"],
+        "hijriOffsetFooter": [.en: "If the Hijri date looks a day off — for example after a local moon sighting — shift it here. This changes only the displayed date, never the prayer times.", .ar: "إذا بدا التاريخ الهجري متأخرًا أو متقدمًا بيوم — مثلًا بعد رؤية الهلال محليًا — عدّله هنا. هذا يغيّر التاريخ المعروض فقط، ولا يمسّ أوقات الصلاة أبدًا.", .fr: "Si la date hégirienne semble décalée d'un jour — par exemple après une observation locale de la lune — ajustez-la ici. Cela change seulement la date affichée, jamais les heures de prière."],
+        "qiblaCompass": [.en: "Qibla Compass", .ar: "بوصلة القبلة", .fr: "Boussole de la Qibla"],
+        "tapForCompass": [.en: "Tap for the full compass", .ar: "اضغط للبوصلة الكاملة", .fr: "Touchez pour la boussole complète"],
         "footerPrivacy": [.en: "Privacy first — no external links, no tracking, nothing leaves this device.", .ar: "الخصوصية أولًا — لا روابط خارجية، لا تتبّع، لا شيء يغادر هذا الجهاز.", .fr: "La confidentialité d'abord — aucun lien externe, aucun suivi, rien ne quitte cet appareil."],
         "footerCalc": [.en: "Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.", .ar: "تُحسب أوقات الأذان على الجهاز وتُعايَر وفق الجدول المنشور لمسجد الراشد. أوقات الإقامة إزاحات ثابتة من الأذان — يُرجى التأكد من الجدول الرسمي للمسجد.", .fr: "Les heures de l'Adhan sont calculées sur l'appareil et calibrées sur le calendrier publié par la mosquée Al Rashid. Les heures d'Iqamah sont des décalages fixes après l'Adhan — veuillez les confirmer avec le calendrier officiel de la mosquée."],
         // Settings chrome
@@ -1607,7 +1643,7 @@ enum L10n {
         "icon.royal": [.en: "Royal", .ar: "الملكي", .fr: "Royal"],
         "iconUnsupported": [.en: "This install doesn't support alternate icons.", .ar: "هذا التثبيت لا يدعم الأيقونات البديلة.", .fr: "Cette installation ne prend pas en charge les icônes alternatives."],
         "prayerAlerts": [.en: "Prayer Alerts", .ar: "تنبيهات الصلاة", .fr: "Alertes de prière"],
-        "prayerAlertsFooter": [.en: "Choose which times play an alert. Sunrise is off by default — turn it on if you want a marker for the end of Fajr time. These work together with the Adhan notifications switch on the main screen.", .ar: "اختر الأوقات التي يُشغَّل لها تنبيه. الشروق متوقف افتراضيًا — فعّله إن أردت علامة لانتهاء وقت الفجر. تعمل هذه مع مفتاح إشعارات الأذان في الشاشة الرئيسية.", .fr: "Choisissez les heures qui jouent une alerte. Le lever du soleil est désactivé par défaut — activez-le pour marquer la fin du temps du Fajr. Ces réglages fonctionnent avec l'interrupteur des notifications de l'Adhan sur l'écran principal."],
+        "prayerAlertsFooter": [.en: "Choose which times play an alert. Sunrise is off by default — turn it on if you want a marker for the end of Fajr time. These work together with the Adhan notifications switch above.", .ar: "اختر الأوقات التي يُشغَّل لها تنبيه. الشروق متوقف افتراضيًا — فعّله إن أردت علامة لانتهاء وقت الفجر. تعمل هذه مع مفتاح إشعارات الأذان أعلاه.", .fr: "Choisissez les heures qui jouent une alerte. Le lever du soleil est désactivé par défaut — activez-le pour marquer la fin du temps du Fajr. Ces réglages fonctionnent avec l'interrupteur des notifications de l'Adhan ci-dessus."],
         "dhuhrFriday": [.en: "Dhuhr (Jumu'ah on Fridays)", .ar: "الظهر (الجمعة يوم الجمعة)", .fr: "Dhuhr (Jumu'ah le vendredi)"],
         "khutbahShown": [.en: "Khutbah time shown", .ar: "يُعرض وقت الخطبة", .fr: "Heure de la Khutbah affichée"],
         "privacy": [.en: "Privacy", .ar: "الخصوصية", .fr: "Confidentialité"],
