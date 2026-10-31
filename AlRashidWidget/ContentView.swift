@@ -216,17 +216,50 @@ private struct NextPrayerCard: View {
 private struct ScheduleCard: View {
     let snapshot: PrayerSnapshot
 
+    /// Today/Tomorrow preview toggle (v1.5). Nil follows the snapshot
+    /// (today, switching to tomorrow after Isha); tapping a segment
+    /// pins the card to that day until the snapshot's day catches up.
+    @State private var showTomorrow: Bool?
+
+    private var provider: PrayerProvider { .standard }
+
+    private var todayDay: PrayerDay { provider.day(for: snapshot.date) }
+
+    private var displayedDay: PrayerDay {
+        let wantTomorrow = showTomorrow ?? snapshot.isShowingTomorrow
+        if wantTomorrow == snapshot.isShowingTomorrow { return snapshot.day }
+        if wantTomorrow {
+            let next = provider.calendar.date(byAdding: .day, value: 1, to: todayDay.date) ?? todayDay.date
+            return provider.computeDay(for: next)
+        }
+        return todayDay
+    }
+
+    private var isDisplayingSnapshotDay: Bool {
+        displayedDay.date == snapshot.day.date
+    }
+
     var body: some View {
+        let day = displayedDay
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text(snapshot.isShowingTomorrow ? L10n.t("tomorrowTimes") : L10n.t("todayTimes"))
+                Text(day.date == todayDay.date ? L10n.t("todayTimes") : L10n.t("tomorrowTimes"))
                     .font(.headline)
                     .foregroundStyle(Theme.onSurface)
                 Spacer(minLength: 8)
-                Text(PrayerFormat.shortDate(snapshot.day.date))
+                Text(PrayerFormat.shortDate(day.date))
                     .font(.subheadline)
                     .foregroundStyle(Theme.onSurfaceSecondary)
             }
+            Picker("", selection: Binding(
+                get: { showTomorrow ?? snapshot.isShowingTomorrow },
+                set: { showTomorrow = $0 }
+            )) {
+                Text(L10n.t("today")).tag(false)
+                Text(L10n.t("tomorrow")).tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
             HStack(spacing: 8) {
                 Text(L10n.t("colPrayer")).frame(maxWidth: .infinity, alignment: .leading)
                 Text(L10n.t("colAdhan")).frame(width: 86, alignment: .trailing)
@@ -237,12 +270,12 @@ private struct ScheduleCard: View {
             .foregroundStyle(Theme.onSurfaceMuted)
             .padding(.horizontal, 12)
             VStack(spacing: 4) {
-                ForEach(snapshot.day.slots) { slot in
-                    ScheduleRow(slot: slot, isNext: snapshot.isNext(slot))
+                ForEach(day.slots) { slot in
+                    ScheduleRow(slot: slot, isNext: isDisplayingSnapshotDay && snapshot.isNext(slot))
                 }
             }
-            if snapshot.day.isFriday {
-                Label(L10n.f("jumuahReplaces", PrayerFormat.khutbahTime(on: snapshot.day.date)), systemImage: "building.columns.fill")
+            if day.isFriday {
+                Label(L10n.f("jumuahReplaces", PrayerFormat.khutbahTime(on: day.date)), systemImage: "building.columns.fill")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.adaptiveGold)
             }
@@ -452,7 +485,13 @@ private struct SettingsView: View {
     /// store AlertSettings reads), NOT the App Group suite.
     @AppStorage(AlertSettings.notificationsKey) private var notificationsOn = true
     @AppStorage(AlertSettings.liveActivityKey) private var liveActivityOn = true
+    @AppStorage(AlertSettings.reminderKey) private var reminderOn = true
+    @AppStorage(AlertSettings.reminderLeadKey) private var reminderLead = 10
+    @AppStorage(AlertSettings.jumuahReminderKey) private var jumuahReminderOn = true
     @State private var notificationsDenied = false
+
+    @AppStorage(HijriOffset.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var hijriOffset: Int = 0
 
     @State private var savedThemes: [AppAppearance.ThemeChoice] = AppAppearance.savedThemes
     @State private var showSaveTheme = false
@@ -472,6 +511,7 @@ private struct SettingsView: View {
                 themesSection
                 textSizeSection
                 iconSection
+                hijriSection
                 alertsSection
                 prayerAlertsSection
                 soundSection
@@ -729,10 +769,69 @@ private struct SettingsView: View {
             .onChange(of: liveActivityOn) { _, isOn in
                 AppServices.liveActivityToggled(on: isOn)
             }
+
+            Toggle(isOn: $reminderOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("reminder"))
+                    Text(L10n.t("reminderBody"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onChange(of: reminderOn) { _, _ in
+                AppServices.alertPreferencesChanged()
+            }
+
+            if reminderOn {
+                Picker(L10n.t("reminder"), selection: $reminderLead) {
+                    ForEach([5, 10, 15, 20, 30], id: \.self) { minutes in
+                        Text(L10n.f("minutesBefore", minutes)).tag(minutes)
+                    }
+                }
+                .onChange(of: reminderLead) { _, _ in
+                    AppServices.alertPreferencesChanged()
+                }
+            }
+
+            Toggle(isOn: $jumuahReminderOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("jumuahReminder"))
+                    Text(L10n.t("jumuahReminderBody"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onChange(of: jumuahReminderOn) { _, _ in
+                AppServices.alertPreferencesChanged()
+            }
         } header: {
             Text(L10n.t("alerts"))
         }
         .task { refreshDeniedState() }
+    }
+
+    /// Hijri date adjustment (v1.5): −1/0/+1 days on the displayed
+    /// Hijri date. It is part of the provider's cache signature, so
+    /// the change recomputes the cached day; reload widgets to match.
+    private var hijriSection: some View {
+        Section {
+            Picker("", selection: $hijriOffset) {
+                Text("-1").tag(-1)
+                Text("0").tag(0)
+                Text("+1").tag(1)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .onChange(of: hijriOffset) { _, _ in
+                settingsChanged()
+                PrayerProvider.standard.refreshCache()
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        } header: {
+            Text(L10n.t("hijriDate"))
+        } footer: {
+            Text(L10n.t("hijriOffsetFooter"))
+        }
     }
 
     private func refreshDeniedState() {
@@ -1119,32 +1218,53 @@ private struct DailyVerseCard: View {
         let language = AppLanguage.current
         let verse = DailyVerses.verse(for: .now)
         VStack(spacing: 10) {
-            Label(L10n.t("dailyVerse"), systemImage: "book.closed.fill")
-                .font(.headline)
-                .foregroundStyle(Theme.onSurface)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text(verse.arabic)
-                .font(.title3.weight(.semibold))
-                .lineSpacing(6)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Theme.onSurface)
-            if let translation = verse.translation(for: language) {
-                Text(translation)
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Theme.onSurfaceSecondary)
+            HStack {
+                Label(L10n.t("dailyVerse"), systemImage: "book.closed.fill")
+                    .font(.headline)
+                    .foregroundStyle(Theme.onSurface)
+                Spacer()
+                ShareLink(item: shareText(verse, language)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .frame(width: 32, height: 32)
+                }
+                .accessibilityLabel(L10n.t("share"))
             }
-            Text(verse.reference(for: language))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.adaptiveGold)
+            VStack(spacing: 10) {
+                Text(verse.arabic)
+                    .font(.title3.weight(.semibold))
+                    .lineSpacing(6)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.onSurface)
+                if let translation = verse.translation(for: language) {
+                    Text(translation)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                }
+                Text(verse.reference(for: language))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.adaptiveGold)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "\(L10n.t("dailyVerse")): \(verse.arabic) \(verse.translation(for: language) ?? "") \(verse.reference(for: language))"
+            )
         }
         .padding(18)
         .frame(maxWidth: .infinity)
         .adaptiveCard(cornerRadius: 26)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "\(L10n.t("dailyVerse")): \(verse.arabic) \(verse.translation(for: language) ?? "") \(verse.reference(for: language))"
-        )
+    }
+
+    /// The verse as one shareable block of text (v1.5).
+    private func shareText(_ verse: DailyVerse, _ language: AppLanguage) -> String {
+        var lines = [verse.arabic]
+        if let translation = verse.translation(for: language) {
+            lines.append(translation)
+        }
+        lines.append("\(verse.reference(for: language)) — \(MosqueInfo.name)")
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -1199,9 +1319,113 @@ private final class QiblaHeadingManager: ObservableObject {
     }
 }
 
+/// The rotating compass dial, shared by the Qibla card and the
+/// full-screen compass (v1.5). The dial rotates against the phone's
+/// heading; the gold marker is the Qibla, the fixed triangle at the
+/// top is where the phone points.
+private struct QiblaDial: View {
+    let heading: Double?
+    let bearing: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = min(proxy.size.width, proxy.size.height)
+            ZStack {
+                Circle()
+                    .fill(Theme.panelFill)
+                    .overlay { Circle().strokeBorder(Theme.hairline, lineWidth: 1) }
+                ZStack {
+                    ForEach(0..<4, id: \.self) { quarter in
+                        Text(L10n.t(["dir.n", "dir.e", "dir.s", "dir.w"][quarter]))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.onSurfaceSecondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                            .padding(.top, 10)
+                            .rotationEffect(.degrees(Double(quarter) * 90))
+                    }
+                    // Qibla marker on the rim.
+                    Text("🕋")
+                        .font(.system(size: size > 200 ? 34 : 24))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .padding(.top, 2)
+                        .rotationEffect(.degrees(bearing))
+                        .accessibilityHidden(true)
+                }
+                .rotationEffect(.degrees(-(heading ?? 0)))
+                .animation(.linear(duration: 0.1), value: heading)
+                // Fixed pointer at the top: where the phone is facing.
+                Image(systemName: "arrowtriangle.up.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.adaptiveGold)
+                    .offset(y: -(size / 2) - 6)
+            }
+        }
+    }
+}
+
+/// Full-screen Qibla compass (v1.5), opened by tapping the Qibla card.
+private struct QiblaCompassView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var manager = QiblaHeadingManager()
+
+    private var bearing: Double { QiblaMath.bearingFromMosque }
+
+    private var offset: Double? {
+        guard let heading = manager.heading else { return nil }
+        var diff = (bearing - heading).truncatingRemainder(dividingBy: 360)
+        if diff > 180 { diff -= 360 }
+        if diff < -180 { diff += 360 }
+        return diff
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                QiblaDial(heading: manager.heading, bearing: bearing)
+                    .frame(width: 300, height: 300)
+                VStack(spacing: 6) {
+                    Text("\(Int(bearing.rounded()))°")
+                        .font(.system(size: 44, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.adaptiveGold)
+                    Text(L10n.t("fromNorth"))
+                        .font(.headline)
+                        .foregroundStyle(Theme.onSurface)
+                    Text(L10n.t("qiblaFromMosque"))
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                    if let offset, abs(offset) <= 3 {
+                        Label(L10n.t("facingQibla"), systemImage: "checkmark.circle.fill")
+                            .font(.headline)
+                            .foregroundStyle(Theme.adaptiveGold)
+                            .padding(.top, 4)
+                    }
+                }
+                Text(L10n.t("qiblaHint"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.onSurfaceMuted)
+                    .multilineTextAlignment(.center)
+                Spacer()
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { AppBackground() }
+            .navigationTitle(L10n.t("qiblaCompass"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.t("done")) { dismiss() }
+                }
+            }
+        }
+        .onAppear { manager.start() }
+        .onDisappear { manager.stop() }
+    }
+}
+
 private struct QiblaCard: View {
     @StateObject private var manager = QiblaHeadingManager()
     @State private var facingQibla = false
+    @State private var showCompass = false
 
     private var bearing: Double { QiblaMath.bearingFromMosque }
 
@@ -1220,7 +1444,7 @@ private struct QiblaCard: View {
                 .font(.headline)
                 .foregroundStyle(Theme.onSurface)
             HStack(spacing: 18) {
-                dial
+                QiblaDial(heading: manager.heading, bearing: bearing)
                     .frame(width: 148, height: 148)
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\(Int(bearing.rounded()))°")
@@ -1242,10 +1466,18 @@ private struct QiblaCard: View {
             Text(L10n.t("qiblaHint"))
                 .font(.caption)
                 .foregroundStyle(Theme.onSurfaceMuted)
+            Label(L10n.t("tapForCompass"), systemImage: "arrow.up.left.and.arrow.down.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.adaptiveGold)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .adaptiveCard(cornerRadius: 26)
+        .contentShape(Rectangle())
+        .onTapGesture { showCompass = true }
+        .sheet(isPresented: $showCompass) {
+            QiblaCompassView()
+        }
         .onAppear { manager.start() }
         .onDisappear { manager.stop() }
         .onChange(of: offset.map { abs($0) <= 3 }) { _, isFacing in
@@ -1257,40 +1489,5 @@ private struct QiblaCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(L10n.t("qibla")): \(Int(bearing.rounded()))° \(L10n.t("fromNorth"))")
-    }
-
-    /// The dial rotates against the phone's heading; the gold marker is
-    /// the Qibla, the fixed triangle at the top is where the phone
-    /// points. North/East/South/West letters rotate with the dial.
-    private var dial: some View {
-        ZStack {
-            Circle()
-                .fill(Theme.panelFill)
-                .overlay { Circle().strokeBorder(Theme.hairline, lineWidth: 1) }
-            ZStack {
-                ForEach(0..<4, id: \.self) { quarter in
-                    Text(L10n.t(["dir.n", "dir.e", "dir.s", "dir.w"][quarter]))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Theme.onSurfaceSecondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .padding(.top, 10)
-                        .rotationEffect(.degrees(Double(quarter) * 90))
-                }
-                // Qibla marker on the rim.
-                Text("🕋")
-                    .font(.system(size: 24))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .padding(.top, 2)
-                    .rotationEffect(.degrees(bearing))
-                    .accessibilityHidden(true)
-            }
-            .rotationEffect(.degrees(-(manager.heading ?? 0)))
-            .animation(.linear(duration: 0.1), value: manager.heading)
-            // Fixed pointer at the top: where the phone is facing.
-            Image(systemName: "arrowtriangle.up.fill")
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.adaptiveGold)
-                .offset(y: -80)
-        }
     }
 }
