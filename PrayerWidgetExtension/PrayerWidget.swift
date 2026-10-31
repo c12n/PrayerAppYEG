@@ -334,9 +334,31 @@ struct LargePrayerWidgetView: View {
             LargeNextPrayerBanner(snapshot: snapshot)
             PrayerTableView(snapshot: snapshot, fontSize: 15, timeColumnWidth: 74, rowVerticalPadding: 2)
                 .frame(maxHeight: .infinity)
+            LargeVerseView(snapshot: snapshot)
             LargeFooterView(snapshot: snapshot)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// The Quran quote of the day, under the prayer table (v1.5).
+struct LargeVerseView: View {
+    let snapshot: PrayerSnapshot
+
+    var body: some View {
+        let verse = DailyVerses.verse(for: snapshot.date)
+        VStack(spacing: 2) {
+            Text(verse.arabic)
+                .font(.system(size: 13.5, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .foregroundStyle(Theme.onSurface)
+            Text(verse.reference(for: AppLanguage.current))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.adaptiveGold)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 2)
     }
 }
 
