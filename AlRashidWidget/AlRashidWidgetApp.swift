@@ -1,1 +1,503 @@
-Ly8KLy8gIEFsUmFzaGlkV2lkZ2V0QXBwLnN3aWZ0Ci8vICBBbFJhc2hpZCBQcmF5ZXIgV2lkZ2V0Ci8vCi8vICBBcHAgdGFyZ2V0OiBBbFJhc2hpZFdpZGdldCAoY29tLmMxMm4uYWxyYXNoaWR3aWRnZXQpLCBpT1MgMTcuMCsKLy8gIFRhcmdldCBNZW1iZXJzaGlwOiBBbFJhc2hpZFdpZGdldCBvbmx5LgovLyAgU2hhcmVkIGZpbGVzIChhbHNvIGluIHRoaXMgdGFyZ2V0KTogUHJheWVyQ2FsY3VsYXRvci5zd2lmdCwgUHJheWVyTW9kZWxzLnN3aWZ0Ci8vICBDYXBhYmlsaXR5OiBBcHAgR3JvdXBzIC0+IGdyb3VwLmNvbS5jMTJuLmFscmFzaGlkd2lkZ2V0Ci8vCgppbXBvcnQgQWN0aXZpdHlLaXQKaW1wb3J0IEJhY2tncm91bmRUYXNrcwppbXBvcnQgU3dpZnRVSQppbXBvcnQgVXNlck5vdGlmaWNhdGlvbnMKaW1wb3J0IFdpZGdldEtpdAoKQG1haW4Kc3RydWN0IEFsUmFzaGlkV2lkZ2V0QXBwOiBBcHAgewogICAgaW5pdCgpIHsKICAgICAgICBCYWNrZ3JvdW5kUmVmcmVzaC5yZWdpc3RlcigpCiAgICB9CgogICAgdmFyIGJvZHk6IHNvbWUgU2NlbmUgewogICAgICAgIFdpbmRvd0dyb3VwIHsKICAgICAgICAgICAgQ29udGVudFZpZXcoKQogICAgICAgICAgICAgICAgLnRpbnQoVGhlbWUuYWRhcHRpdmVHb2xkKQogICAgICAgIH0KICAgIH0KfQoKLy8gTUFSSzogLSBBbGVydCBzZXR0aW5ncwoKLy8vIFVzZXItZmFjaW5nIGFsZXJ0IHByZWZlcmVuY2VzLCBzaGFyZWQgYnkgQ29udGVudFZpZXcgKHRvZ2dsZXMpIGFuZAovLy8gQXBwU2VydmljZXMgKHNjaGVkdWxpbmcpLiBCb3RoIGRlZmF1bHQgT04uCmVudW0gQWxlcnRTZXR0aW5ncyB7CiAgICBzdGF0aWMgbGV0IG5vdGlmaWNhdGlvbnNLZXkgPSAiYWxlcnRzLm5vdGlmaWNhdGlvbnNFbmFibGVkIgogICAgc3RhdGljIGxldCBsaXZlQWN0aXZpdHlLZXkgPSAiYWxlcnRzLmxpdmVBY3Rpdml0eUVuYWJsZWQiCgogICAgcHJpdmF0ZSBzdGF0aWMgdmFyIGRlZmF1bHRzOiBVc2VyRGVmYXVsdHMgeyAuc3RhbmRhcmQgfQoKICAgIHN0YXRpYyB2YXIgbm90aWZpY2F0aW9uc0VuYWJsZWQ6IEJvb2wgewogICAgICAgIGdldCB7IGRlZmF1bHRzLm9iamVjdChmb3JLZXk6IG5vdGlmaWNhdGlvbnNLZXkpIGFzPyBCb29sID8/IHRydWUgfQogICAgICAgIHNldCB7IGRlZmF1bHRzLnNldChuZXdWYWx1ZSwgZm9yS2V5OiBub3RpZmljYXRpb25zS2V5KSB9CiAgICB9CgogICAgc3RhdGljIHZhciBsaXZlQWN0aXZpdHlFbmFibGVkOiBCb29sIHsKICAgICAgICBnZXQgeyBkZWZhdWx0cy5vYmplY3QoZm9yS2V5OiBsaXZlQWN0aXZpdHlLZXkpIGFzPyBCb29sID8/IHRydWUgfQogICAgICAgIHNldCB7IGRlZmF1bHRzLnNldChuZXdWYWx1ZSwgZm9yS2V5OiBsaXZlQWN0aXZpdHlLZXkpIH0KICAgIH0KfQoKLy8gTUFSSzogLSBBcHAgc2VydmljZXMgKEFkaGFuIG5vdGlmaWNhdGlvbnMgKyBMaXZlIEFjdGl2aXR5KQoKLy8vIE93bnMgdGhlIHR3byBhbGVydCBjaGFubmVscyBhZGRlZCBpbiB2MS4wLjM6Ci8vLwovLy8gLSBMb2NhbCBub3RpZmljYXRpb25zIGF0IGV2ZXJ5IEFkaGFuICh0aGUgZml2ZSBwcmF5ZXJzOyBKdW11J2FoIG9uCi8vLyAgIEZyaWRheXMpLCBzY2hlZHVsZWQgNyBkYXlzIGFoZWFkICh1cCB0byA0MiByZXF1ZXN0cyDigJQgdW5kZXIgaU9TJ3MKLy8vICAgNjQtcGVuZGluZyBjYXApIGFuZCByZS1zY2hlZHVsZWQgd2hlbmV2ZXIgdGhlIGFwcCBiZWNvbWVzIGFjdGl2ZSwgc28KLy8vICAgdGhlIHNjaGVkdWxlIGlzIGFsd2F5cyBmcmVzaC4gU2luY2UgdjEuMC41IGVhY2ggcHJheWVyJ3MgYWxlcnQgY2FuCi8vLyAgIGJlIHR1cm5lZCBvZmYgaW4gU2V0dGluZ3MsIGFuZCBTdW5yaXNlIGNhbiBiZSB0dXJuZWQgb24uIHYxLjAuMiBhbmQKLy8vICAgZWFybGllciBzY2hlZHVsZWQgbm9uZS4KLy8vIC0gQSBMaXZlIEFjdGl2aXR5IGNvdW50aW5nIGRvd24gdG8gdGhlIG5leHQgcHJheWVyIG9uIHRoZSBMb2NrIFNjcmVlbgovLy8gICBhbmQgRHluYW1pYyBJc2xhbmQuIFNpbmNlIHYxLjAuNCBpdCByb2xscyBvdmVyIHRvIHRoZSBmb2xsb3dpbmcgcHJheWVyCi8vLyAgIG9uIGl0cyBvd24gd2hlbiBhIHByYXllciB0aW1lIGFycml2ZXM6IGEgQkdBcHBSZWZyZXNoVGFzayBpcyBjaGFpbmVkCi8vLyAgIHRvIGZpcmUganVzdCBhZnRlciBldmVyeSBBZGhhbiAoc2VlIEJhY2tncm91bmRSZWZyZXNoKSwgYW5kIGVhY2gKLy8vICAgdXBkYXRlIGFsc28gcHJlLXN0YWdlcyB0aGUgcHJheWVyIGFmdGVyIG5leHQgb24gdGhlIExvY2sgU2NyZWVuLgovLy8gICBTaW5jZSB2MS4zIHRoZSBob21lbGFiIHB1c2ggc2VydmVyIChzZWUgTGl2ZUFjdGl2aXR5UHVzaFN5bmMpIGFsc28KLy8vICAgdXBkYXRlcyB0aGUgYWN0aXZpdHkgdmlhIEFQTnMgYXQgZWFjaCBBZGhhbjsgdGhlIGJhY2tncm91bmQgdGFzawovLy8gICBhbmQgdGhlIHN0YWxlLWRhdGUgZmxpcCByZW1haW4gYXMgZmFsbGJhY2tzLCBzaW5jZSBpT1MgZGVjaWRlcyB0aGUKLy8vICAgZXhhY3QgbW9tZW50IHRoZSBiYWNrZ3JvdW5kIHRhc2sgcnVucy4KZW51bSBBcHBTZXJ2aWNlcyB7CgogICAgLy8vIENhbGxlZCBvbiBsYXVuY2ggYW5kIG9uIGV2ZXJ5IG1vdmUgdG8gdGhlIGFjdGl2ZSBzdGF0ZS4KICAgIHN0YXRpYyBmdW5jIHJlZnJlc2goKSB7CiAgICAgICAgVGFzayB7CiAgICAgICAgICAgIGlmIEFsZXJ0U2V0dGluZ3Mubm90aWZpY2F0aW9uc0VuYWJsZWQgewogICAgICAgICAgICAgICAgXyA9IGF3YWl0IEFkaGFuTm90aWZpY2F0aW9ucy5yZXF1ZXN0QXV0aG9yaXphdGlvbklmTmVlZGVkKCkKICAgICAgICAgICAgICAgIGF3YWl0IEFkaGFuTm90aWZpY2F0aW9ucy5yZXNjaGVkdWxlKCkKICAgICAgICAgICAgfQogICAgICAgICAgICBhd2FpdCBMaXZlQWN0aXZpdHlDb250cm9sbGVyLnJlZnJlc2goKQogICAgICAgICAgICBCYWNrZ3JvdW5kUmVmcmVzaC5zY2hlZHVsZSgpCiAgICAgICAgfQogICAgfQoKICAgIHN0YXRpYyBmdW5jIG5vdGlmaWNhdGlvbnNUb2dnbGVkKG9uOiBCb29sKSB7CiAgICAgICAgVGFzayB7CiAgICAgICAgICAgIGlmIG9uIHsKICAgICAgICAgICAgICAgIF8gPSBhd2FpdCBBZGhhbk5vdGlmaWNhdGlvbnMucmVxdWVzdEF1dGhvcml6YXRpb25JZk5lZWRlZCgpCiAgICAgICAgICAgICAgICBhd2FpdCBBZGhhbk5vdGlmaWNhdGlvbnMucmVzY2hlZHVsZSgpCiAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICBhd2FpdCBBZGhhbk5vdGlmaWNhdGlvbnMuY2FuY2VsQWxsKCkKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICBzdGF0aWMgZnVuYyBsaXZlQWN0aXZpdHlUb2dnbGVkKG9uOiBCb29sKSB7CiAgICAgICAgVGFzayB7IGF3YWl0IExpdmVBY3Rpdml0eUNvbnRyb2xsZXIucmVmcmVzaCgpIH0KICAgIH0KfQoKLy8gTUFSSzogLSBBZGhhbiBhbGVydCBzb3VuZCAodjEuMS4wKQoKLy8vIFRoZSBzb3VuZCBwbGF5ZWQgd2l0aCBBZGhhbiBub3RpZmljYXRpb25zLCBjaG9zZW4gaW4gU2V0dGluZ3MgYW5kCi8vLyBzdG9yZWQgaW4gdGhlIEFwcCBHcm91cC4gVGhlIHR3byB0b25lcyBhcmUgc21hbGwgc3ludGhlc2l6ZWQgZmlsZXMKLy8vIGJ1bmRsZWQgd2l0aCB0aGUgYXBwIChubyBkb3dubG9hZHMsIHBlciB0aGUgcHJpdmFjeSBwcm9taXNlKS4KZW51bSBBZGhhblNvdW5kOiBTdHJpbmcsIENhc2VJdGVyYWJsZSwgU2VuZGFibGUsIElkZW50aWZpYWJsZSB7CiAgICBjYXNlIGBkZWZhdWx0YCwgc2lsZW50LCBjaGltZSwgYmVsbAoKICAgIHZhciBpZDogU3RyaW5nIHsgcmF3VmFsdWUgfQogICAgc3RhdGljIGxldCBzdG9yYWdlS2V5ID0gImFsZXJ0cy5zb3VuZCIKCiAgICBzdGF0aWMgdmFyIGN1cnJlbnQ6IEFkaGFuU291bmQgewogICAgICAgIGxldCByYXcgPSBVc2VyRGVmYXVsdHMoc3VpdGVOYW1lOiBQcmF5ZXJQcm92aWRlci5hcHBHcm91cElkZW50aWZpZXIpPwogICAgICAgICAgICAuc3RyaW5nKGZvcktleTogc3RvcmFnZUtleSkKICAgICAgICByZXR1cm4gQWRoYW5Tb3VuZChyYXdWYWx1ZTogcmF3ID8/ICIiKSA/PyAuZGVmYXVsdAogICAgfQoKICAgIHZhciBsMTBuS2V5OiBTdHJpbmcgeyAic291bmQuXChyYXdWYWx1ZSkiIH0KCiAgICB2YXIgbm90aWZpY2F0aW9uU291bmQ6IFVOTm90aWZpY2F0aW9uU291bmQ/IHsKICAgICAgICBzd2l0Y2ggc2VsZiB7CiAgICAgICAgY2FzZSAuZGVmYXVsdDogLmRlZmF1bHQKICAgICAgICBjYXNlIC5zaWxlbnQ6IG5pbAogICAgICAgIGNhc2UgLmNoaW1lOiBVTk5vdGlmaWNhdGlvblNvdW5kKG5hbWVkOiBVTk5vdGlmaWNhdGlvblNvdW5kTmFtZSgiYWRoYW5fY2hpbWUud2F2IikpCiAgICAgICAgY2FzZSAuYmVsbDogVU5Ob3RpZmljYXRpb25Tb3VuZChuYW1lZDogVU5Ob3RpZmljYXRpb25Tb3VuZE5hbWUoImFkaGFuX2JlbGwud2F2IikpCiAgICAgICAgfQogICAgfQp9CgovLyBNQVJLOiAtIEFkaGFuIGxvY2FsIG5vdGlmaWNhdGlvbnMKCmVudW0gQWRoYW5Ob3RpZmljYXRpb25zIHsKICAgIHByaXZhdGUgc3RhdGljIHZhciBjZW50ZXI6IFVOVXNlck5vdGlmaWNhdGlvbkNlbnRlciB7IC5jdXJyZW50KCkgfQogICAgcHJpdmF0ZSBzdGF0aWMgbGV0IGlkZW50aWZpZXJQcmVmaXggPSAiYWRoYW4uIgoKICAgIC8vLyBBc2tzIGZvciBhbGVydCBwZXJtaXNzaW9uIHRoZSBmaXJzdCB0aW1lIChuby1vcCBvbmNlIGRlY2lkZWQpLgogICAgLy8vIFJldHVybnMgdHJ1ZSB3aGVuIG5vdGlmaWNhdGlvbnMgbWF5IGJlIHNjaGVkdWxlZC4KICAgIHN0YXRpYyBmdW5jIHJlcXVlc3RBdXRob3JpemF0aW9uSWZOZWVkZWQoKSBhc3luYyAtPiBCb29sIHsKICAgICAgICBsZXQgc2V0dGluZ3MgPSBhd2FpdCBjZW50ZXIubm90aWZpY2F0aW9uU2V0dGluZ3MoKQogICAgICAgIHN3aXRjaCBzZXR0aW5ncy5hdXRob3JpemF0aW9uU3RhdHVzIHsKICAgICAgICBjYXNlIC5hdXRob3JpemVkLCAucHJvdmlzaW9uYWwsIC5lcGhlbWVyYWw6CiAgICAgICAgICAgIHJldHVybiB0cnVlCiAgICAgICAgY2FzZSAubm90RGV0ZXJtaW5lZDoKICAgICAgICAgICAgcmV0dXJuICh0cnk/IGF3YWl0IGNlbnRlci5yZXF1ZXN0QXV0aG9yaXphdGlvbihvcHRpb25zOiBbLmFsZXJ0LCAuc291bmQsIC5iYWRnZV0pKSA/PyBmYWxzZQogICAgICAgIGRlZmF1bHQ6CiAgICAgICAgICAgIHJldHVybiBmYWxzZQogICAgICAgIH0KICAgIH0KCiAgICBzdGF0aWMgZnVuYyBhdXRob3JpemF0aW9uRGVuaWVkKCkgYXN5bmMgLT4gQm9vbCB7CiAgICAgICAgYXdhaXQgY2VudGVyLm5vdGlmaWNhdGlvblNldHRpbmdzKCkuYXV0aG9yaXphdGlvblN0YXR1cyA9PSAuZGVuaWVkCiAgICB9CgogICAgLy8vIFJlYnVpbGRzIHRoZSBwZW5kaW5nIEFkaGFuIG5vdGlmaWNhdGlvbnMgZm9yIHRoZSBuZXh0IDcgZGF5cy4KICAgIHN0YXRpYyBmdW5jIHJlc2NoZWR1bGUoKSBhc3luYyB7CiAgICAgICAgbGV0IHNldHRpbmdzID0gYXdhaXQgY2VudGVyLm5vdGlmaWNhdGlvblNldHRpbmdzKCkKICAgICAgICBndWFyZCBzZXR0aW5ncy5hdXRob3JpemF0aW9uU3RhdHVzID09IC5hdXRob3JpemVkCiAgICAgICAgICAgICAgICB8fCBzZXR0aW5ncy5hdXRob3JpemF0aW9uU3RhdHVzID09IC5wcm92aXNpb25hbAogICAgICAgICAgICAgICAgfHwgc2V0dGluZ3MuYXV0aG9yaXphdGlvblN0YXR1cyA9PSAuZXBoZW1lcmFsIGVsc2UgeyByZXR1cm4gfQoKICAgICAgICBhd2FpdCBjYW5jZWxBbGwoKQoKICAgICAgICBsZXQgcHJvdmlkZXIgPSBQcmF5ZXJQcm92aWRlci5zdGFuZGFyZAogICAgICAgIGxldCBjYWxlbmRhciA9IHByb3ZpZGVyLmNhbGVuZGFyCiAgICAgICAgbGV0IG5vdyA9IERhdGUubm93CiAgICAgICAgbGV0IHRvZGF5U3RhcnQgPSBjYWxlbmRhci5zdGFydE9mRGF5KGZvcjogbm93KQoKICAgICAgICB2YXIgcmVxdWVzdHM6IFtVTk5vdGlmaWNhdGlvblJlcXVlc3RdID0gW10KICAgICAgICBmb3Igb2Zmc2V0IGluIDAuLjw3IHsKICAgICAgICAgICAgZ3VhcmQgbGV0IGRheVN0YXJ0ID0gY2FsZW5kYXIuZGF0ZShieUFkZGluZzogLmRheSwgdmFsdWU6IG9mZnNldCwgdG86IHRvZGF5U3RhcnQpIGVsc2UgeyBjb250aW51ZSB9CiAgICAgICAgICAgIGxldCBkYXkgPSBwcm92aWRlci5jb21wdXRlRGF5KGZvcjogZGF5U3RhcnQpCiAgICAgICAgICAgIGZvciBzbG90IGluIGRheS5zbG90cyB3aGVyZSBzbG90LmFkaGFuID4gbm93ICYmIFByYXllckFsZXJ0U2V0dGluZ3MuaXNFbmFibGVkKHNsb3QucHJheWVyKSB7CiAgICAgICAgICAgICAgICBsZXQgY29udGVudCA9IFVOTXV0YWJsZU5vdGlmaWNhdGlvbkNvbnRlbnQoKQogICAgICAgICAgICAgICAgaWYgc2xvdC5wcmF5ZXIgPT0gLnN1bnJpc2UgewogICAgICAgICAgICAgICAgICAgIGNvbnRlbnQudGl0bGUgPSBMMTBuLmYoIm1vc3F1ZVRpdGxlIiwgc2xvdC5uYW1lLCBNb3NxdWVJbmZvLm5hbWUpCiAgICAgICAgICAgICAgICAgICAgY29udGVudC5ib2R5ID0gTDEwbi5mKCJzdW5yaXNlQm9keSIsIFByYXllckZvcm1hdC50aW1lKHNsb3QuYWRoYW4pKQogICAgICAgICAgICAgICAgfSBlbHNlIGlmIHNsb3QuaXNKdW11YWggewogICAgICAgICAgICAgICAgICAgIGNvbnRlbnQudGl0bGUgPSBMMTBuLmYoIm1vc3F1ZVRpdGxlIiwgc2xvdC5uYW1lLCBNb3NxdWVJbmZvLm5hbWUpCiAgICAgICAgICAgICAgICAgICAgY29udGVudC5ib2R5ID0gTDEwbi5mKCJsYWJlbEF0VGltZSIsIHNsb3QuaXFhbWFoTGFiZWwsIFByYXllckZvcm1hdC50aW1lKHNsb3QuaXFhbWFoID8/IHNsb3QuYWRoYW4pKQogICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICBjb250ZW50LnRpdGxlID0gTDEwbi5mKCJub3RpZlRpdGxlIiwgc2xvdC5uYW1lLCBNb3NxdWVJbmZvLm5hbWUpCiAgICAgICAgICAgICAgICAgICAgaWYgbGV0IGlxYW1haCA9IHNsb3QuaXFhbWFoIHsKICAgICAgICAgICAgICAgICAgICAgICAgY29udGVudC5ib2R5ID0gTDEwbi5mKCJsYWJlbEF0VGltZSIsIHNsb3QuaXFhbWFoTGFiZWwsIFByYXllckZvcm1hdC50aW1lKGlxYW1haCkpCiAgICAgICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICAgICAgY29udGVudC5ib2R5ID0gTDEwbi5mKCJhZGhhbkF0VGltZSIsIFByYXllckZvcm1hdC50aW1lKHNsb3QuYWRoYW4pKQogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGNvbnRlbnQuc291bmQgPSBBZGhhblNvdW5kLmN1cnJlbnQubm90aWZpY2F0aW9uU291bmQKICAgICAgICAgICAgICAgIGxldCBjb21wb25lbnRzID0gY2FsZW5kYXIuZGF0ZUNvbXBvbmVudHMoWy55ZWFyLCAubW9udGgsIC5kYXksIC5ob3VyLCAubWludXRlXSwgZnJvbTogc2xvdC5hZGhhbikKICAgICAgICAgICAgICAgIGxldCB0cmlnZ2VyID0gVU5DYWxlbmRhck5vdGlmaWNhdGlvblRyaWdnZXIoZGF0ZU1hdGNoaW5nOiBjb21wb25lbnRzLCByZXBlYXRzOiBmYWxzZSkKICAgICAgICAgICAgICAgIGxldCBpZGVudGlmaWVyID0gaWRlbnRpZmllclByZWZpeCArIFN0cmluZyhJbnQoc2xvdC5hZGhhbi50aW1lSW50ZXJ2YWxTaW5jZTE5NzApKQogICAgICAgICAgICAgICAgcmVxdWVzdHMuYXBwZW5kKFVOTm90aWZpY2F0aW9uUmVxdWVzdChpZGVudGlmaWVyOiBpZGVudGlmaWVyLCBjb250ZW50OiBjb250ZW50LCB0cmlnZ2VyOiB0cmlnZ2VyKSkKICAgICAgICAgICAgfQogICAgICAgIH0KICAgICAgICBmb3IgcmVxdWVzdCBpbiByZXF1ZXN0cyB7CiAgICAgICAgICAgIHRyeT8gYXdhaXQgY2VudGVyLmFkZChyZXF1ZXN0KQogICAgICAgIH0KICAgIH0KCiAgICBzdGF0aWMgZnVuYyBjYW5jZWxBbGwoKSBhc3luYyB7CiAgICAgICAgbGV0IHBlbmRpbmcgPSBhd2FpdCBjZW50ZXIucGVuZGluZ05vdGlmaWNhdGlvblJlcXVlc3RzKCkKICAgICAgICBsZXQgaWRlbnRpZmllcnMgPSBwZW5kaW5nLm1hcChcLmlkZW50aWZpZXIpLmZpbHRlciB7ICQwLmhhc1ByZWZpeChpZGVudGlmaWVyUHJlZml4KSB9CiAgICAgICAgY2VudGVyLnJlbW92ZVBlbmRpbmdOb3RpZmljYXRpb25SZXF1ZXN0cyh3aXRoSWRlbnRpZmllcnM6IGlkZW50aWZpZXJzKQogICAgfQp9CgovLyBNQVJLOiAtIExpdmUgQWN0aXZpdHkKCkBNYWluQWN0b3IKZW51bSBMaXZlQWN0aXZpdHlDb250cm9sbGVyIHsKCiAgICAvLy8gU3RhcnRzLCB1cGRhdGVzIG9yIGVuZHMgdGhlIG5leHQtcHJheWVyIExpdmUgQWN0aXZpdHkgdG8gbWF0Y2ggdGhlCiAgICAvLy8gY3VycmVudCBzbmFwc2hvdCBhbmQgdGhlIHVzZXIncyBwcmVmZXJlbmNlLgogICAgc3RhdGljIGZ1bmMgcmVmcmVzaCgpIHsKICAgICAgICBsZXQgYWN0aXZpdGllcyA9IEFjdGl2aXR5PFByYXllckFjdGl2aXR5QXR0cmlidXRlcz4uYWN0aXZpdGllcwoKICAgICAgICBndWFyZCBBbGVydFNldHRpbmdzLmxpdmVBY3Rpdml0eUVuYWJsZWQsCiAgICAgICAgICAgICAgQWN0aXZpdHlBdXRob3JpemF0aW9uSW5mbygpLmFyZUFjdGl2aXRpZXNFbmFibGVkIGVsc2UgewogICAgICAgICAgICBlbmRBbGwoYWN0aXZpdGllcykKICAgICAgICAgICAgTGl2ZUFjdGl2aXR5UHVzaFN5bmMudW5yZWdpc3RlcigpCiAgICAgICAgICAgIHJldHVybgogICAgICAgIH0KCiAgICAgICAgbGV0IHByb3ZpZGVyID0gUHJheWVyUHJvdmlkZXIuc3RhbmRhcmQKICAgICAgICBsZXQgc25hcHNob3QgPSBwcm92aWRlci5zbmFwc2hvdCgpCiAgICAgICAgbGV0IG5leHQgPSBzbmFwc2hvdC5uZXh0CiAgICAgICAgbGV0IHN0YXRlID0gbWFrZUNvbnRlbnRTdGF0ZShwcm92aWRlcjogcHJvdmlkZXIsIHNuYXBzaG90OiBzbmFwc2hvdCwgc3RhZ2VkQXQ6IC5ub3cpCiAgICAgICAgLy8gVEhFIHN3aXRjaCAodjEuMS4yKTogc3RhbGVEYXRlIGlzIHRoZSBuZXh0IHByYXllcidzIEFkaGFuLgogICAgICAgIC8vIFdoZW4gaXQgcGFzc2VzLCB0aGUgc3lzdGVtIHJlLXJlbmRlcnMgdGhlIGFjdGl2aXR5IHdpdGgKICAgICAgICAvLyBpc1N0YWxlID0gdHJ1ZSwgYW5kIHRoZSB2aWV3cyBzaG93IHRoZSBwcmUtc3RhZ2VkIEZPTExPV0lORwogICAgICAgIC8vIHByYXllciBpbnN0ZWFkIOKAlCB0aGUgb25lIGRhdGUtdHJpZ2dlcmVkIHZpZXcgY2hhbmdlIEFwcGxlCiAgICAgICAgLy8gZG9jdW1lbnRzIGZvciBMaXZlIEFjdGl2aXRpZXMgKFRpbWVsaW5lVmlldyBpcyBub3Q6IGZvcnVtCiAgICAgICAgLy8gcmVwb3J0cyBzaG93IGl0cyBjbG9zdXJlIHJ1bnMgb25seSBhIGNvdXBsZSBvZiB0aW1lcyBpbnNpZGUKICAgICAgICAvLyBhbiBhY3Rpdml0eSwgYW5kIG5laXRoZXIgQWN0aXZpdHlLaXQgbm9yIFdpZGdldEtpdCBkb2N1bWVudHMKICAgICAgICAvLyBpdCB0aGVyZSkuIFRoZSBmbGlwIGNhbiBsYW5kIGEgbWludXRlIG9yIHR3byBhZnRlciB0aGUgQWRoYW4sCiAgICAgICAgLy8gYnV0IGl0IGRvZXMgbm90IGRlcGVuZCBvbiB0aGUgYmFja2dyb3VuZCB0YXNrLCB3aG9zZQogICAgICAgIC8vIGVhcmxpZXN0QmVnaW5EYXRlIGlzIG9ubHkgYSBmbG9vciwgbm90IGEgcHJvbWlzZS4gRXZlcnkKICAgICAgICAvLyByZWZyZXNoIHJlLXN0YWdlcyB0aGUgcGFpciBhbmQgbW92ZXMgdGhlIHN0YWxlIGRhdGUgdG8gdGhlCiAgICAgICAgLy8gbmV3IG5leHQgQWRoYW4sIHNvIGVhY2ggdXBkYXRlIGJ1eXMgb25lIG1vcmUgb24tdGltZSBzd2l0Y2guCiAgICAgICAgbGV0IGNvbnRlbnQgPSBBY3Rpdml0eUNvbnRlbnQoc3RhdGU6IHN0YXRlLCBzdGFsZURhdGU6IG5leHQuYWRoYW4pCgogICAgICAgIC8vIFVwZGF0ZXMgdG8gYW4gZW5kZWQgYWN0aXZpdHkgYXJlIGlnbm9yZWQsIHNvIG9ubHkgdXBkYXRlIG9uZQogICAgICAgIC8vIHRoYXQgaXMgYWN0aXZlIG9yIHN0YWxlOyBpZiBub25lIHF1YWxpZmllcywgc3RhcnQgZnJlc2guCiAgICAgICAgLy8gU2luY2UgdjEuMyB0aGUgYWN0aXZpdHkgbXVzdCBiZSBwdXNoLWVuYWJsZWQgKHB1c2hUeXBlIC50b2tlbikKICAgICAgICAvLyBzbyB0aGUgaG9tZWxhYiBzZXJ2ZXIgY2FuIHJvbGwgaXQgb3ZlciB2aWEgQVBOczsgYWN0aXZpdGllcwogICAgICAgIC8vIHN0YXJ0ZWQgYnkgb2xkZXIgdmVyc2lvbnMgaGF2ZSBubyBwdXNoIHRva2VuIGFuZCBhcmUgcmVwbGFjZWQuCiAgICAgICAgbGV0IGxpdmUgPSBhY3Rpdml0aWVzLmZpbHRlciB7CiAgICAgICAgICAgICgkMC5hY3Rpdml0eVN0YXRlID09IC5hY3RpdmUgfHwgJDAuYWN0aXZpdHlTdGF0ZSA9PSAuc3RhbGUpICYmICQwLnB1c2hUb2tlbiAhPSBuaWwKICAgICAgICB9CiAgICAgICAgaWYgbGV0IGFjdGl2aXR5ID0gbGl2ZS5maXJzdCB7CiAgICAgICAgICAgIFRhc2sgeyBhd2FpdCBhY3Rpdml0eS51cGRhdGUoY29udGVudCkgfQogICAgICAgICAgICBlbmRBbGwoYWN0aXZpdGllcy5maWx0ZXIgeyAkMC5pZCAhPSBhY3Rpdml0eS5pZCB9KQogICAgICAgICAgICBMaXZlQWN0aXZpdHlQdXNoU3luYy5vYnNlcnZlKGFjdGl2aXR5KQogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIGVuZEFsbChhY3Rpdml0aWVzKQogICAgICAgICAgICBsZXQgYXR0cmlidXRlcyA9IFByYXllckFjdGl2aXR5QXR0cmlidXRlcyhtb3NxdWVOYW1lOiBNb3NxdWVJbmZvLm5hbWUpCiAgICAgICAgICAgIGlmIGxldCBhY3Rpdml0eSA9IHRyeT8gQWN0aXZpdHkucmVxdWVzdChhdHRyaWJ1dGVzOiBhdHRyaWJ1dGVzLCBjb250ZW50OiBjb250ZW50LCBwdXNoVHlwZTogLnRva2VuKSB7CiAgICAgICAgICAgICAgICBMaXZlQWN0aXZpdHlQdXNoU3luYy5vYnNlcnZlKGFjdGl2aXR5KQogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQoKICAgIC8vLyBCdWlsZHMgdGhlIENvbnRlbnRTdGF0ZSBmb3IgYSBzbmFwc2hvdDogdGhlIHNuYXBzaG90J3MgbmV4dCBwcmF5ZXIKICAgIC8vLyBwbHVzIHRoZSB0d28gYWZ0ZXIgaXQsIHByZS1zdGFnZWQgc28gdGhlIHN0YWxlLWRhdGUgZmxpcCBhbmQgdGhlCiAgICAvLy8gc2VydmVyIHB1c2ggYm90aCBoYXZlIHRoZSBmb2xsb3dpbmcgcHJheWVycyByZWFkeS4gU2hhcmVkIGJ5IHRoZQogICAgLy8vIG9uLWRldmljZSByZWZyZXNoIGFuZCB0aGUgcHVzaCBzY2hlZHVsZSBidWlsZGVyLgogICAgc3RhdGljIGZ1bmMgbWFrZUNvbnRlbnRTdGF0ZSgKICAgICAgICBwcm92aWRlcjogUHJheWVyUHJvdmlkZXIsCiAgICAgICAgc25hcHNob3Q6IFByYXllclNuYXBzaG90LAogICAgICAgIHN0YWdlZEF0OiBEYXRlCiAgICApIC0+IFByYXllckFjdGl2aXR5QXR0cmlidXRlcy5Db250ZW50U3RhdGUgewogICAgICAgIGxldCBuZXh0ID0gc25hcHNob3QubmV4dAogICAgICAgIGxldCBmb2xsb3dpbmcgPSBwcm92aWRlci5mb2xsb3dpbmdTbG90KGFmdGVyOiBuZXh0KQogICAgICAgIGxldCB0aGlyZCA9IGZvbGxvd2luZy5mbGF0TWFwIHsgcHJvdmlkZXIuZm9sbG93aW5nU2xvdChhZnRlcjogJDApIH0KICAgICAgICByZXR1cm4gUHJheWVyQWN0aXZpdHlBdHRyaWJ1dGVzLkNvbnRlbnRTdGF0ZSgKICAgICAgICAgICAgcHJheWVyTmFtZTogbmV4dC5uYW1lLAogICAgICAgICAgICBzeW1ib2xOYW1lOiBuZXh0LnN5bWJvbE5hbWUsCiAgICAgICAgICAgIGFkaGFuOiBuZXh0LmFkaGFuLAogICAgICAgICAgICBpcWFtYWg6IG5leHQuaXFhbWFoLAogICAgICAgICAgICBpcWFtYWhMYWJlbDogbmV4dC5pcWFtYWhMYWJlbCwKICAgICAgICAgICAgaGlqcmk6IHNuYXBzaG90LmRheS5oaWpyaURhdGUsCiAgICAgICAgICAgIGlzVG9tb3Jyb3c6IHNuYXBzaG90LmlzU2hvd2luZ1RvbW9ycm93LAogICAgICAgICAgICBmb2xsb3dpbmdOYW1lOiBmb2xsb3dpbmc/Lm5hbWUsCiAgICAgICAgICAgIGZvbGxvd2luZ0FkaGFuOiBmb2xsb3dpbmc/LmFkaGFuLAogICAgICAgICAgICBmb2xsb3dpbmdTeW1ib2xOYW1lOiBmb2xsb3dpbmc/LnN5bWJvbE5hbWUsCiAgICAgICAgICAgIGZvbGxvd2luZ0lxYW1haDogZm9sbG93aW5nPy5pcWFtYWgsCiAgICAgICAgICAgIGZvbGxvd2luZ0lxYW1haExhYmVsOiBmb2xsb3dpbmc/LmlxYW1haExhYmVsLAogICAgICAgICAgICB0aGlyZE5hbWU6IHRoaXJkPy5uYW1lLAogICAgICAgICAgICB0aGlyZEFkaGFuOiB0aGlyZD8uYWRoYW4sCiAgICAgICAgICAgIHRoaXJkU3ltYm9sTmFtZTogdGhpcmQ/LnN5bWJvbE5hbWUsCiAgICAgICAgICAgIHRoaXJkSXFhbWFoOiB0aGlyZD8uaXFhbWFoLAogICAgICAgICAgICB0aGlyZElxYW1haExhYmVsOiB0aGlyZD8uaXFhbWFoTGFiZWwsCiAgICAgICAgICAgIHN0YWdlZEF0OiBzdGFnZWRBdAogICAgICAgICkKICAgIH0KCiAgICBwcml2YXRlIHN0YXRpYyBmdW5jIGVuZEFsbChfIGFjdGl2aXRpZXM6IFtBY3Rpdml0eTxQcmF5ZXJBY3Rpdml0eUF0dHJpYnV0ZXM+XSkgewogICAgICAgIGZvciBhY3Rpdml0eSBpbiBhY3Rpdml0aWVzIHsKICAgICAgICAgICAgVGFzayB7IGF3YWl0IGFjdGl2aXR5LmVuZChuaWwsIGRpc21pc3NhbFBvbGljeTogLmltbWVkaWF0ZSkgfQogICAgICAgIH0KICAgIH0KfQoKLy8gTUFSSzogLSBMaXZlIEFjdGl2aXR5IHNlcnZlciBwdXNoIHN5bmMgKHYxLjMpCgovLy8gUmVnaXN0ZXJzIHRoZSBydW5uaW5nIGFjdGl2aXR5J3MgQVBOcyBwdXNoIHRva2VuIHdpdGggdGhlIGhvbWVsYWIKLy8vIHB1c2ggc2VydmVyIChhY3Rpdml0eS4wNzA1MTk2OS54eXosIG9uIFlvdXNzZWYncyBaaW1hT1MgYm94KSB0b2dldGhlcgovLy8gd2l0aCBhIHJvbGxpbmcgMTQtZGF5IHNjaGVkdWxlIG9mIHByZWNvbXB1dGVkIENvbnRlbnRTdGF0ZXMg4oCUIG9uZSBwZXIKLy8vIHVwY29taW5nIHByYXllciBib3VuZGFyeS4gQXQgZWFjaCBib3VuZGFyeSB0aGUgc2VydmVyIHNlbmRzIGFuCi8vLyBBY3Rpdml0eUtpdCB1cGRhdGUgcHVzaCwgc28gdGhlIExvY2sgU2NyZWVuIHJvbGxzIHRvIHRoZSBuZXh0IHByYXllcgovLy8gZXZlbiB3aGVuIG5laXRoZXIgdGhlIGFwcCBub3IgaXRzIGJhY2tncm91bmQgcmVmcmVzaCBoYXMgcnVuLiBUaGUKLy8vIG9uLWRldmljZSBzdGFsZS1kYXRlIGZsaXAgc3RheXMgaW4gcGxhY2UgYXMgdGhlIGZhbGxiYWNrLCBhbmQgdGhlCi8vLyBjb3JlIHByYXllciB0aW1lcyBhcmUgc3RpbGwgY29tcHV0ZWQgZW50aXJlbHkgb24tZGV2aWNlOiB0aGUgb25seQovLy8gZGF0YSBzZW50IGlzIHRoZSBhY3Rpdml0eSdzIHB1c2ggdG9rZW4gYW5kIHRoZSB1cGNvbWluZyBwcmF5ZXIgbmFtZXMKLy8vIGFuZCB0aW1lcyB0aGUgYWN0aXZpdHkgYWxyZWFkeSBkaXNwbGF5cy4KQE1haW5BY3RvcgplbnVtIExpdmVBY3Rpdml0eVB1c2hTeW5jIHsKICAgIHByaXZhdGUgc3RhdGljIGxldCBzZXJ2ZXJCYXNlID0gVVJMKHN0cmluZzogImh0dHBzOi8vYWN0aXZpdHkuMDcwNTE5NjkueHl6IikhCiAgICBwcml2YXRlIHN0YXRpYyBsZXQgcmVnaXN0cmF0aW9uVG9rZW4gPSAiYmY1MWU0MTllZWJmZDJkNzRjMTlhNDRiMDE3OGE5ZWQ4YzY1Y2JjN2IxY2ExZmQxIgogICAgcHJpdmF0ZSBzdGF0aWMgbGV0IGluc3RhbGxhdGlvbklkS2V5ID0gInB1c2hzeW5jLmluc3RhbGxhdGlvbklkIgoKICAgIHByaXZhdGUgc3RhdGljIHZhciBvYnNlcnZlZEFjdGl2aXR5SWQ6IFN0cmluZz8KICAgIHByaXZhdGUgc3RhdGljIHZhciB0b2tlblRhc2s6IFRhc2s8Vm9pZCwgTmV2ZXI+PwogICAgcHJpdmF0ZSBzdGF0aWMgdmFyIGxhc3RTeW5jZWRIYXNoOiBTdHJpbmc/CiAgICBwcml2YXRlIHN0YXRpYyB2YXIgbGFzdFN5bmNBdDogRGF0ZT8KCiAgICBzdGF0aWMgdmFyIGluc3RhbGxhdGlvbklkOiBTdHJpbmcgewogICAgICAgIGlmIGxldCBleGlzdGluZyA9IFVzZXJEZWZhdWx0cy5zdGFuZGFyZC5zdHJpbmcoZm9yS2V5OiBpbnN0YWxsYXRpb25JZEtleSkgewogICAgICAgICAgICByZXR1cm4gZXhpc3RpbmcKICAgICAgICB9CiAgICAgICAgbGV0IGZyZXNoID0gVVVJRCgpLnV1aWRTdHJpbmcKICAgICAgICBVc2VyRGVmYXVsdHMuc3RhbmRhcmQuc2V0KGZyZXNoLCBmb3JLZXk6IGluc3RhbGxhdGlvbklkS2V5KQogICAgICAgIHJldHVybiBmcmVzaAogICAgfQoKICAgIC8vLyBXYXRjaGVzIHRoZSBhY3Rpdml0eSdzIHB1c2ggdG9rZW4gKGl0IGNhbiByb3RhdGUgYXQgYW55IHRpbWUpIGFuZAogICAgLy8vIHJlZ2lzdGVycyBldmVyeSBuZXcgdG9rZW4gd2l0aCB0aGUgc2VydmVyLiBTYWZlIHRvIGNhbGwgcmVwZWF0ZWRseS4KICAgIHN0YXRpYyBmdW5jIG9ic2VydmUoXyBhY3Rpdml0eTogQWN0aXZpdHk8UHJheWVyQWN0aXZpdHlBdHRyaWJ1dGVzPikgewogICAgICAgIGlmIGxldCB0b2tlbiA9IGFjdGl2aXR5LnB1c2hUb2tlbiB7CiAgICAgICAgICAgIHN5bmMoYWN0aXZpdHk6IGFjdGl2aXR5LCB0b2tlbkhleDogaGV4KHRva2VuKSkKICAgICAgICB9CiAgICAgICAgZ3VhcmQgb2JzZXJ2ZWRBY3Rpdml0eUlkICE9IGFjdGl2aXR5LmlkIGVsc2UgeyByZXR1cm4gfQogICAgICAgIG9ic2VydmVkQWN0aXZpdHlJZCA9IGFjdGl2aXR5LmlkCiAgICAgICAgdG9rZW5UYXNrPy5jYW5jZWwoKQogICAgICAgIHRva2VuVGFzayA9IFRhc2sgewogICAgICAgICAgICBmb3IgYXdhaXQgdG9rZW5EYXRhIGluIGFjdGl2aXR5LnB1c2hUb2tlblVwZGF0ZXMgewogICAgICAgICAgICAgICAgc3luYyhhY3Rpdml0eTogYWN0aXZpdHksIHRva2VuSGV4OiBoZXgodG9rZW5EYXRhKSkKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICAvLy8gUmVtb3ZlcyB0aGlzIGluc3RhbGwncyByZWdpc3RyYXRpb24gKExpdmUgQWN0aXZpdHkgdHVybmVkIG9mZiwgb3IKICAgIC8vLyBldmVyeSBhY3Rpdml0eSBlbmRlZCk6IHRoZSBzZXJ2ZXIgZHJvcHMgdGhlIHRva2VuIGFuZCBzY2hlZHVsZS4KICAgIHN0YXRpYyBmdW5jIHVucmVnaXN0ZXIoKSB7CiAgICAgICAgbGFzdFN5bmNlZEhhc2ggPSBuaWwKICAgICAgICBsYXN0U3luY0F0ID0gbmlsCiAgICAgICAgbGV0IHVybCA9IHNlcnZlckJhc2UuYXBwZW5kaW5nUGF0aENvbXBvbmVudCgidjEvcmVnaXN0ZXIvXChpbnN0YWxsYXRpb25JZCkiKQogICAgICAgIHZhciByZXF1ZXN0ID0gVVJMUmVxdWVzdCh1cmw6IHVybCkKICAgICAgICByZXF1ZXN0Lmh0dHBNZXRob2QgPSAiREVMRVRFIgogICAgICAgIHJlcXVlc3Quc2V0VmFsdWUoIkJlYXJlciBcKHJlZ2lzdHJhdGlvblRva2VuKSIsIGZvckhUVFBIZWFkZXJGaWVsZDogIkF1dGhvcml6YXRpb24iKQogICAgICAgIFRhc2sgeyBfID0gdHJ5PyBhd2FpdCBVUkxTZXNzaW9uLnNoYXJlZC5kYXRhKGZvcjogcmVxdWVzdCkgfQogICAgfQoKICAgIHByaXZhdGUgc3RhdGljIGZ1bmMgaGV4KF8gZGF0YTogRGF0YSkgLT4gU3RyaW5nIHsKICAgICAgICBkYXRhLm1hcCB7IFN0cmluZyhmb3JtYXQ6ICIlMDJ4IiwgJDApIH0uam9pbmVkKCkKICAgIH0KCiAgICBwcml2YXRlIHN0YXRpYyBmdW5jIHN5bmMoYWN0aXZpdHk6IEFjdGl2aXR5PFByYXllckFjdGl2aXR5QXR0cmlidXRlcz4sIHRva2VuSGV4OiBTdHJpbmcpIHsKICAgICAgICBsZXQgZXZlbnRzID0gYnVpbGRTY2hlZHVsZSgpCiAgICAgICAgZ3VhcmQgIWV2ZW50cy5pc0VtcHR5IGVsc2UgeyByZXR1cm4gfQogICAgICAgIGxldCBmaXJzdCA9IChldmVudHMuZmlyc3Q/WyJldmVudFRpbWUiXSBhcz8gSW50KSA/PyAwCiAgICAgICAgbGV0IGxhc3QgPSAoZXZlbnRzLmxhc3Q/WyJldmVudFRpbWUiXSBhcz8gSW50KSA/PyAwCiAgICAgICAgbGV0IGhhc2ggPSAiXCh0b2tlbkhleCl8XChldmVudHMuY291bnQpfFwoZmlyc3QpfFwobGFzdCkiCiAgICAgICAgaWYgaGFzaCA9PSBsYXN0U3luY2VkSGFzaCwKICAgICAgICAgICBsZXQgbGFzdFN5bmNBdCwgRGF0ZS5ub3cudGltZUludGVydmFsU2luY2UobGFzdFN5bmNBdCkgPCA2ICogMzYwMCB7CiAgICAgICAgICAgIHJldHVybiAgLy8gc2FtZSB0b2tlbiBhbmQgc2NoZWR1bGUgYWxyZWFkeSByZWdpc3RlcmVkIHJlY2VudGx5CiAgICAgICAgfQogICAgICAgIGxldCBib2R5OiBbU3RyaW5nOiBBbnldID0gWwogICAgICAgICAgICAiaW5zdGFsbGF0aW9uSWQiOiBpbnN0YWxsYXRpb25JZCwKICAgICAgICAgICAgImFjdGl2aXR5SWQiOiBhY3Rpdml0eS5pZCwKICAgICAgICAgICAgInB1c2hUb2tlbiI6IHRva2VuSGV4LAogICAgICAgICAgICAiZXZlbnRzIjogZXZlbnRzLAogICAgICAgIF0KICAgICAgICBndWFyZCBsZXQgcGF5bG9hZCA9IHRyeT8gSlNPTlNlcmlhbGl6YXRpb24uZGF0YSh3aXRoSlNPTk9iamVjdDogYm9keSkgZWxzZSB7IHJldHVybiB9CiAgICAgICAgdmFyIHJlcXVlc3QgPSBVUkxSZXF1ZXN0KHVybDogc2VydmVyQmFzZS5hcHBlbmRpbmdQYXRoQ29tcG9uZW50KCJ2MS9yZWdpc3RlciIpKQogICAgICAgIHJlcXVlc3QuaHR0cE1ldGhvZCA9ICJQT1NUIgogICAgICAgIHJlcXVlc3Quc2V0VmFsdWUoIkJlYXJlciBcKHJlZ2lzdHJhdGlvblRva2VuKSIsIGZvckhUVFBIZWFkZXJGaWVsZDogIkF1dGhvcml6YXRpb24iKQogICAgICAgIHJlcXVlc3Quc2V0VmFsdWUoImFwcGxpY2F0aW9uL2pzb24iLCBmb3JIVFRQSGVhZGVyRmllbGQ6ICJDb250ZW50LVR5cGUiKQogICAgICAgIHJlcXVlc3QuaHR0cEJvZHkgPSBwYXlsb2FkCiAgICAgICAgVGFzayB7CiAgICAgICAgICAgIGlmIGxldCAoXywgcmVzcG9uc2UpID0gdHJ5PyBhd2FpdCBVUkxTZXNzaW9uLnNoYXJlZC5kYXRhKGZvcjogcmVxdWVzdCksCiAgICAgICAgICAgICAgIGxldCBodHRwID0gcmVzcG9uc2UgYXM/IEhUVFBVUkxSZXNwb25zZSwgKDIwMC4uPDMwMCkuY29udGFpbnMoaHR0cC5zdGF0dXNDb2RlKSB7CiAgICAgICAgICAgICAgICBsYXN0U3luY2VkSGFzaCA9IGhhc2gKICAgICAgICAgICAgICAgIGxhc3RTeW5jQXQgPSAubm93CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9CgogICAgLy8vIE9uZSBldmVudCBwZXIgcHJheWVyIGJvdW5kYXJ5IGluIHRoZSBuZXh0IDE0IGRheXMuIEVhY2ggZXZlbnQncwogICAgLy8vIENvbnRlbnRTdGF0ZSBpcyB0aGUgc3RhdGUgdGhhdCBiZWNvbWVzIGN1cnJlbnQgYXQgdGhhdCBib3VuZGFyeQogICAgLy8vIChzbmFwc2hvdCB0YWtlbiAxIHMgYWZ0ZXIgaXQpLCBlbmNvZGVkIGV4YWN0bHkgYXMgQWN0aXZpdHlLaXQKICAgIC8vLyB3aWxsIGRlY29kZSBpdCBmcm9tIHRoZSBwdXNoIHBheWxvYWQg4oCUIHRoZSBKU09ORW5jb2RlciBkZWZhdWx0CiAgICAvLy8gcmVwcmVzZW50YXRpb24sIHBhc3NlZCB0aHJvdWdoIHRoZSBzZXJ2ZXIgdW50b3VjaGVkLgogICAgcHJpdmF0ZSBzdGF0aWMgZnVuYyBidWlsZFNjaGVkdWxlKCkgLT4gW1tTdHJpbmc6IEFueV1dIHsKICAgICAgICBsZXQgcHJvdmlkZXIgPSBQcmF5ZXJQcm92aWRlci5zdGFuZGFyZAogICAgICAgIGxldCBjYWxlbmRhciA9IHByb3ZpZGVyLmNhbGVuZGFyCiAgICAgICAgbGV0IG5vdyA9IERhdGUubm93CiAgICAgICAgbGV0IHRvZGF5U3RhcnQgPSBjYWxlbmRhci5zdGFydE9mRGF5KGZvcjogbm93KQogICAgICAgIHZhciBib3VuZGFyaWVzOiBbRGF0ZV0gPSBbXQogICAgICAgIGZvciBvZmZzZXQgaW4gMC4uLjE0IHsKICAgICAgICAgICAgZ3VhcmQgbGV0IGRheVN0YXJ0ID0gY2FsZW5kYXIuZGF0ZShieUFkZGluZzogLmRheSwgdmFsdWU6IG9mZnNldCwgdG86IHRvZGF5U3RhcnQpIGVsc2UgeyBjb250aW51ZSB9CiAgICAgICAgICAgIGxldCBkYXkgPSBwcm92aWRlci5jb21wdXRlRGF5KGZvcjogZGF5U3RhcnQpCiAgICAgICAgICAgIGJvdW5kYXJpZXMuYXBwZW5kKGNvbnRlbnRzT2Y6IGRheS5wcmF5ZXJTbG90cy5tYXAoXC5hZGhhbikuZmlsdGVyIHsgJDAgPiBub3cgfSkKICAgICAgICB9CiAgICAgICAgYm91bmRhcmllcy5zb3J0KCkKICAgICAgICBsZXQgZW5jb2RlciA9IEpTT05FbmNvZGVyKCkKICAgICAgICB2YXIgZXZlbnRzOiBbW1N0cmluZzogQW55XV0gPSBbXQogICAgICAgIGZvciBib3VuZGFyeSBpbiBib3VuZGFyaWVzLnByZWZpeCg3MCkgewogICAgICAgICAgICBsZXQgc3RhZ2VkQXQgPSBib3VuZGFyeS5hZGRpbmdUaW1lSW50ZXJ2YWwoMSkKICAgICAgICAgICAgbGV0IHNuYXBzaG90ID0gcHJvdmlkZXIuc25hcHNob3QoYXQ6IHN0YWdlZEF0KQogICAgICAgICAgICBsZXQgc3RhdGUgPSBMaXZlQWN0aXZpdHlDb250cm9sbGVyLm1ha2VDb250ZW50U3RhdGUoCiAgICAgICAgICAgICAgICBwcm92aWRlcjogcHJvdmlkZXIsIHNuYXBzaG90OiBzbmFwc2hvdCwgc3RhZ2VkQXQ6IHN0YWdlZEF0KQogICAgICAgICAgICBndWFyZCBsZXQgZGF0YSA9IHRyeT8gZW5jb2Rlci5lbmNvZGUoc3RhdGUpLAogICAgICAgICAgICAgICAgICBsZXQgb2JqZWN0ID0gdHJ5PyBKU09OU2VyaWFsaXphdGlvbi5qc29uT2JqZWN0KHdpdGg6IGRhdGEpIGVsc2UgeyBjb250aW51ZSB9CiAgICAgICAgICAgIGV2ZW50cy5hcHBlbmQoWwogICAgICAgICAgICAgICAgImV2ZW50VGltZSI6IEludChib3VuZGFyeS50aW1lSW50ZXJ2YWxTaW5jZTE5NzApLAogICAgICAgICAgICAgICAgInN0YWxlRGF0ZSI6IEludChzdGF0ZS5hZGhhbi50aW1lSW50ZXJ2YWxTaW5jZTE5NzApLAogICAgICAgICAgICAgICAgImNvbnRlbnRTdGF0ZSI6IG9iamVjdCwKICAgICAgICAgICAgXSkKICAgICAgICB9CiAgICAgICAgcmV0dXJuIGV2ZW50cwogICAgfQp9CgovLyBNQVJLOiAtIEJhY2tncm91bmQgcmVmcmVzaCAoYXV0b21hdGljIExpdmUgQWN0aXZpdHkgcm9sbG92ZXIpCgovLy8gQ2hhaW5zIGEgQkdBcHBSZWZyZXNoVGFzayB0byBqdXN0IGFmdGVyIGV2ZXJ5IEFkaGFuLiBXaGVuIGl0IGZpcmVzLCB0aGUKLy8vIExpdmUgQWN0aXZpdHkgaXMgdXBkYXRlZCB0byB0aGUgZm9sbG93aW5nIHByYXllciDigJQgc28gdGhlIExvY2sgU2NyZWVuCi8vLyBjb3VudGRvd24gcm9sbHMgZnJvbSBEaHVociB0byBBc3IgKGFuZCBzbyBvbikgd2l0aG91dCB0aGUgYXBwIGV2ZXIKLy8vIGJlaW5nIG9wZW5lZCDigJQgdGhlIEFkaGFuIG5vdGlmaWNhdGlvbnMgYXJlIHJlLXNjaGVkdWxlZCwgYW5kIHRoZSBuZXh0Ci8vLyByZWZyZXNoIGlzIGNoYWluZWQuIFRoZSBpZGVudGlmaWVyIG11c3QgYWxzbyBiZSBsaXN0ZWQgdW5kZXIKLy8vIEJHVGFza1NjaGVkdWxlclBlcm1pdHRlZElkZW50aWZpZXJzIGluIEluZm8ucGxpc3QsIEFORCBJbmZvLnBsaXN0IG11c3QKLy8vIGRlY2xhcmUgdGhlIGBmZXRjaGAgYmFja2dyb3VuZCBtb2RlIChVSUJhY2tncm91bmRNb2Rlcykg4oCUIHdpdGhvdXQgaXQKLy8vIGV2ZXJ5IHN1Ym1pdCgpIGZhaWxzIHNpbGVudGx5IGFuZCB0aGUgdGFzayBuZXZlciBydW5zICh0aGUgdjEuMC404oCTCi8vLyB2MS4wLjUgcm9sbG92ZXIgYnVnLCBmaXhlZCBpbiB2MS4wLjYpLiBTaW5jZSB2MS4xLjIgdGhlIHZpc2libGUKLy8vIHN3aXRjaCBkb2VzIE5PVCBkZXBlbmQgb24gdGhpcyB0YXNrJ3MgdGltaW5nOiB0aGUgYWN0aXZpdHkncwovLy8gc3RhbGVEYXRlIGlzIHNldCB0byB0aGUgbmV4dCBBZGhhbiwgYW5kIHdoZW4gaXQgcGFzc2VzIHRoZSBzeXN0ZW0KLy8vIHJlLXJlbmRlcnMgdGhlIGFjdGl2aXR5IGFzIHN0YWxlIGFuZCB0aGUgdmlld3MgcHJvbW90ZSB0aGUKLy8vIHByZS1zdGFnZWQgZm9sbG93aW5nIHByYXllciAoc2VlIExpdmVBY3Rpdml0eUNvbnRyb2xsZXIpLiBUaGlzCi8vLyB0YXNrIHJlbWFpbnMgYXMgdGhlIGJhY2tzdG9wIHRoYXQgcmUtc3RhZ2VzIGZyZXNoIHByYXllcnMsCi8vLyByZWxvYWRzIHRoZSB3aWRnZXRzIGFuZCByZWJ1aWxkcyB0aGUgbm90aWZpY2F0aW9ucyB3aGVuZXZlciBpT1MKLy8vIGRvZXMgY2hvb3NlIHRvIHJ1biBpdCDigJQgQkdBcHBSZWZyZXNoVGFzayB0aW1pbmcgaXMgdGhlIHN5c3RlbSdzCi8vLyBjYWxsIChlYXJsaWVzdEJlZ2luRGF0ZSBpcyBhIGZsb29yLCBub3QgYSBwcm9taXNlKSwgYW5kIG9uIHNvbWUKLy8vIHBob25lcyBpdCBsYW5kcyBmYXIgbGF0ZXIgdGhhbiB0aGUgcmVxdWVzdGVkIDE1IHMgYWZ0ZXIgdGhlIEFkaGFuLgplbnVtIEJhY2tncm91bmRSZWZyZXNoIHsKICAgIHN0YXRpYyBsZXQgaWRlbnRpZmllciA9ICJjb20uYzEybi5hbHJhc2hpZHdpZGdldC5yZWZyZXNoIgogICAgcHJpdmF0ZSBzdGF0aWMgdmFyIGRpZFJlZ2lzdGVyID0gZmFsc2UKCiAgICAvLy8gTXVzdCBydW4gYmVmb3JlIHRoZSBhcHAgZmluaXNoZXMgbGF1bmNoaW5nIChjYWxsZWQgZnJvbSBBcHAuaW5pdCkuCiAgICBzdGF0aWMgZnVuYyByZWdpc3RlcigpIHsKICAgICAgICBndWFyZCAhZGlkUmVnaXN0ZXIgZWxzZSB7IHJldHVybiB9CiAgICAgICAgZGlkUmVnaXN0ZXIgPSB0cnVlCiAgICAgICAgQkdUYXNrU2NoZWR1bGVyLnNoYXJlZC5yZWdpc3Rlcihmb3JUYXNrV2l0aElkZW50aWZpZXI6IGlkZW50aWZpZXIsIHVzaW5nOiBuaWwpIHsgdGFzayBpbgogICAgICAgICAgICBndWFyZCBsZXQgcmVmcmVzaFRhc2sgPSB0YXNrIGFzPyBCR0FwcFJlZnJlc2hUYXNrIGVsc2UgewogICAgICAgICAgICAgICAgdGFzay5zZXRUYXNrQ29tcGxldGVkKHN1Y2Nlc3M6IGZhbHNlKQogICAgICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgICAgIH0KICAgICAgICAgICAgaGFuZGxlKHJlZnJlc2hUYXNrKQogICAgICAgIH0KICAgIH0KCiAgICAvLy8gQXNrcyBpT1MgdG8gd2FrZSB0aGUgYXBwIHNob3J0bHkgYWZ0ZXIgdGhlIG5leHQgQWRoYW4uIFN1Ym1pdHRpbmcgYQogICAgLy8vIG5ldyByZXF1ZXN0IHdpdGggdGhlIHNhbWUgaWRlbnRpZmllciByZXBsYWNlcyB0aGUgcGVuZGluZyBvbmUuCiAgICBzdGF0aWMgZnVuYyBzY2hlZHVsZSgpIHsKICAgICAgICBsZXQgbmV4dCA9IFByYXllclByb3ZpZGVyLnN0YW5kYXJkLnNuYXBzaG90KCkubmV4dAogICAgICAgIGxldCByZXF1ZXN0ID0gQkdBcHBSZWZyZXNoVGFza1JlcXVlc3QoaWRlbnRpZmllcjogaWRlbnRpZmllcikKICAgICAgICByZXF1ZXN0LmVhcmxpZXN0QmVnaW5EYXRlID0gbmV4dC5hZGhhbi5hZGRpbmdUaW1lSW50ZXJ2YWwoMTUpCiAgICAgICAgdHJ5PyBCR1Rhc2tTY2hlZHVsZXIuc2hhcmVkLnN1Ym1pdChyZXF1ZXN0KQogICAgfQoKICAgIHByaXZhdGUgc3RhdGljIGZ1bmMgaGFuZGxlKF8gdGFzazogQkdBcHBSZWZyZXNoVGFzaykgewogICAgICAgIC8vIENoYWluIGZpcnN0OiBieSB0aGUgdGltZSB0aGlzIHJ1bnMsIHRoZSBzbmFwc2hvdCdzIG5leHQgcHJheWVyIGlzCiAgICAgICAgLy8gdGhlIGZvbGxvd2luZyBvbmUsIHNvIHRoaXMgc2NoZWR1bGVzIHRoZSByZWZyZXNoIGFmdGVyIElUUyBBZGhhbi4KICAgICAgICBzY2hlZHVsZSgpCgogICAgICAgIC8vIFRoZSBMaXZlIEFjdGl2aXR5IHVwZGF0ZSBnb2VzIEZJUlNUICh2MS4wLjYpOiB0aGUgYmFja2dyb3VuZAogICAgICAgIC8vIGJ1ZGdldCBpcyB+MzAgcywgYW5kIHJlYnVpbGRpbmcgfjQwIG5vdGlmaWNhdGlvbiByZXF1ZXN0cyBmaXJzdAogICAgICAgIC8vIGNvdWxkIHN0YXJ2ZSB0aGUgb25lIHVwZGF0ZSB0aGUgdXNlciBhY3R1YWxseSBzZWVzLiBOb3RpZmljYXRpb25zCiAgICAgICAgLy8gYXJlIHJlZnJlc2hlZCBsYXN0LCBhcyBiZXN0LWVmZm9ydC4KICAgICAgICBsZXQgd29yayA9IFRhc2sgewogICAgICAgICAgICBhd2FpdCBMaXZlQWN0aXZpdHlDb250cm9sbGVyLnJlZnJlc2goKQogICAgICAgICAgICBXaWRnZXRDZW50ZXIuc2hhcmVkLnJlbG9hZEFsbFRpbWVsaW5lcygpCiAgICAgICAgICAgIGlmIEFsZXJ0U2V0dGluZ3Mubm90aWZpY2F0aW9uc0VuYWJsZWQgewogICAgICAgICAgICAgICAgYXdhaXQgQWRoYW5Ob3RpZmljYXRpb25zLnJlc2NoZWR1bGUoKQogICAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIHRhc2suZXhwaXJhdGlvbkhhbmRsZXIgPSB7IHdvcmsuY2FuY2VsKCkgfQogICAgICAgIFRhc2sgewogICAgICAgICAgICBfID0gYXdhaXQgd29yay5yZXN1bHQKICAgICAgICAgICAgdGFzay5zZXRUYXNrQ29tcGxldGVkKHN1Y2Nlc3M6ICF3b3JrLmlzQ2FuY2VsbGVkKQogICAgICAgIH0KICAgIH0KfQo=
+//
+//  AlRashidWidgetApp.swift
+//  AlRashid Prayer Widget
+//
+//  App target: AlRashidWidget (com.c12n.alrashidwidget), iOS 17.0+
+//  Target Membership: AlRashidWidget only.
+//  Shared files (also in this target): PrayerCalculator.swift, PrayerModels.swift
+//  Capability: App Groups -> group.com.c12n.alrashidwidget
+//
+
+import ActivityKit
+import BackgroundTasks
+import SwiftUI
+import UserNotifications
+import WidgetKit
+
+@main
+struct AlRashidWidgetApp: App {
+    init() {
+        BackgroundRefresh.register()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .tint(Theme.adaptiveGold)
+        }
+    }
+}
+
+// MARK: - Alert settings
+
+/// User-facing alert preferences, shared by ContentView (toggles) and
+/// AppServices (scheduling). Both default ON.
+enum AlertSettings {
+    static let notificationsKey = "alerts.notificationsEnabled"
+    static let liveActivityKey = "alerts.liveActivityEnabled"
+
+    private static var defaults: UserDefaults { .standard }
+
+    static var notificationsEnabled: Bool {
+        get { defaults.object(forKey: notificationsKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: notificationsKey) }
+    }
+
+    static var liveActivityEnabled: Bool {
+        get { defaults.object(forKey: liveActivityKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: liveActivityKey) }
+    }
+}
+
+// MARK: - App services (Adhan notifications + Live Activity)
+
+/// Owns the two alert channels added in v1.0.3:
+///
+/// - Local notifications at every Adhan (the five prayers; Jumu'ah on
+///   Fridays), scheduled 7 days ahead (up to 42 requests — under iOS's
+///   64-pending cap) and re-scheduled whenever the app becomes active, so
+///   the schedule is always fresh. Since v1.0.5 each prayer's alert can
+///   be turned off in Settings, and Sunrise can be turned on. v1.0.2 and
+///   earlier scheduled none.
+/// - A Live Activity counting down to the next prayer on the Lock Screen
+///   and Dynamic Island. Since v1.0.4 it rolls over to the following prayer
+///   on its own when a prayer time arrives: a BGAppRefreshTask is chained
+///   to fire just after every Adhan (see BackgroundRefresh), and each
+///   update also pre-stages the prayer after next on the Lock Screen.
+///   Since v1.3 the homelab push server (see LiveActivityPushSync) also
+///   updates the activity via APNs at each Adhan; the background task
+///   and the stale-date flip remain as fallbacks, since iOS decides the
+///   exact moment the background task runs.
+enum AppServices {
+
+    /// Called on launch and on every move to the active state.
+    static func refresh() {
+        Task {
+            if AlertSettings.notificationsEnabled {
+                _ = await AdhanNotifications.requestAuthorizationIfNeeded()
+                await AdhanNotifications.reschedule()
+            }
+            await LiveActivityController.refresh()
+            BackgroundRefresh.schedule()
+        }
+    }
+
+    static func notificationsToggled(on: Bool) {
+        Task {
+            if on {
+                _ = await AdhanNotifications.requestAuthorizationIfNeeded()
+                await AdhanNotifications.reschedule()
+            } else {
+                await AdhanNotifications.cancelAll()
+            }
+        }
+    }
+
+    static func liveActivityToggled(on: Bool) {
+        Task { await LiveActivityController.refresh() }
+    }
+}
+
+// MARK: - Adhan alert sound (v1.1.0)
+
+/// The sound played with Adhan notifications, chosen in Settings and
+/// stored in the App Group. The two tones are small synthesized files
+/// bundled with the app (no downloads, per the privacy promise).
+enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
+    case `default`, silent, chime, bell
+
+    var id: String { rawValue }
+    static let storageKey = "alerts.sound"
+
+    static var current: AdhanSound {
+        let raw = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier)?
+            .string(forKey: storageKey)
+        return AdhanSound(rawValue: raw ?? "") ?? .default
+    }
+
+    var l10nKey: String { "sound.\(rawValue)" }
+
+    var notificationSound: UNNotificationSound? {
+        switch self {
+        case .default: .default
+        case .silent: nil
+        case .chime: UNNotificationSound(named: UNNotificationSoundName("adhan_chime.wav"))
+        case .bell: UNNotificationSound(named: UNNotificationSoundName("adhan_bell.wav"))
+        }
+    }
+}
+
+// MARK: - Adhan local notifications
+
+enum AdhanNotifications {
+    private static var center: UNUserNotificationCenter { .current() }
+    private static let identifierPrefix = "adhan."
+
+    /// Asks for alert permission the first time (no-op once decided).
+    /// Returns true when notifications may be scheduled.
+    static func requestAuthorizationIfNeeded() async -> Bool {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        case .notDetermined:
+            return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        default:
+            return false
+        }
+    }
+
+    static func authorizationDenied() async -> Bool {
+        await center.notificationSettings().authorizationStatus == .denied
+    }
+
+    /// Rebuilds the pending Adhan notifications for the next 7 days.
+    static func reschedule() async {
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized
+                || settings.authorizationStatus == .provisional
+                || settings.authorizationStatus == .ephemeral else { return }
+
+        await cancelAll()
+
+        let provider = PrayerProvider.standard
+        let calendar = provider.calendar
+        let now = Date.now
+        let todayStart = calendar.startOfDay(for: now)
+
+        var requests: [UNNotificationRequest] = []
+        for offset in 0..<7 {
+            guard let dayStart = calendar.date(byAdding: .day, value: offset, to: todayStart) else { continue }
+            let day = provider.computeDay(for: dayStart)
+            for slot in day.slots where slot.adhan > now && PrayerAlertSettings.isEnabled(slot.prayer) {
+                let content = UNMutableNotificationContent()
+                if slot.prayer == .sunrise {
+                    content.title = L10n.f("mosqueTitle", slot.name, MosqueInfo.name)
+                    content.body = L10n.f("sunriseBody", PrayerFormat.time(slot.adhan))
+                } else if slot.isJumuah {
+                    content.title = L10n.f("mosqueTitle", slot.name, MosqueInfo.name)
+                    content.body = L10n.f("labelAtTime", slot.iqamahLabel, PrayerFormat.time(slot.iqamah ?? slot.adhan))
+                } else {
+                    content.title = L10n.f("notifTitle", slot.name, MosqueInfo.name)
+                    if let iqamah = slot.iqamah {
+                        content.body = L10n.f("labelAtTime", slot.iqamahLabel, PrayerFormat.time(iqamah))
+                    } else {
+                        content.body = L10n.f("adhanAtTime", PrayerFormat.time(slot.adhan))
+                    }
+                }
+                content.sound = AdhanSound.current.notificationSound
+                let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: slot.adhan)
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                let identifier = identifierPrefix + String(Int(slot.adhan.timeIntervalSince1970))
+                requests.append(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+            }
+        }
+        for request in requests {
+            try? await center.add(request)
+        }
+    }
+
+    static func cancelAll() async {
+        let pending = await center.pendingNotificationRequests()
+        let identifiers = pending.map(\.identifier).filter { $0.hasPrefix(identifierPrefix) }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+}
+
+// MARK: - Live Activity
+
+@MainActor
+enum LiveActivityController {
+
+    /// Starts, updates or ends the next-prayer Live Activity to match the
+    /// current snapshot and the user's preference.
+    static func refresh() {
+        let activities = Activity<PrayerActivityAttributes>.activities
+
+        guard AlertSettings.liveActivityEnabled,
+              ActivityAuthorizationInfo().areActivitiesEnabled else {
+            endAll(activities)
+            LiveActivityPushSync.unregister()
+            return
+        }
+
+        let provider = PrayerProvider.standard
+        let snapshot = provider.snapshot()
+        let next = snapshot.next
+        let state = makeContentState(provider: provider, snapshot: snapshot, stagedAt: .now)
+        // THE switch (v1.1.2): staleDate is the next prayer's Adhan.
+        // When it passes, the system re-renders the activity with
+        // isStale = true, and the views show the pre-staged FOLLOWING
+        // prayer instead — the one date-triggered view change Apple
+        // documents for Live Activities (TimelineView is not: forum
+        // reports show its closure runs only a couple of times inside
+        // an activity, and neither ActivityKit nor WidgetKit documents
+        // it there). The flip can land a minute or two after the Adhan,
+        // but it does not depend on the background task, whose
+        // earliestBeginDate is only a floor, not a promise. Every
+        // refresh re-stages the pair and moves the stale date to the
+        // new next Adhan, so each update buys one more on-time switch.
+        let content = ActivityContent(state: state, staleDate: next.adhan)
+
+        // Updates to an ended activity are ignored, so only update one
+        // that is active or stale; if none qualifies, start fresh.
+        // Since v1.3 the activity must be push-enabled (pushType .token)
+        // so the homelab server can roll it over via APNs; activities
+        // started by older versions have no push token and are replaced.
+        let live = activities.filter {
+            ($0.activityState == .active || $0.activityState == .stale) && $0.pushToken != nil
+        }
+        if let activity = live.first {
+            Task { await activity.update(content) }
+            endAll(activities.filter { $0.id != activity.id })
+            LiveActivityPushSync.observe(activity)
+        } else {
+            endAll(activities)
+            let attributes = PrayerActivityAttributes(mosqueName: MosqueInfo.name)
+            if let activity = try? Activity.request(attributes: attributes, content: content, pushType: .token) {
+                LiveActivityPushSync.observe(activity)
+            }
+        }
+    }
+
+    /// Builds the ContentState for a snapshot: the snapshot's next prayer
+    /// plus the two after it, pre-staged so the stale-date flip and the
+    /// server push both have the following prayers ready. Shared by the
+    /// on-device refresh and the push schedule builder.
+    static func makeContentState(
+        provider: PrayerProvider,
+        snapshot: PrayerSnapshot,
+        stagedAt: Date
+    ) -> PrayerActivityAttributes.ContentState {
+        let next = snapshot.next
+        let following = provider.followingSlot(after: next)
+        let third = following.flatMap { provider.followingSlot(after: $0) }
+        return PrayerActivityAttributes.ContentState(
+            prayerName: next.name,
+            symbolName: next.symbolName,
+            adhan: next.adhan,
+            iqamah: next.iqamah,
+            iqamahLabel: next.iqamahLabel,
+            hijri: snapshot.day.hijriDate,
+            isTomorrow: snapshot.isShowingTomorrow,
+            followingName: following?.name,
+            followingAdhan: following?.adhan,
+            followingSymbolName: following?.symbolName,
+            followingIqamah: following?.iqamah,
+            followingIqamahLabel: following?.iqamahLabel,
+            thirdName: third?.name,
+            thirdAdhan: third?.adhan,
+            thirdSymbolName: third?.symbolName,
+            thirdIqamah: third?.iqamah,
+            thirdIqamahLabel: third?.iqamahLabel,
+            stagedAt: stagedAt
+        )
+    }
+
+    private static func endAll(_ activities: [Activity<PrayerActivityAttributes>]) {
+        for activity in activities {
+            Task { await activity.end(nil, dismissalPolicy: .immediate) }
+        }
+    }
+}
+
+// MARK: - Live Activity server push sync (v1.3)
+
+/// Registers the running activity's APNs push token with the homelab
+/// push server (activity.07051969.xyz, on Youssef's ZimaOS box) together
+/// with a rolling 14-day schedule of precomputed ContentStates — one per
+/// upcoming prayer boundary. At each boundary the server sends an
+/// ActivityKit update push, so the Lock Screen rolls to the next prayer
+/// even when neither the app nor its background refresh has run. The
+/// on-device stale-date flip stays in place as the fallback, and the
+/// core prayer times are still computed entirely on-device: the only
+/// data sent is the activity's push token and the upcoming prayer names
+/// and times the activity already displays.
+@MainActor
+enum LiveActivityPushSync {
+    private static let serverBase = URL(string: "https://activity.07051969.xyz")!
+    private static let registrationToken = "bf51e419eebfd2d74c19a44b0178a9ed8c65cbc7b1ca1fd1"
+    private static let installationIdKey = "pushsync.installationId"
+
+    private static var observedActivityId: String?
+    private static var tokenTask: Task<Void, Never>?
+    private static var lastSyncedHash: String?
+    private static var lastSyncAt: Date?
+
+    static var installationId: String {
+        if let existing = UserDefaults.standard.string(forKey: installationIdKey) {
+            return existing
+        }
+        let fresh = UUID().uuidString
+        UserDefaults.standard.set(fresh, forKey: installationIdKey)
+        return fresh
+    }
+
+    /// Watches the activity's push token (it can rotate at any time) and
+    /// registers every new token with the server. Safe to call repeatedly.
+    static func observe(_ activity: Activity<PrayerActivityAttributes>) {
+        if let token = activity.pushToken {
+            sync(activity: activity, tokenHex: hex(token))
+        }
+        guard observedActivityId != activity.id else { return }
+        observedActivityId = activity.id
+        tokenTask?.cancel()
+        tokenTask = Task {
+            for await tokenData in activity.pushTokenUpdates {
+                sync(activity: activity, tokenHex: hex(tokenData))
+            }
+        }
+    }
+
+    /// Removes this install's registration (Live Activity turned off, or
+    /// every activity ended): the server drops the token and schedule.
+    static func unregister() {
+        lastSyncedHash = nil
+        lastSyncAt = nil
+        let url = serverBase.appendingPathComponent("v1/register/\(installationId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(registrationToken)", forHTTPHeaderField: "Authorization")
+        Task { _ = try? await URLSession.shared.data(for: request) }
+    }
+
+    private static func hex(_ data: Data) -> String {
+        data.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func sync(activity: Activity<PrayerActivityAttributes>, tokenHex: String) {
+        let events = buildSchedule()
+        guard !events.isEmpty else { return }
+        let first = (events.first?["eventTime"] as? Int) ?? 0
+        let last = (events.last?["eventTime"] as? Int) ?? 0
+        let hash = "\(tokenHex)|\(events.count)|\(first)|\(last)"
+        if hash == lastSyncedHash,
+           let lastSyncAt, Date.now.timeIntervalSince(lastSyncAt) < 6 * 3600 {
+            return  // same token and schedule already registered recently
+        }
+        let body: [String: Any] = [
+            "installationId": installationId,
+            "activityId": activity.id,
+            "pushToken": tokenHex,
+            "events": events,
+        ]
+        guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return }
+        var request = URLRequest(url: serverBase.appendingPathComponent("v1/register"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(registrationToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = payload
+        Task {
+            if let (_, response) = try? await URLSession.shared.data(for: request),
+               let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
+                lastSyncedHash = hash
+                lastSyncAt = .now
+            }
+        }
+    }
+
+    /// One event per prayer boundary in the next 14 days. Each event's
+    /// ContentState is the state that becomes current at that boundary
+    /// (snapshot taken 1 s after it), encoded exactly as ActivityKit
+    /// will decode it from the push payload — the JSONEncoder default
+    /// representation, passed through the server untouched.
+    private static func buildSchedule() -> [[String: Any]] {
+        let provider = PrayerProvider.standard
+        let calendar = provider.calendar
+        let now = Date.now
+        let todayStart = calendar.startOfDay(for: now)
+        var boundaries: [Date] = []
+        for offset in 0...14 {
+            guard let dayStart = calendar.date(byAdding: .day, value: offset, to: todayStart) else { continue }
+            let day = provider.computeDay(for: dayStart)
+            boundaries.append(contentsOf: day.prayerSlots.map(\.adhan).filter { $0 > now })
+        }
+        boundaries.sort()
+        let encoder = JSONEncoder()
+        var events: [[String: Any]] = []
+        for boundary in boundaries.prefix(70) {
+            let stagedAt = boundary.addingTimeInterval(1)
+            let snapshot = provider.snapshot(at: stagedAt)
+            let state = LiveActivityController.makeContentState(
+                provider: provider, snapshot: snapshot, stagedAt: stagedAt)
+            guard let data = try? encoder.encode(state),
+                  let object = try? JSONSerialization.jsonObject(with: data) else { continue }
+            events.append([
+                "eventTime": Int(boundary.timeIntervalSince1970),
+                "staleDate": Int(state.adhan.timeIntervalSince1970),
+                "contentState": object,
+            ])
+        }
+        return events
+    }
+}
+
+// MARK: - Background refresh (automatic Live Activity rollover)
+
+/// Chains a BGAppRefreshTask to just after every Adhan. When it fires, the
+/// Live Activity is updated to the following prayer — so the Lock Screen
+/// countdown rolls from Dhuhr to Asr (and so on) without the app ever
+/// being opened — the Adhan notifications are re-scheduled, and the next
+/// refresh is chained. The identifier must also be listed under
+/// BGTaskSchedulerPermittedIdentifiers in Info.plist, AND Info.plist must
+/// declare the `fetch` background mode (UIBackgroundModes) — without it
+/// every submit() fails silently and the task never runs (the v1.0.4–
+/// v1.0.5 rollover bug, fixed in v1.0.6). Since v1.1.2 the visible
+/// switch does NOT depend on this task's timing: the activity's
+/// staleDate is set to the next Adhan, and when it passes the system
+/// re-renders the activity as stale and the views promote the
+/// pre-staged following prayer (see LiveActivityController). This
+/// task remains as the backstop that re-stages fresh prayers,
+/// reloads the widgets and rebuilds the notifications whenever iOS
+/// does choose to run it — BGAppRefreshTask timing is the system's
+/// call (earliestBeginDate is a floor, not a promise), and on some
+/// phones it lands far later than the requested 15 s after the Adhan.
+enum BackgroundRefresh {
+    static let identifier = "com.c12n.alrashidwidget.refresh"
+    private static var didRegister = false
+
+    /// Must run before the app finishes launching (called from App.init).
+    static func register() {
+        guard !didRegister else { return }
+        didRegister = true
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
+            guard let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            handle(refreshTask)
+        }
+    }
+
+    /// Asks iOS to wake the app shortly after the next Adhan. Submitting a
+    /// new request with the same identifier replaces the pending one.
+    static func schedule() {
+        let next = PrayerProvider.standard.snapshot().next
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = next.adhan.addingTimeInterval(15)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    private static func handle(_ task: BGAppRefreshTask) {
+        // Chain first: by the time this runs, the snapshot's next prayer is
+        // the following one, so this schedules the refresh after ITS Adhan.
+        schedule()
+
+        // The Live Activity update goes FIRST (v1.0.6): the background
+        // budget is ~30 s, and rebuilding ~40 notification requests first
+        // could starve the one update the user actually sees. Notifications
+        // are refreshed last, as best-effort.
+        let work = Task {
+            await LiveActivityController.refresh()
+            WidgetCenter.shared.reloadAllTimelines()
+            if AlertSettings.notificationsEnabled {
+                await AdhanNotifications.reschedule()
+            }
+        }
+        task.expirationHandler = { work.cancel() }
+        Task {
+            _ = await work.result
+            task.setTaskCompleted(success: !work.isCancelled)
+        }
+    }
+}
