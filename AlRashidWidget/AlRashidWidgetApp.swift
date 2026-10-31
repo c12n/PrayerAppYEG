@@ -35,6 +35,9 @@ struct AlRashidWidgetApp: App {
 enum AlertSettings {
     static let notificationsKey = "alerts.notificationsEnabled"
     static let liveActivityKey = "alerts.liveActivityEnabled"
+    static let reminderKey = "alerts.reminderEnabled"
+    static let reminderLeadKey = "alerts.reminderLeadMinutes"
+    static let jumuahReminderKey = "alerts.jumuahReminderEnabled"
 
     private static var defaults: UserDefaults { .standard }
 
@@ -46,6 +49,27 @@ enum AlertSettings {
     static var liveActivityEnabled: Bool {
         get { defaults.object(forKey: liveActivityKey) as? Bool ?? true }
         set { defaults.set(newValue, forKey: liveActivityKey) }
+    }
+
+    /// Pre-prayer reminder (v1.5): a gentle heads-up before each Adhan.
+    static var reminderEnabled: Bool {
+        get { defaults.object(forKey: reminderKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: reminderKey) }
+    }
+
+    /// How many minutes before the Adhan the reminder fires.
+    static var reminderLeadMinutes: Int {
+        get {
+            let stored = defaults.integer(forKey: reminderLeadKey)
+            return [5, 10, 15, 20, 30].contains(stored) ? stored : 10
+        }
+        set { defaults.set(newValue, forKey: reminderLeadKey) }
+    }
+
+    /// Friday reminder one hour before the Khutbah (v1.5).
+    static var jumuahReminderEnabled: Bool {
+        get { defaults.object(forKey: jumuahReminderKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: jumuahReminderKey) }
     }
 }
 
@@ -95,6 +119,16 @@ enum AppServices {
 
     static func liveActivityToggled(on: Bool) {
         Task { await LiveActivityController.refresh() }
+    }
+
+    /// Reminder / Jumu'ah preferences changed in Settings (v1.5):
+    /// rebuild the pending schedule when notifications are on.
+    static func alertPreferencesChanged() {
+        Task {
+            if AlertSettings.notificationsEnabled {
+                await AdhanNotifications.reschedule()
+            }
+        }
     }
 }
 
@@ -151,7 +185,16 @@ enum AdhanNotifications {
         await center.notificationSettings().authorizationStatus == .denied
     }
 
-    /// Rebuilds the pending Adhan notifications for the next 7 days.
+    private static let reminderPrefix = "reminder."
+    private static let jumuahPrefix = "jumuah."
+    /// iOS refuses more than 64 pending requests per app; with Adhan
+    /// alerts plus the v1.5 reminders the 7-day window can exceed
+    /// that, so the earliest requests win and the rest are dropped —
+    /// the schedule rebuilds on every app activation anyway.
+    private static let maxPendingRequests = 60
+
+    /// Rebuilds the pending Adhan notifications for the next 7 days,
+    /// including the v1.5 pre-prayer reminders and Jumu'ah reminder.
     static func reschedule() async {
         let settings = await center.notificationSettings()
         guard settings.authorizationStatus == .authorized
@@ -165,7 +208,14 @@ enum AdhanNotifications {
         let now = Date.now
         let todayStart = calendar.startOfDay(for: now)
 
-        var requests: [UNNotificationRequest] = []
+        func makeRequest(identifier: String, content: UNMutableNotificationContent, fireDate: Date) -> UNNotificationRequest {
+            let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            return UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        }
+
+        let lead = AlertSettings.reminderLeadMinutes
+        var scheduled: [(fireDate: Date, request: UNNotificationRequest)] = []
         for offset in 0..<7 {
             guard let dayStart = calendar.date(byAdding: .day, value: offset, to: todayStart) else { continue }
             let day = provider.computeDay(for: dayStart)
@@ -186,20 +236,47 @@ enum AdhanNotifications {
                     }
                 }
                 content.sound = AdhanSound.current.notificationSound
-                let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: slot.adhan)
-                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
                 let identifier = identifierPrefix + String(Int(slot.adhan.timeIntervalSince1970))
-                requests.append(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+                scheduled.append((slot.adhan, makeRequest(identifier: identifier, content: content, fireDate: slot.adhan)))
+
+                // Pre-prayer reminder (v1.5): the five prayers only —
+                // Sunrise has no reminder, and the Jumu'ah slot is
+                // covered by its own Khutbah reminder below.
+                if AlertSettings.reminderEnabled, slot.prayer.isPrayer, !slot.isJumuah {
+                    let fire = slot.adhan.addingTimeInterval(-Double(lead) * 60)
+                    if fire > now {
+                        let reminderContent = UNMutableNotificationContent()
+                        reminderContent.title = L10n.f("mosqueTitle", slot.name, MosqueInfo.name)
+                        reminderContent.body = L10n.f("inMinutes", slot.name, lead)
+                        reminderContent.sound = .default
+                        let reminderID = reminderPrefix + String(Int(slot.adhan.timeIntervalSince1970))
+                        scheduled.append((fire, makeRequest(identifier: reminderID, content: reminderContent, fireDate: fire)))
+                    }
+                }
+            }
+
+            // Jumu'ah reminder (v1.5): one hour before the Khutbah.
+            if day.isFriday, AlertSettings.jumuahReminderEnabled, let khutbah = day.jumuahKhutbah {
+                let fire = khutbah.addingTimeInterval(-3600)
+                if fire > now {
+                    let jumuahContent = UNMutableNotificationContent()
+                    jumuahContent.title = L10n.f("mosqueTitle", Prayer.jumuahName(in: AppLanguage.current), MosqueInfo.name)
+                    jumuahContent.body = L10n.f("jumuahReminderNotif", PrayerFormat.time(khutbah))
+                    jumuahContent.sound = .default
+                    let jumuahID = jumuahPrefix + String(Int(khutbah.timeIntervalSince1970))
+                    scheduled.append((fire, makeRequest(identifier: jumuahID, content: jumuahContent, fireDate: fire)))
+                }
             }
         }
-        for request in requests {
-            try? await center.add(request)
+        for entry in scheduled.sorted(by: { $0.fireDate < $1.fireDate }).prefix(maxPendingRequests) {
+            try? await center.add(entry.request)
         }
     }
 
     static func cancelAll() async {
         let pending = await center.pendingNotificationRequests()
-        let identifiers = pending.map(\.identifier).filter { $0.hasPrefix(identifierPrefix) }
+        let prefixes = [identifierPrefix, reminderPrefix, jumuahPrefix]
+        let identifiers = pending.map(\.identifier).filter { id in prefixes.contains { id.hasPrefix($0) } }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 }
