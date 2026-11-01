@@ -10,6 +10,15 @@ import SwiftUI
 import UIKit
 import WidgetKit
 
+/// Reports the home list's scroll offset (the content's top edge in
+/// the scroll view's coordinate space) for the status-bar auto-hide.
+private struct HomeScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// The user's Light/Dark choice from Settings (App Group, shared with
@@ -45,6 +54,10 @@ struct ContentView: View {
     /// A @State change in THIS view always re-renders it, and the stamp
     /// below rebuilds the timeline with colors re-read from the suite.
     @State private var appearanceGeneration = 0
+    /// True once the home list is scrolled: the status bar hides so
+    /// it never floats over the prayer cards mid-scroll (v1.5.1), and
+    /// screenshots taken while scrolled come out clean.
+    @State private var statusBarHidden = false
     private let provider = PrayerProvider.standard
 
     /// Changes whenever any appearance value changes.
@@ -58,6 +71,13 @@ struct ContentView: View {
             let todaySchedule = provider.day(for: context.date)
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    // Scroll-offset sentinel for the status-bar hide.
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(key: HomeScrollOffsetKey.self,
+                                        value: proxy.frame(in: .named("homeScroll")).minY)
+                    }
+                    .frame(height: 0)
                     HeaderView(today: todaySchedule, now: context.date) {
                         showSettings = true
                     }
@@ -72,6 +92,11 @@ struct ContentView: View {
                 .padding(.bottom, 32)
             }
             .scrollIndicators(.hidden)
+            .coordinateSpace(name: "homeScroll")
+            .onPreferenceChange(HomeScrollOffsetKey.self) { minY in
+                statusBarHidden = minY < -24
+            }
+            .statusBarHidden(statusBarHidden)
         }
         .id("\(appearanceStamp)#\(appearanceGeneration)")
         .background { AppBackground() }
@@ -493,6 +518,8 @@ private struct SettingsView: View {
     @AppStorage(HijriOffset.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var hijriOffset: Int = 0
 
+    @AppStorage(CompassSettings.hapticsKey) private var hapticsOn = true
+
     @State private var savedThemes: [AppAppearance.ThemeChoice] = AppAppearance.savedThemes
     @State private var showSaveTheme = false
     @State private var showRestartPrompt = false
@@ -512,6 +539,7 @@ private struct SettingsView: View {
                 textSizeSection
                 iconSection
                 hijriSection
+                qiblaSection
                 alertsSection
                 prayerAlertsSection
                 soundSection
@@ -836,6 +864,22 @@ private struct SettingsView: View {
 
     private func refreshDeniedState() {
         Task { notificationsDenied = await AdhanNotifications.authorizationDenied() }
+    }
+
+    /// Qibla compass preferences (v1.5.1): the facing haptic toggle.
+    private var qiblaSection: some View {
+        Section {
+            Toggle(isOn: $hapticsOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("haptics"))
+                    Text(L10n.t("hapticsBody"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text(L10n.t("qibla"))
+        }
     }
 
     private var prayerAlertsSection: some View {
@@ -1367,6 +1411,7 @@ private struct QiblaDial: View {
 private struct QiblaCompassView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var manager = QiblaHeadingManager()
+    @State private var facingQibla = false
 
     private var bearing: Double { QiblaMath.bearingFromMosque }
 
@@ -1419,12 +1464,23 @@ private struct QiblaCompassView: View {
         }
         .onAppear { manager.start() }
         .onDisappear { manager.stop() }
+        // The facing haptic lives ONLY here (v1.5.1): on the card it
+        // fired whenever the phone drifted past the Qibla bearing,
+        // even with the card scrolled off-screen. In the full-screen
+        // compass the user is actively aiming, so the buzz is wanted
+        // — and Settings can turn it off entirely.
+        .onChange(of: offset.map { abs($0) <= 3 }) { _, isFacing in
+            let facing = isFacing ?? false
+            if facing && !facingQibla && CompassSettings.hapticsEnabled {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+            facingQibla = facing
+        }
     }
 }
 
 private struct QiblaCard: View {
     @StateObject private var manager = QiblaHeadingManager()
-    @State private var facingQibla = false
     @State private var showCompass = false
 
     private var bearing: Double { QiblaMath.bearingFromMosque }
@@ -1480,13 +1536,6 @@ private struct QiblaCard: View {
         }
         .onAppear { manager.start() }
         .onDisappear { manager.stop() }
-        .onChange(of: offset.map { abs($0) <= 3 }) { _, isFacing in
-            let facing = isFacing ?? false
-            if facing && !facingQibla {
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-            }
-            facingQibla = facing
-        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(L10n.t("qibla")): \(Int(bearing.rounded()))° \(L10n.t("fromNorth"))")
     }
