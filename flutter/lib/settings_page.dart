@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'alerts.dart';
 import 'app_settings.dart';
 import 'prayer_models.dart';
 import 'strings.dart';
@@ -119,6 +120,69 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _sectionNote(context, S.t('textSizeNote')),
+              _sectionHeader(context, S.t('hijriDate')),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: -1, label: Text('-1')),
+                    ButtonSegment(value: 0, label: Text('0')),
+                    ButtonSegment(value: 1, label: Text('+1')),
+                  ],
+                  selected: {settings.hijriOffsetDays},
+                  onSelectionChanged: (sel) => settings
+                      .update(() => settings.hijriOffsetDays = sel.first),
+                ),
+              ),
+              _sectionNote(context, S.t('hijriOffsetFooter')),
+              _sectionHeader(context, S.t('alerts')),
+              SwitchListTile(
+                secondary: const Icon(Icons.notifications_active),
+                title: Text(S.t('adhanNotifications')),
+                subtitle: Text(S.t('notificationsBody')),
+                value: settings.notificationsEnabled,
+                onChanged: (v) {
+                  settings.update(() => settings.notificationsEnabled = v);
+                  AlertScheduler.refresh(settings, askPermission: v);
+                },
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.alarm),
+                title: Text(S.t('reminder')),
+                subtitle: Text(S.t('reminderBody')),
+                value: settings.reminderEnabled,
+                onChanged: (v) {
+                  settings.update(() => settings.reminderEnabled = v);
+                  AlertScheduler.refresh(settings);
+                },
+              ),
+              if (settings.reminderEnabled)
+                ListTile(
+                  leading: const Icon(Icons.timer_outlined),
+                  title: Text(S.f('minutesBefore',
+                      {'minutes': '${settings.reminderLeadMinutes}'})),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _pickLeadMinutes(context),
+                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.mosque),
+                title: Text(S.t('jumuahReminder')),
+                subtitle: Text(S.t('jumuahReminderBody')),
+                value: settings.jumuahReminderEnabled,
+                onChanged: (v) {
+                  settings.update(() => settings.jumuahReminderEnabled = v);
+                  AlertScheduler.refresh(settings);
+                },
+              ),
+              _sectionHeader(context, S.t('qibla')),
+              SwitchListTile(
+                secondary: const Icon(Icons.vibration),
+                title: Text(S.t('haptics')),
+                subtitle: Text(S.t('hapticsBody')),
+                value: settings.hapticsEnabled,
+                onChanged: (v) =>
+                    settings.update(() => settings.hapticsEnabled = v),
+              ),
               _sectionHeader(context, S.t('widgetCountdown')),
               for (final prayer in Prayer.values)
                 SwitchListTile(
@@ -127,8 +191,10 @@ class SettingsPage extends StatelessWidget {
                       ? S.t('dhuhrFriday')
                       : prayer.displayName),
                   value: settings.alerts[prayer] ?? false,
-                  onChanged: (v) =>
-                      settings.update(() => settings.alerts[prayer] = v),
+                  onChanged: (v) {
+                    settings.update(() => settings.alerts[prayer] = v);
+                    AlertScheduler.refresh(settings);
+                  },
                 ),
               _sectionNote(context, S.t('widgetCountdownNote')),
               _sectionHeader(context, S.t('privacy')),
@@ -215,7 +281,34 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
-    if (ok == true) settings.resetToDefaults();
+    if (ok == true) {
+      settings.resetToDefaults();
+      AlertScheduler.refresh(settings);
+    }
+  }
+
+  Future<void> _pickLeadMinutes(BuildContext context) async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(S.t('reminder')),
+        children: [
+          for (final minutes in AppSettings.reminderLeadOptions)
+            ListTile(
+              title: Text(S.f('minutesBefore', {'minutes': '$minutes'})),
+              trailing: settings.reminderLeadMinutes == minutes
+                  ? Icon(Icons.check_circle,
+                      color:
+                          accentFor(Theme.of(context).brightness, settings))
+                  : null,
+              onTap: () => Navigator.pop(context, minutes),
+            ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    settings.update(() => settings.reminderLeadMinutes = picked);
+    AlertScheduler.refresh(settings);
   }
 }
 
