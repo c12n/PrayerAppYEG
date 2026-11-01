@@ -73,6 +73,19 @@ enum AlertSettings {
     }
 }
 
+// MARK: - Compass settings
+
+/// Qibla compass preferences (v1.5.1): the facing haptic, which
+/// fires only in the full-screen compass and can be turned off.
+enum CompassSettings {
+    static let hapticsKey = "compass.hapticsEnabled"
+
+    static var hapticsEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: hapticsKey) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: hapticsKey) }
+    }
+}
+
 // MARK: - App services (Adhan notifications + Live Activity)
 
 /// Owns the two alert channels added in v1.0.3:
