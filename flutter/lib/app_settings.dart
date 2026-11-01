@@ -13,6 +13,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'hijri_calendar.dart';
 import 'prayer_models.dart';
 
 class SavedTheme {
@@ -60,6 +61,14 @@ class AppSettings extends ChangeNotifier {
   static const languageKey = 'language.code';
   static const textSizeKey = 'appearance.textSize';
   static String alertKey(Prayer p) => 'alerts.${p.name}';
+  // Notification engine settings (v1.5, same keys/defaults as iOS).
+  static const notificationsEnabledKey = 'alerts.notificationsEnabled';
+  static const reminderEnabledKey = 'alerts.reminderEnabled';
+  static const reminderLeadKey = 'alerts.reminderLeadMinutes';
+  static const jumuahReminderEnabledKey = 'alerts.jumuahReminderEnabled';
+  static const hijriOffsetKey = 'hijri.offsetDays';
+  static const hapticsEnabledKey = 'compass.hapticsEnabled';
+  static const reminderLeadOptions = [5, 10, 15, 20, 30];
 
   static const defaultPrimary = 0x0B3D2E;
   static const defaultAccent = 0xD4AF37;
@@ -83,6 +92,20 @@ class AppSettings extends ChangeNotifier {
     for (final p in Prayer.values) p: p != Prayer.sunrise,
   };
 
+  /// Notification engine (v1.5): master switch, pre-prayer reminder
+  /// and Friday Jumu'ah reminder — all default ON, like iOS.
+  bool notificationsEnabled = true;
+  bool reminderEnabled = true;
+  int reminderLeadMinutes = 10;
+  bool jumuahReminderEnabled = true;
+
+  /// Hijri date adjustment (v1.5): −1..+1 days on the displayed date.
+  int hijriOffsetDays = 0;
+
+  /// Facing-Qibla vibration in the full-screen compass only (v1.5).
+  /// The home-screen Qibla card never buzzes.
+  bool hapticsEnabled = true;
+
   SharedPreferences? _prefs;
 
   static Future<AppSettings> load() async {
@@ -105,6 +128,18 @@ class AppSettings extends ChangeNotifier {
       final v = prefs.getBool(alertKey(p));
       if (v != null) s.alerts[p] = v;
     }
+    s.notificationsEnabled =
+        prefs.getBool(notificationsEnabledKey) ?? true;
+    s.reminderEnabled = prefs.getBool(reminderEnabledKey) ?? true;
+    final lead = prefs.getInt(reminderLeadKey) ?? 10;
+    s.reminderLeadMinutes =
+        reminderLeadOptions.contains(lead) ? lead : 10;
+    s.jumuahReminderEnabled =
+        prefs.getBool(jumuahReminderEnabledKey) ?? true;
+    s.hijriOffsetDays =
+        (prefs.getInt(hijriOffsetKey) ?? 0).clamp(-1, 1);
+    HijriState.offsetDays = s.hijriOffsetDays;
+    s.hapticsEnabled = prefs.getBool(hapticsEnabledKey) ?? true;
     s.language = AppLanguage.values.asNameMap()[prefs.getString(languageKey)] ??
         AppLanguage.en;
     LanguageState.current = s.language;
@@ -137,6 +172,13 @@ class AppSettings extends ChangeNotifier {
     for (final p in Prayer.values) {
       await prefs.setBool(alertKey(p), alerts[p] ?? false);
     }
+    await prefs.setBool(notificationsEnabledKey, notificationsEnabled);
+    await prefs.setBool(reminderEnabledKey, reminderEnabled);
+    await prefs.setInt(reminderLeadKey, reminderLeadMinutes);
+    await prefs.setBool(jumuahReminderEnabledKey, jumuahReminderEnabled);
+    await prefs.setInt(hijriOffsetKey, hijriOffsetDays);
+    HijriState.offsetDays = hijriOffsetDays;
+    await prefs.setBool(hapticsEnabledKey, hapticsEnabled);
     await prefs.setString(
         savedThemesKey, jsonEncode(savedThemes.map((t) => t.toJson()).toList()));
     await prefs.setString(languageKey, language.name);
@@ -181,6 +223,12 @@ class AppSettings extends ChangeNotifier {
         for (final p in Prayer.values) {
           alerts[p] = p != Prayer.sunrise;
         }
+        notificationsEnabled = true;
+        reminderEnabled = true;
+        reminderLeadMinutes = 10;
+        jumuahReminderEnabled = true;
+        hijriOffsetDays = 0;
+        hapticsEnabled = true;
       });
 }
 
