@@ -37,6 +37,12 @@ object WidgetPrefs {
     fun language(context: Context): String =
         prefs(context).getString("flutter.language.code", null) ?: "en"
 
+    /// The Hijri date adjustment (v1.5, Settings → Hijri Date):
+    /// −1..+1 days. shared_preferences stores Dart ints as Long.
+    fun hijriOffsetDays(context: Context): Int =
+        prefs(context).getLong("flutter.hijri.offsetDays", 0L)
+            .toInt().coerceIn(-1, 1)
+
     fun accentColor(context: Context): Int? {
         val raw = prefs(context).getLong("flutter.appearance.accentHex", -1L)
         if (raw < 0) return null
@@ -254,10 +260,15 @@ object WidgetData {
             )
         }
 
+        // The displayed Hijri date honors the user's ±1 day
+        // adjustment (v1.5), applied to the Gregorian date before
+        // conversion, exactly like the app.
+        val hijriGregorian =
+            nextDay.date.plusDays(WidgetPrefs.hijriOffsetDays(context).toLong())
         return Model(
             hijri = UmmAlQuraCalendar.hijriString(
-                nextDay.date.year, nextDay.date.monthValue, nextDay.date.dayOfMonth,
-                language
+                hijriGregorian.year, hijriGregorian.monthValue,
+                hijriGregorian.dayOfMonth, language
             ),
             dateText = dateFmt(language).format(nextDay.date),
             nextName = displayName,
@@ -433,6 +444,17 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
             views.setTextColor(R.id.widget_next_label, accent)
         }
         ScheduleWidgetProvider.fillRows(context, views, model)
+        // Quran quote of the day under the schedule (v1.5), the same
+        // verse the app shows today.
+        val language = WidgetPrefs.language(context)
+        val today = ZonedDateTime.now(PrayerCalculator.ZONE).toLocalDate()
+        val verse = DailyVerses.verseFor(today)
+        views.setTextViewText(R.id.widget_verse, verse.arabic)
+        views.setTextViewText(
+            R.id.widget_verse_ref, DailyVerses.reference(verse, language))
+        WidgetPrefs.accentColor(context)?.let { accent ->
+            views.setTextColor(R.id.widget_verse_ref, accent)
+        }
         return views
     }
 }
