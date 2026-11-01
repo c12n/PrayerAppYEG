@@ -21,6 +21,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'alerts.dart';
 import 'app_settings.dart';
 import 'prayer_models.dart';
 import 'settings_page.dart';
@@ -113,9 +114,11 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Timer? _timer;
   late tz.TZDateTime _now;
+  final ScrollController _scrollController = ScrollController();
+  bool _statusBarHidden = false;
 
   tz.Location get _edmonton => edmontonLocation();
 
@@ -126,10 +129,58 @@ class _HomePageState extends State<HomePage> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _now = tz.TZDateTime.now(_edmonton));
     });
+    WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_onScroll);
+    // Arm the Adhan alerts (v1.5) and ask for the notification
+    // permission on first launch.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AlertScheduler.refresh(SettingsScope.of(context), askPermission: true);
+    });
+  }
+
+  /// iOS v1.5.1 parity: once the home list scrolls past ~24px, hide
+  /// the status bar so it never floats over the prayer cards
+  /// mid-scroll (and screenshots taken while scrolled stay clean);
+  /// it comes back near the top. The controller is shared by every
+  /// home layout's scroll views, so the furthest-scrolled pane wins.
+  void _onScroll() {
+    var offset = 0.0;
+    for (final position in _scrollController.positions) {
+      if (position.pixels > offset) offset = position.pixels;
+    }
+    _setStatusBarHidden(offset > 24);
+  }
+
+  void _setStatusBarHidden(bool hidden) {
+    if (hidden == _statusBarHidden) return;
+    _statusBarHidden = hidden;
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays:
+          hidden ? const [SystemUiOverlay.bottom] : SystemUiOverlay.values,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Keep the 7-day alert plan fresh, like iOS rescheduling on
+    // every activation.
+    if (state == AppLifecycleState.resumed) {
+      AlertScheduler.refresh(SettingsScope.of(context));
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    // Restore the default overlays when leaving the home page.
+    _statusBarHidden = false;
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
     _timer?.cancel();
     super.dispose();
   }
@@ -180,6 +231,7 @@ class _HomePageState extends State<HomePage> {
   Widget _phoneLayout(
       BuildContext context, PrayerSnapshot snapshot, PrayerDay today) {
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,6 +263,7 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             flex: 5,
             child: SingleChildScrollView(
+              controller: _scrollController,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -229,6 +282,7 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             flex: 6,
             child: SingleChildScrollView(
+              controller: _scrollController,
               child: Column(
                 children: [
                   ScheduleCard(snapshot: snapshot),
@@ -257,6 +311,7 @@ class _HomePageState extends State<HomePage> {
               SizedBox(
                 width: 400,
                 child: SingleChildScrollView(
+                  controller: _scrollController,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -276,12 +331,14 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 24),
               Expanded(
                 child: SingleChildScrollView(
+                  controller: _scrollController,
                   child: ScheduleCard(snapshot: snapshot, large: true),
                 ),
               ),
               const SizedBox(width: 24),
               Expanded(
                 child: SingleChildScrollView(
+                  controller: _scrollController,
                   child: ScheduleCard.forDay(
                     day: tomorrow,
                     title: S.t('tomorrowTimes'),
@@ -327,13 +384,16 @@ class HeaderSection extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.settings),
               tooltip: S.t('settings'),
-              onPressed: () {
-                Navigator.of(context).push(
+              onPressed: () async {
+                final settings = SettingsScope.of(context);
+                await Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        SettingsPage(settings: SettingsScope.of(context)),
+                    builder: (_) => SettingsPage(settings: settings),
                   ),
                 );
+                // Any settings change (language included) can change
+                // the alert plan's contents — rebuild it on return.
+                AlertScheduler.refresh(settings);
               },
             ),
           ],
@@ -588,31 +648,74 @@ class NextPrayerCard extends StatelessWidget {
 
 // MARK: - Schedule card
 
-class ScheduleCard extends StatelessWidget {
-  final PrayerDay day;
-  final String title;
-  final PrayerSlot? highlight;
+class ScheduleCard extends StatefulWidget {
+  final PrayerSnapshot? snapshot;
+  final PrayerDay? fixedDay;
+  final String? fixedTitle;
   final bool large;
 
   ScheduleCard({
     super.key,
     required PrayerSnapshot snapshot,
     this.large = false,
-  })  : day = snapshot.day,
-        title = snapshot.isShowingTomorrow
-            ? S.t('tomorrowTimes')
-            : S.t('todayTimes'),
-        highlight = snapshot.next;
+  })  : snapshot = snapshot,
+        fixedDay = null,
+        fixedTitle = null;
 
   const ScheduleCard.forDay({
     super.key,
-    required this.day,
-    required this.title,
+    required PrayerDay day,
+    required String title,
     this.large = false,
-  }) : highlight = null;
+  })  : snapshot = null,
+        fixedDay = day,
+        fixedTitle = title;
+
+  @override
+  State<ScheduleCard> createState() => _ScheduleCardState();
+}
+
+class _ScheduleCardState extends State<ScheduleCard> {
+  /// Today/Tomorrow preview toggle (v1.5). Null follows the snapshot
+  /// (today, switching to tomorrow after Isha); tapping a segment
+  /// pins the card to that day until the snapshot's day catches up.
+  bool? _showTomorrow;
+
+  static bool _sameDay(tz.TZDateTime a, tz.TZDateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   @override
   Widget build(BuildContext context) {
+    final snapshot = widget.snapshot;
+    final PrayerDay day;
+    final String title;
+    final PrayerSlot? highlight;
+    var showToggle = false;
+    var wantTomorrow = false;
+    if (snapshot == null) {
+      day = widget.fixedDay!;
+      title = widget.fixedTitle!;
+      highlight = null;
+    } else {
+      final todayDay = PrayerProvider.dayFor(snapshot.date);
+      wantTomorrow = _showTomorrow ?? snapshot.isShowingTomorrow;
+      if (wantTomorrow == snapshot.isShowingTomorrow) {
+        day = snapshot.day;
+      } else if (wantTomorrow) {
+        final start = todayDay.date;
+        day = PrayerProvider.computeDay(tz.TZDateTime(
+            start.location, start.year, start.month, start.day + 1));
+      } else {
+        day = todayDay;
+      }
+      title = _sameDay(day.date, todayDay.date)
+          ? S.t('todayTimes')
+          : S.t('tomorrowTimes');
+      // The "next" highlight only applies on the snapshot's own day.
+      highlight = _sameDay(day.date, snapshot.day.date) ? snapshot.next : null;
+      showToggle = true;
+    }
+    final large = widget.large;
     final nameSize = large ? 18.0 : 16.0;
     final timeSize = large ? 18.0 : 16.0;
     final c = SurfaceColors.of(context);
@@ -644,6 +747,18 @@ class ScheduleCard extends StatelessWidget {
               ),
             ],
           ),
+          if (showToggle) ...[
+            const SizedBox(height: 10),
+            SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(value: false, label: Text(S.t('today'))),
+                ButtonSegment(value: true, label: Text(S.t('tomorrow'))),
+              ],
+              selected: {wantTomorrow},
+              onSelectionChanged: (sel) =>
+                  setState(() => _showTomorrow = sel.first),
+            ),
+          ],
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -915,13 +1030,20 @@ class DailyVerseCard extends StatelessWidget {
             children: [
               Icon(Icons.menu_book, size: 20, color: c.accent),
               const SizedBox(width: 8),
-              Text(
-                S.t('dailyVerse'),
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: c.primary,
+              Expanded(
+                child: Text(
+                  S.t('dailyVerse'),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: c.primary,
+                  ),
                 ),
+              ),
+              IconButton(
+                icon: Icon(Icons.share, size: 20, color: c.accent),
+                tooltip: S.t('share'),
+                onPressed: () => _shareVerse(verse, translation, language),
               ),
             ],
           ),
@@ -958,6 +1080,48 @@ class DailyVerseCard extends StatelessWidget {
       ),
     );
   }
+
+  /// Shares the verse as one block of text (v1.5, mirroring iOS):
+  /// the Arabic, the translation when there is one, then the
+  /// reference and the mosque name — via the native share sheet.
+  static const _shareChannel = MethodChannel('alrashid/share');
+
+  void _shareVerse(
+      DailyVerse verse, String? translation, AppLanguage language) {
+    final lines = <String>[
+      verse.arabic,
+      if (translation != null) translation,
+      '${verse.reference(language)} — ${MosqueInfo.name}',
+    ];
+    _shareChannel.invokeMethod('share', {'text': lines.join('\n')});
+  }
+}
+
+/// Shared heading stream (v1.5): one platform subscription to the
+/// native 'alrashid/heading' EventChannel, fanned out in Dart so the
+/// Qibla card and the full-screen compass page can listen at the same
+/// time (the platform channel supports a single subscriber). Values
+/// are true-north degrees — Edmonton's magnetic declination is added
+/// here, once.
+class HeadingService {
+  static const _channel = EventChannel('alrashid/heading');
+  static StreamSubscription<dynamic>? _platformSub;
+  static final StreamController<double> _controller =
+      StreamController<double>.broadcast(onListen: _start, onCancel: _stop);
+
+  static Stream<double> get stream => _controller.stream;
+
+  static void _start() {
+    _platformSub ??= _channel.receiveBroadcastStream().listen((event) {
+      final magnetic = (event as num).toDouble();
+      _controller.add((magnetic + QiblaMath.magneticDeclination) % 360);
+    }, onError: (_) {});
+  }
+
+  static void _stop() {
+    _platformSub?.cancel();
+    _platformSub = null;
+  }
 }
 
 /// The Qibla card: a live compass dial fed by the native heading
@@ -972,10 +1136,8 @@ class QiblaCard extends StatefulWidget {
 }
 
 class _QiblaCardState extends State<QiblaCard> {
-  static const _channel = EventChannel('alrashid/heading');
-  StreamSubscription<dynamic>? _sub;
+  StreamSubscription<double>? _sub;
   double? _heading; // true-north compass heading, degrees
-  bool _facing = false;
 
   double get _bearing => QiblaMath.bearingFromMosque;
 
@@ -991,16 +1153,14 @@ class _QiblaCardState extends State<QiblaCard> {
   @override
   void initState() {
     super.initState();
-    _sub = _channel.receiveBroadcastStream().listen((event) {
+    // No facing haptic here on purpose (v1.5.1 parity): the card's
+    // listener runs even while the card is scrolled off-screen, so a
+    // buzz would fire as the phone drifts past the bearing in a
+    // pocket. The vibration lives in the full-screen compass page
+    // only; the card keeps its visual "facing the Qibla" indicator.
+    _sub = HeadingService.stream.listen((heading) {
       if (!mounted) return;
-      final magnetic = (event as num).toDouble();
-      setState(() {
-        _heading = (magnetic + QiblaMath.magneticDeclination) % 360;
-      });
-      final offset = _offset;
-      final facing = offset != null && offset.abs() <= 3;
-      if (facing && !_facing) HapticFeedback.lightImpact();
-      _facing = facing;
+      setState(() => _heading = heading);
     }, onError: (_) {});
   }
 
@@ -1015,7 +1175,14 @@ class _QiblaCardState extends State<QiblaCard> {
     final c = SurfaceColors.of(context);
     final offset = _offset;
     final facing = offset != null && offset.abs() <= 3;
-    return AdaptiveCard(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const QiblaCompassPage()),
+        );
+      },
+      child: AdaptiveCard(
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1095,18 +1262,58 @@ class _QiblaCardState extends State<QiblaCard> {
             S.t('qiblaHint'),
             style: TextStyle(fontSize: 12, color: c.muted),
           ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(Icons.open_in_full, size: 14, color: c.accent),
+              const SizedBox(width: 6),
+              Text(
+                S.t('tapForCompass'),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: c.accent,
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
       ),
     );
   }
 
-  /// The dial rotates against the phone's heading; the Kaaba marker
-  /// sits at the Qibla bearing, the fixed triangle at the top is where
-  /// the phone points. Letters orbit via full-size rotated containers
-  /// (their centers are the dial's center).
-  Widget _dial(SurfaceColors c) {
-    const size = 148.0;
-    final headingRad = -(_heading ?? 0) * math.pi / 180;
+  Widget _dial(SurfaceColors c) => QiblaDial(
+        heading: _heading,
+        bearing: _bearing,
+        colors: c,
+        size: 148,
+      );
+}
+
+/// The rotating compass dial, shared by the Qibla card and the
+/// full-screen compass (v1.5). The dial rotates against the phone's
+/// heading; the Kaaba marker sits at the Qibla bearing, the fixed
+/// triangle at the top is where the phone points. Letters orbit via
+/// full-size rotated containers (their centers are the dial's center).
+class QiblaDial extends StatelessWidget {
+  final double? heading; // true-north compass heading, degrees
+  final double bearing;
+  final SurfaceColors colors;
+  final double size;
+
+  const QiblaDial({
+    super.key,
+    required this.heading,
+    required this.bearing,
+    required this.colors,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = colors;
+    final headingRad = -(heading ?? 0) * math.pi / 180;
     final letters = [S.t('dir.n'), S.t('dir.e'), S.t('dir.s'), S.t('dir.w')];
     return SizedBox(
       width: size,
@@ -1139,7 +1346,7 @@ class _QiblaCardState extends State<QiblaCard> {
                             child: Text(
                               letters[q],
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: size > 200 ? 14 : 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.secondary,
                               ),
@@ -1148,12 +1355,14 @@ class _QiblaCardState extends State<QiblaCard> {
                         ),
                       ),
                     Transform.rotate(
-                      angle: _bearing * math.pi / 180,
-                      child: const Align(
+                      angle: bearing * math.pi / 180,
+                      child: Align(
                         alignment: Alignment.topCenter,
                         child: Padding(
-                          padding: EdgeInsets.only(top: 2),
-                          child: Text('🕋', style: TextStyle(fontSize: 24)),
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text('🕋',
+                              style:
+                                  TextStyle(fontSize: size > 200 ? 34 : 24)),
                         ),
                       ),
                     ),
@@ -1163,6 +1372,140 @@ class _QiblaCardState extends State<QiblaCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Full-screen Qibla compass (v1.5), opened by tapping the Qibla card:
+/// the same live heading stream and dial, large, with the bearing
+/// readout and the "facing the Qibla" state.
+class QiblaCompassPage extends StatefulWidget {
+  const QiblaCompassPage({super.key});
+
+  @override
+  State<QiblaCompassPage> createState() => _QiblaCompassPageState();
+}
+
+class _QiblaCompassPageState extends State<QiblaCompassPage> {
+  StreamSubscription<double>? _sub;
+  double? _heading; // true-north compass heading, degrees
+  bool _facing = false;
+  AppSettings? _settings;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _settings = SettingsScope.of(context);
+  }
+
+  double get _bearing => QiblaMath.bearingFromMosque;
+
+  double? get _offset {
+    final heading = _heading;
+    if (heading == null) return null;
+    var diff = (_bearing - heading) % 360;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    return diff;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = HeadingService.stream.listen((heading) {
+      if (!mounted) return;
+      setState(() => _heading = heading);
+      final offset = _offset;
+      final facing = offset != null && offset.abs() <= 3;
+      // The facing haptic lives ONLY on this full-screen page
+      // (v1.5.1 parity), and only when the user keeps haptics on
+      // (Settings → Qibla).
+      if (facing && !_facing && (_settings?.hapticsEnabled ?? true)) {
+        HapticFeedback.lightImpact();
+      }
+      _facing = facing;
+    }, onError: (_) {});
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = SurfaceColors.of(context);
+    final offset = _offset;
+    final facing = offset != null && offset.abs() <= 3;
+    final dialSize = math.min(300.0, MediaQuery.of(context).size.width - 64);
+    return Scaffold(
+      appBar: AppBar(title: Text(S.t('qiblaCompass'))),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                QiblaDial(
+                  heading: _heading,
+                  bearing: _bearing,
+                  colors: c,
+                  size: dialSize,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  '${_bearing.round()}°',
+                  style: TextStyle(
+                    fontSize: 44,
+                    fontWeight: FontWeight.bold,
+                    color: c.accent,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                Text(
+                  S.t('fromNorth'),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: c.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  S.t('qiblaFromMosque'),
+                  style: TextStyle(fontSize: 15, color: c.secondary),
+                ),
+                if (facing) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, size: 20, color: c.accent),
+                      const SizedBox(width: 6),
+                      Text(
+                        S.t('facingQibla'),
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: c.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Text(
+                  S.t('qiblaHint'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: c.muted),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
