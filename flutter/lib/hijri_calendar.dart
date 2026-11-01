@@ -13,6 +13,15 @@ class HijriDate {
   const HijriDate(this.year, this.month, this.day);
 }
 
+/// The user's Hijri date adjustment (v1.5, mirroring iOS): −1/0/+1
+/// days applied to the Gregorian date before conversion, for when the
+/// local moon sighting differs from the Umm al-Qura table. Held as a
+/// static like LanguageState; AppSettings keeps it in sync (stored as
+/// 'hijri.offsetDays' in shared_preferences).
+class HijriState {
+  static int offsetDays = 0;
+}
+
 class UmmAlQuraCalendar {
   static const List<String> monthNames = [
     'Muharram', 'Safar', 'Rabi I', 'Rabi II', 'Jumada I', 'Jumada II',
@@ -288,7 +297,17 @@ class UmmAlQuraCalendar {
   }
 
   static String hijriString(int year, int month, int day) {
-    final h = hijri(year, month, day);
+    // Apply the user's ±1 day adjustment (v1.5): shift the Gregorian
+    // date before converting; prayer times are never affected.
+    var y = year, m = month, d = day;
+    if (HijriState.offsetDays != 0) {
+      final shifted =
+          DateTime.utc(year, month, day + HijriState.offsetDays);
+      y = shifted.year;
+      m = shifted.month;
+      d = shifted.day;
+    }
+    final h = hijri(y, m, d);
     if (h == null) return '';
     final language = LanguageState.current;
     final monthName = monthNamesFor(language)[h.month - 1];
