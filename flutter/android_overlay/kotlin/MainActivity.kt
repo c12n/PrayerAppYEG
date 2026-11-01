@@ -1,12 +1,19 @@
 package com.c12n.alrashidwidget
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.MethodChannel
 import kotlin.math.atan2
 
 /// MainActivity with the Qibla compass heading channel (v1.1.0).
@@ -15,9 +22,14 @@ import kotlin.math.atan2
 /// No location permission is involved; the Dart side adds Edmonton's
 /// magnetic declination to get true north. This file replaces the
 /// flutter-create generated MainActivity via the overlay copy step.
+///
+/// v1.5 adds two MethodChannels: 'alrashid/alerts' (the Adhan
+/// notification plan — see Alerts.kt) and 'alrashid/share' (the daily
+/// verse share sheet).
 class MainActivity : FlutterActivity(), SensorEventListener {
     private var sensorManager: SensorManager? = null
     private var headingSink: EventChannel.EventSink? = null
+    private var permissionResult: MethodChannel.Result? = null
 
     private val gravity = FloatArray(3)
     private val geomagnetic = FloatArray(3)
@@ -40,6 +52,77 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                     stopSensors()
                 }
             })
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/alerts")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "schedule" -> {
+                        val raw = call.argument<List<Map<*, *>>>("items")
+                            ?: emptyList()
+                        AlertStore.save(this, raw.map { AlertItem.fromChannelMap(it) })
+                        AlertArmer.rearm(this)
+                        result.success(null)
+                    }
+                    "cancelAll" -> {
+                        AlertStore.clear(this)
+                        AlertArmer.cancel(this)
+                        result.success(null)
+                    }
+                    "requestPermission" -> requestNotificationPermission(result)
+                    else -> result.notImplemented()
+                }
+            }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/share")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "share" -> {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, call.argument<String>("text") ?: "")
+                        }
+                        startActivity(Intent.createChooser(send, null))
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    /// POST_NOTIFICATIONS runtime permission (Android 13+). The Dart
+    /// side gets the outcome via the stored channel result, completed
+    /// in onRequestPermissionsResult.
+    private fun requestNotificationPermission(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            result.success(true)
+            return
+        }
+        permissionResult?.success(false)
+        permissionResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            permissionResult?.success(granted)
+            permissionResult = null
+        }
+    }
+
+    companion object {
+        private const val NOTIFICATION_PERMISSION_REQUEST = 0xAD11
     }
 
     private fun startSensors() {
