@@ -765,6 +765,21 @@ private struct SettingsView: View {
     /// Master alert switches (v1.4 — moved from the Home screen's
     /// Alerts card): Adhan notifications on/off with the
     /// permission-denied warning, and the Live Activity on/off.
+    /// v1.5.2: the Live Activity push-registration state shown in the
+    /// Alerts section — the server handoff is verifiable on the phone
+    /// instead of failing silently as it did in v1.3–1.5.1.
+    private var pushStatusText: String {
+        switch LiveActivityPushSync.status {
+        case .registered(let date):
+            return L10n.t("pushConnected") + " · "
+                + date.formatted(date: .omitted, time: .shortened)
+        case .pending, .failed:
+            return L10n.t("pushPending")
+        case .localOnly:
+            return L10n.t("pushLocalOnly")
+        }
+    }
+
     private var alertsSection: some View {
         Section {
             Toggle(isOn: $notificationsOn) {
@@ -796,6 +811,19 @@ private struct SettingsView: View {
             }
             .onChange(of: liveActivityOn) { _, isOn in
                 AppServices.liveActivityToggled(on: isOn)
+            }
+
+            // v1.5.2: the Live Activity push-registration state, so a
+            // broken server handoff is visible instead of silent.
+            if liveActivityOn {
+                HStack {
+                    Text(L10n.t("pushUpdates"))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(pushStatusText)
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
             }
 
             Toggle(isOn: $reminderOn) {
