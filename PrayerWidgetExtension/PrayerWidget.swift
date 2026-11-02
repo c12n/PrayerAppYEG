@@ -679,7 +679,16 @@ private func displayedPrayers(
     isStale: Bool
 ) -> (current: StagedPrayer, then: StagedPrayer?, countdown: ClosedRange<Date>) {
     let prayers = stagedPrayers(for: state)
-    let index = isStale && prayers.count > 1 ? 1 : 0
+    var index = isStale && prayers.count > 1 ? 1 : 0
+    // v1.5.2: also advance by the clock. If a render lands after the
+    // displayed prayer's Adhan (the stale re-render can arrive late),
+    // show the prayer that is actually next instead of a frozen 0:00
+    // on the finished one. Only comparisons use the clock — the
+    // countdown range below is still built purely from staged dates.
+    let now = Date()
+    while index + 1 < prayers.count, prayers[index].adhan <= now {
+        index += 1
+    }
     let current = prayers[index]
     let then = index + 1 < prayers.count ? prayers[index + 1] : nil
     let start = index == 0
