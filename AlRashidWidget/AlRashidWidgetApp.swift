@@ -341,7 +341,8 @@ enum LiveActivityController {
         let live = activities.filter {
             $0.activityState == .active || $0.activityState == .stale
         }
-        if let activity = live.first, !LiveActivityPushSync.activityExpired(activity) {
+        if let activity = live.first, !LiveActivityPushSync.activityExpired(activity),
+           !LiveActivityPushSync.needsPushRetry(activity) {
             Task { await activity.update(content) }
             endAll(activities.filter { $0.id != activity.id })
             LiveActivityPushSync.observe(activity)
@@ -449,6 +450,7 @@ enum LiveActivityPushSync {
     private static let lastErrorKey = "pushsync.lastError"
     private static let registeredAtKey = "pushsync.registeredAt"
     private static let syncedHashKey = "pushsync.syncedHash"
+    private static let buildKey = "pushsync.appBuild"
 
     private nonisolated static var defaults: UserDefaults { .standard }
     private static var tokenTasks: [String: Task<Void, Never>] = [:]
@@ -505,11 +507,30 @@ enum LiveActivityPushSync {
         defaults.set(id, forKey: activityIdKey)
         defaults.set(Date.now.timeIntervalSince1970, forKey: activitySinceKey)
         defaults.set(pushCapable, forKey: pushCapableKey)
+        defaults.set(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "",
+                     forKey: buildKey)
         if let requestError {
             defaults.set(requestError, forKey: requestErrorKey)
         } else {
             defaults.removeObject(forKey: requestErrorKey)
         }
+    }
+
+    /// v1.5.3: true when the standing activity is this app's own
+    /// tokenless fallback (its push-type request failed) AND it was
+    /// requested by an OLDER build. A newer build — e.g. one whose
+    /// signing gained the push entitlement — retries the push-type
+    /// request once instead of reusing the local-only activity
+    /// forever. Retries are naturally once-per-build: the new request
+    /// re-stamps the build number whether it succeeds or fails.
+    static func needsPushRetry(_ activity: Activity<PrayerActivityAttributes>) -> Bool {
+        guard activity.pushToken == nil else { return false }
+        guard defaults.string(forKey: activityIdKey) == activity.id else { return false }
+        guard defaults.object(forKey: pushCapableKey) != nil,
+              !defaults.bool(forKey: pushCapableKey) else { return false }
+        let recordedBuild = defaults.string(forKey: buildKey) ?? ""
+        let currentBuild = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return recordedBuild != currentBuild
     }
 
     /// True when the tracked activity is old enough that the system's
@@ -533,7 +554,8 @@ enum LiveActivityPushSync {
         for task in tokenTasks.values { task.cancel() }
         tokenTasks.removeAll()
         for key in [activityIdKey, activitySinceKey, pushCapableKey, requestErrorKey,
-                    lastAttemptKey, lastHTTPKey, lastErrorKey, registeredAtKey, syncedHashKey] {
+                    lastAttemptKey, lastHTTPKey, lastErrorKey, registeredAtKey, syncedHashKey,
+                    buildKey] {
             defaults.removeObject(forKey: key)
         }
         let url = serverBase.appendingPathComponent("v1/register/\(installationId)")
