@@ -11,6 +11,7 @@
 import ActivityKit
 import BackgroundTasks
 import SwiftUI
+import UIKit
 import UserNotifications
 import WidgetKit
 
@@ -18,6 +19,10 @@ import WidgetKit
 struct AlRashidWidgetApp: App {
     init() {
         BackgroundRefresh.register()
+        // v1.5.2: token observers attach at process launch, not only on
+        // scene activation — a process woken in the background (by the
+        // refresh task or a token rotation) is observed too.
+        LiveActivityPushSync.startObserving()
     }
 
     var body: some Scene {
@@ -318,42 +323,56 @@ enum LiveActivityController {
         // THE switch (v1.1.2): staleDate is the next prayer's Adhan.
         // When it passes, the system re-renders the activity with
         // isStale = true, and the views show the pre-staged FOLLOWING
-        // prayer instead — the one date-triggered view change Apple
-        // documents for Live Activities (TimelineView is not: forum
-        // reports show its closure runs only a couple of times inside
-        // an activity, and neither ActivityKit nor WidgetKit documents
-        // it there). The flip can land a minute or two after the Adhan,
-        // but it does not depend on the background task, whose
-        // earliestBeginDate is only a floor, not a promise. Every
-        // refresh re-stages the pair and moves the stale date to the
-        // new next Adhan, so each update buys one more on-time switch.
-        let content = ActivityContent(state: state, staleDate: next.adhan)
+        // prayer instead. Every refresh re-stages the set and moves the
+        // stale date to the new next Adhan. Since v1.3 the server push
+        // is the primary rollover; the stale flip is the fallback.
+        let content = ActivityContent(state: state, staleDate: next.adhan, relevanceScore: 100)
 
-        // Updates to an ended activity are ignored, so only update one
-        // that is active or stale; if none qualifies, start fresh.
-        // Since v1.3 the activity must be push-enabled (pushType .token)
-        // so the homelab server can roll it over via APNs; activities
-        // started by older versions have no push token and are replaced.
+        // v1.5.2: reuse the running activity WHATEVER its push state.
+        // The v1.3–1.5.1 filter demanded pushToken != nil — but the
+        // token arrives asynchronously after the request, so an
+        // activation landing before it (onAppear and scenePhase both
+        // refresh at every launch) ended a healthy just-started
+        // activity and requested a new one, killing its token observer
+        // before the first token could ever be registered. The server
+        // consequently saw ZERO registrations and no push ever rolled
+        // the activity over. An activity is now replaced only when it
+        // nears the system's ~8 h Live Activity lifetime cap.
         let live = activities.filter {
-            ($0.activityState == .active || $0.activityState == .stale) && $0.pushToken != nil
+            $0.activityState == .active || $0.activityState == .stale
         }
-        if let activity = live.first {
+        if let activity = live.first, !LiveActivityPushSync.activityExpired(activity) {
             Task { await activity.update(content) }
             endAll(activities.filter { $0.id != activity.id })
             LiveActivityPushSync.observe(activity)
         } else {
             endAll(activities)
-            let attributes = PrayerActivityAttributes(mosqueName: MosqueInfo.name)
-            if let activity = try? Activity.request(attributes: attributes, content: content, pushType: .token) {
+            requestNew(content: content)
+        }
+    }
+
+    /// Starts a fresh activity, push-capable when the installed copy's
+    /// signing allows it. v1.5.2: a failed push-type request is
+    /// RECORDED (Settings → Alerts shows it) instead of silently
+    /// falling back — the silent fallback is what hid the broken
+    /// server handoff through v1.3–1.5.1.
+    private static func requestNew(
+        content: ActivityContent<PrayerActivityAttributes.ContentState>
+    ) {
+        let attributes = PrayerActivityAttributes(mosqueName: MosqueInfo.name)
+        do {
+            let activity = try Activity.request(
+                attributes: attributes, content: content, pushType: .token)
+            LiveActivityPushSync.noteActivityRequested(id: activity.id, pushCapable: true)
+            LiveActivityPushSync.observe(activity)
+        } catch {
+            LiveActivityPushSync.noteActivityRequested(
+                id: "", pushCapable: false, requestError: error.localizedDescription)
+            // Local-only fallback (v1.3.1): the Lock Screen countdown
+            // still appears; the stale-date flip covers the switch.
+            if let activity = try? Activity.request(
+                attributes: attributes, content: content, pushType: .none) {
                 LiveActivityPushSync.observe(activity)
-            } else if (try? Activity.request(attributes: attributes, content: content, pushType: .none)) != nil {
-                // v1.3.1: the push-type start can fail when the installed
-                // copy was re-signed without the aps-environment
-                // entitlement (a sideload profile created before the Push
-                // capability existed). Fall back to a local activity so
-                // the Lock Screen countdown still appears — the
-                // stale-date flip covers the prayer switch — and the next
-                // refresh retries the push-type start.
             }
         }
     }
@@ -417,10 +436,23 @@ enum LiveActivityPushSync {
     private static let registrationToken = "bf51e419eebfd2d74c19a44b0178a9ed8c65cbc7b1ca1fd1"
     private static let installationIdKey = "pushsync.installationId"
 
-    private static var observedActivityId: String?
-    private static var tokenTask: Task<Void, Never>?
-    private static var lastSyncedHash: String?
-    private static var lastSyncAt: Date?
+    // v1.5.2: registration state is PERSISTED (v1.3–1.5.1 kept it in
+    // memory only, so a lost first POST was invisible and the dedupe
+    // could suppress the retry) and is surfaced in Settings → Alerts,
+    // so a broken handoff is diagnosable on the phone itself.
+    private static let activityIdKey = "pushsync.activityId"
+    private static let activitySinceKey = "pushsync.activitySince"
+    private static let pushCapableKey = "pushsync.pushCapable"
+    private static let requestErrorKey = "pushsync.requestError"
+    private static let lastAttemptKey = "pushsync.lastAttemptAt"
+    private static let lastHTTPKey = "pushsync.lastHTTPStatus"
+    private static let lastErrorKey = "pushsync.lastError"
+    private static let registeredAtKey = "pushsync.registeredAt"
+    private static let syncedHashKey = "pushsync.syncedHash"
+
+    private nonisolated static var defaults: UserDefaults { .standard }
+    private static var tokenTasks: [String: Task<Void, Never>] = [:]
+    private static var didStartObserving = false
 
     static var installationId: String {
         if let existing = UserDefaults.standard.string(forKey: installationIdKey) {
@@ -431,27 +463,79 @@ enum LiveActivityPushSync {
         return fresh
     }
 
-    /// Watches the activity's push token (it can rotate at any time) and
-    /// registers every new token with the server. Safe to call repeatedly.
-    static func observe(_ activity: Activity<PrayerActivityAttributes>) {
-        if let token = activity.pushToken {
-            sync(activity: activity, tokenHex: hex(token))
-        }
-        guard observedActivityId != activity.id else { return }
-        observedActivityId = activity.id
-        tokenTask?.cancel()
-        tokenTask = Task {
-            for await tokenData in activity.pushTokenUpdates {
-                sync(activity: activity, tokenHex: hex(tokenData))
+    /// v1.5.2: attaches token observers at process launch (called from
+    /// App.init), for the activities that already exist and for every
+    /// activity the system reports from then on — including processes
+    /// woken in the background, which the v1.3 flow never observed.
+    nonisolated static func startObserving() {
+        Task { @MainActor in
+            guard !didStartObserving else { return }
+            didStartObserving = true
+            for activity in Activity<PrayerActivityAttributes>.activities {
+                observe(activity)
+            }
+            Task {
+                for await activity in Activity<PrayerActivityAttributes>.activityUpdates {
+                    observe(activity)
+                }
             }
         }
+    }
+
+    /// Watches the activity's push token (it can rotate at any time) and
+    /// registers every new token with the server. Safe to call repeatedly:
+    /// one observer task per activity, and an immediate sync whenever a
+    /// token is already available.
+    static func observe(_ activity: Activity<PrayerActivityAttributes>) {
+        if let token = activity.pushToken {
+            Task { await sync(activity: activity, tokenHex: hex(token)) }
+        }
+        guard tokenTasks[activity.id] == nil else { return }
+        tokenTasks[activity.id] = Task {
+            for await tokenData in activity.pushTokenUpdates {
+                await sync(activity: activity, tokenHex: hex(tokenData))
+            }
+        }
+    }
+
+    /// Records which activity the controller most recently requested,
+    /// and whether it is push-capable, for the renewal check and the
+    /// Settings diagnostics.
+    static func noteActivityRequested(id: String, pushCapable: Bool, requestError: String? = nil) {
+        defaults.set(id, forKey: activityIdKey)
+        defaults.set(Date.now.timeIntervalSince1970, forKey: activitySinceKey)
+        defaults.set(pushCapable, forKey: pushCapableKey)
+        if let requestError {
+            defaults.set(requestError, forKey: requestErrorKey)
+        } else {
+            defaults.removeObject(forKey: requestErrorKey)
+        }
+    }
+
+    /// True when the tracked activity is old enough that the system's
+    /// ~8-hour Live Activity lifetime could end it mid-day; refresh()
+    /// renews it (end + fresh request) after 6 hours. An activity this
+    /// build did not request gets its clock started at first sight.
+    static func activityExpired(_ activity: Activity<PrayerActivityAttributes>) -> Bool {
+        if defaults.string(forKey: activityIdKey) != activity.id {
+            defaults.set(activity.id, forKey: activityIdKey)
+            defaults.set(Date.now.timeIntervalSince1970, forKey: activitySinceKey)
+            return false
+        }
+        let since = defaults.double(forKey: activitySinceKey)
+        guard since > 0 else { return false }
+        return Date.now.timeIntervalSince1970 - since > 6 * 3600
     }
 
     /// Removes this install's registration (Live Activity turned off, or
     /// every activity ended): the server drops the token and schedule.
     static func unregister() {
-        lastSyncedHash = nil
-        lastSyncAt = nil
+        for task in tokenTasks.values { task.cancel() }
+        tokenTasks.removeAll()
+        for key in [activityIdKey, activitySinceKey, pushCapableKey, requestErrorKey,
+                    lastAttemptKey, lastHTTPKey, lastErrorKey, registeredAtKey, syncedHashKey] {
+            defaults.removeObject(forKey: key)
+        }
         let url = serverBase.appendingPathComponent("v1/register/\(installationId)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
@@ -463,15 +547,19 @@ enum LiveActivityPushSync {
         data.map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func sync(activity: Activity<PrayerActivityAttributes>, tokenHex: String) {
+    /// v1.5.2: the POST now runs inside a background-task assertion with
+    /// retries (a request suspended mid-flight as the app backgrounded
+    /// was lost silently in v1.3), and EVERY outcome is recorded. The
+    /// dedupe skip requires a previous SUCCESS with the same hash.
+    private static func sync(activity: Activity<PrayerActivityAttributes>, tokenHex: String) async {
         let events = buildSchedule()
         guard !events.isEmpty else { return }
         let first = (events.first?["eventTime"] as? Int) ?? 0
         let last = (events.last?["eventTime"] as? Int) ?? 0
         let hash = "\(tokenHex)|\(events.count)|\(first)|\(last)"
-        if hash == lastSyncedHash,
-           let lastSyncAt, Date.now.timeIntervalSince(lastSyncAt) < 6 * 3600 {
-            return  // same token and schedule already registered recently
+        if hash == defaults.string(forKey: syncedHashKey),
+           defaults.double(forKey: registeredAtKey) > Date.now.timeIntervalSince1970 - 6 * 3600 {
+            return  // this exact token + schedule already reached the server
         }
         let body: [String: Any] = [
             "installationId": installationId,
@@ -485,13 +573,61 @@ enum LiveActivityPushSync {
         request.setValue("Bearer \(registrationToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = payload
-        Task {
-            if let (_, response) = try? await URLSession.shared.data(for: request),
-               let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
-                lastSyncedHash = hash
-                lastSyncAt = .now
+
+        for attempt in 0..<3 {
+            if attempt > 0 {
+                try? await Task.sleep(nanoseconds: attempt == 1 ? 2_000_000_000 : 5_000_000_000)
+            }
+            defaults.set(Date.now.timeIntervalSince1970, forKey: lastAttemptKey)
+            let backgroundTask = UIApplication.shared.beginBackgroundTask(
+                withName: "LiveActivityPushSync") { }
+            do {
+                let (_, response) = try await URLSession.shared.data(for: request)
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                defaults.set(status, forKey: lastHTTPKey)
+                if (200..<300).contains(status) {
+                    defaults.set(hash, forKey: syncedHashKey)
+                    defaults.set(Date.now.timeIntervalSince1970, forKey: registeredAtKey)
+                    defaults.removeObject(forKey: lastErrorKey)
+                    if backgroundTask != .invalid {
+                        UIApplication.shared.endBackgroundTask(backgroundTask)
+                    }
+                    return
+                }
+                defaults.set("HTTP \(status)", forKey: lastErrorKey)
+            } catch {
+                defaults.set(error.localizedDescription, forKey: lastErrorKey)
+            }
+            if backgroundTask != .invalid {
+                UIApplication.shared.endBackgroundTask(backgroundTask)
             }
         }
+    }
+
+    // MARK: Diagnostics (Settings → Alerts)
+
+    enum PushStatus {
+        case registered(Date)
+        case pending
+        case failed(String)
+        case localOnly(String?)
+    }
+
+    /// The registration state for the Settings row. Persisted in
+    /// UserDefaults by the sync engine above; safe to read anywhere.
+    nonisolated static var status: PushStatus {
+        let d = UserDefaults.standard
+        if d.object(forKey: pushCapableKey) != nil, !d.bool(forKey: pushCapableKey) {
+            return .localOnly(d.string(forKey: requestErrorKey))
+        }
+        let registeredAt = d.double(forKey: registeredAtKey)
+        if registeredAt > 0 {
+            return .registered(Date(timeIntervalSince1970: registeredAt))
+        }
+        if let error = d.string(forKey: lastErrorKey) {
+            return .failed(error)
+        }
+        return .pending
     }
 
     /// One event per prayer boundary in the next 14 days. Each event's
