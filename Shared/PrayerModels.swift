@@ -1590,6 +1590,10 @@ enum L10n {
         "liveActivity": [.en: "Live Activity", .ar: "النشاط المباشر", .fr: "Activité en direct"],
         "notificationsBody": [.en: "A notification with sound at every prayer time, scheduled 7 days ahead and refreshed whenever you open the app.", .ar: "إشعار بصوت عند كل وقت صلاة، يُجدوَل لسبعة أيام مقدمًا ويُحدَّث كلما فتحت التطبيق.", .fr: "Une notification avec son à chaque heure de prière, programmée 7 jours à l'avance et actualisée à chaque ouverture de l'app."],
         "liveActivityBody": [.en: "A live countdown to the next prayer on your Lock Screen and Dynamic Island. It moves on to the following prayer by itself when a prayer time arrives, and also refreshes whenever you open the app.", .ar: "عدّاد مباشر للصلاة التالية على شاشة القفل وDynamic Island. ينتقل بنفسه إلى الصلاة التي بعدها عند حلول وقت الصلاة، ويُحدَّث أيضًا كلما فتحت التطبيق.", .fr: "Un compte à rebours en direct vers la prochaine prière sur l'écran verrouillé et la Dynamic Island. Il passe tout seul à la prière suivante à l'heure venue, et s'actualise à chaque ouverture de l'app."],
+        "pushUpdates": [.en: "Live Activity updates", .ar: "تحديثات النشاط المباشر", .fr: "Mises à jour de l'activité en direct"],
+        "pushConnected": [.en: "Connected", .ar: "متصل", .fr: "Connecté"],
+        "pushPending": [.en: "Not connected yet", .ar: "غير متصل بعد", .fr: "Pas encore connecté"],
+        "pushLocalOnly": [.en: "Local only", .ar: "محلي فقط", .fr: "Local uniquement"],
         "notificationsOffWarning": [.en: "Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", .ar: "الإشعارات متوقفة لهذا التطبيق في إعدادات iOS — فعّلها هناك لسماع تنبيهات الأذان.", .fr: "Les notifications sont désactivées pour cette app dans les Réglages iOS — activez-les pour entendre les alertes de l'Adhan."],
         // Alerts extras (v1.5)
         "reminder": [.en: "Pre-prayer reminder", .ar: "تذكير قبل الصلاة", .fr: "Rappel avant la prière"],
