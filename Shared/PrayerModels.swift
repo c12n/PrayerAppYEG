@@ -1594,6 +1594,11 @@ enum L10n {
         "pushConnected": [.en: "Connected", .ar: "متصل", .fr: "Connecté"],
         "pushPending": [.en: "Not connected yet", .ar: "غير متصل بعد", .fr: "Pas encore connecté"],
         "pushLocalOnly": [.en: "Local only", .ar: "محلي فقط", .fr: "Local uniquement"],
+        // In-app update reminder (v1.7.0)
+        "updateAvailable": [.en: "Update available", .ar: "يتوفر تحديث", .fr: "Mise à jour disponible"],
+        "updateAvailableBody": [.en: "Version %@ of Al Rashid Prayer is ready in TestFlight.", .ar: "الإصدار %@ من تطبيق الراشد جاهز في TestFlight.", .fr: "La version %@ d'Al Rashid Prayer est prête dans TestFlight."],
+        "updateNow": [.en: "Update in TestFlight", .ar: "التحديث في TestFlight", .fr: "Mettre à jour dans TestFlight"],
+        "updateLater": [.en: "Later", .ar: "لاحقًا", .fr: "Plus tard"],
         "notificationsOffWarning": [.en: "Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", .ar: "الإشعارات متوقفة لهذا التطبيق في إعدادات iOS — فعّلها هناك لسماع تنبيهات الأذان.", .fr: "Les notifications sont désactivées pour cette app dans les Réglages iOS — activez-les pour entendre les alertes de l'Adhan."],
         // Alerts extras (v1.5)
         "reminder": [.en: "Pre-prayer reminder", .ar: "تذكير قبل الصلاة", .fr: "Rappel avant la prière"],

@@ -46,6 +46,11 @@ struct ContentView: View {
     @AppStorage(AppTextSize.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var textSizeRaw: String = AppTextSize.standard.rawValue
     @State private var showSettings = false
+    /// In-app update reminder (v1.7.0): checks the version note hosted
+    /// in the c12nfeather source and prompts toward TestFlight when a
+    /// newer public build than the installed one is advertised.
+    @StateObject private var updateChecker = UpdateChecker()
+    @Environment(\.openURL) private var openURL
     /// Bumped by Settings on every change — and again when the sheet
     /// closes — to force this screen to rebuild with the new values
     /// (v1.1.1). Cross-view @AppStorage observation of the App Group
@@ -106,12 +111,32 @@ struct ContentView: View {
         .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
         .sheet(isPresented: $showSettings, onDismiss: { appearanceGeneration += 1 }) {
             SettingsView { appearanceGeneration += 1 }
+                .environmentObject(updateChecker)
         }
-        .onAppear { refreshWidgets() }
+        .alert(L10n.t("updateAvailable"), isPresented: $updateChecker.showAlert) {
+            Button(L10n.t("updateNow")) {
+                if let update = updateChecker.updateToShow,
+                   let url = URL(string: update.url) {
+                    openURL(url)
+                }
+            }
+            Button(L10n.t("updateLater"), role: .cancel) {
+                updateChecker.dismiss()
+            }
+        } message: {
+            if let update = updateChecker.updateToShow {
+                Text(L10n.f("updateAvailableBody", update.version))
+            }
+        }
+        .onAppear {
+            refreshWidgets()
+            updateChecker.checkIfNeeded()
+        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 appearanceGeneration += 1
                 refreshWidgets()
+                updateChecker.checkIfNeeded()
             }
         }
     }
@@ -484,6 +509,9 @@ private struct SettingsView: View {
     let onSettingsChanged: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    /// In-app update reminder state (v1.7.0), owned by ContentView.
+    @EnvironmentObject private var updateChecker: UpdateChecker
 
     private static var suite: UserDefaults {
         UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
@@ -532,6 +560,7 @@ private struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                updateSection
                 languageSection
                 appearanceSection
                 colorsSection
@@ -777,6 +806,40 @@ private struct SettingsView: View {
             return L10n.t("pushPending")
         case .localOnly:
             return L10n.t("pushLocalOnly")
+        }
+    }
+
+    /// In-app update reminder (v1.7.0): pinned at the top of Settings
+    /// while a newer public build than the installed one is advertised
+    /// and the user has not dismissed that build.
+    @ViewBuilder
+    private var updateSection: some View {
+        if let update = updateChecker.updateToShow {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(L10n.t("updateAvailable"), systemImage: "arrow.down.circle.fill")
+                        .font(.headline)
+                    Text(L10n.f("updateAvailableBody", update.version))
+                        .font(.subheadline)
+                    if let notes = update.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack(spacing: 12) {
+                        Button(L10n.t("updateNow")) {
+                            if let url = URL(string: update.url) {
+                                openURL(url)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Button(L10n.t("updateLater")) {
+                            updateChecker.dismiss()
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+            }
         }
     }
 
@@ -1566,5 +1629,80 @@ private struct QiblaCard: View {
         .onDisappear { manager.stop() }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(L10n.t("qibla")): \(Int(bearing.rounded()))° \(L10n.t("fromNorth"))")
+    }
+}
+
+// MARK: - Update checker (v1.7.0)
+
+/// The version note hosted in the c12nfeather source
+/// (alrashid-version.json). It only ever advertises a build Apple has
+/// approved for the public TestFlight link, so a prompt never sends
+/// anyone to an update that is not actually there for them.
+private struct AdvertisedVersion: Decodable {
+    let version: String
+    let build: Int
+    let url: String
+    let notes: String?
+}
+
+/// Checks the advertised version at most once per 6 hours, silently.
+/// On a newer build: a one-time alert (ContentView) plus a standing
+/// Settings section, until the user updates or dismisses that build.
+@MainActor
+final class UpdateChecker: ObservableObject {
+    @Published private(set) var advertised: AdvertisedVersion?
+    @Published var showAlert = false
+
+    private let defaults = UserDefaults.standard
+    private let lastCheckKey = "updatecheck.lastAt"
+    private let dismissedKey = "updatecheck.dismissedBuild"
+    private let alertedKey = "updatecheck.alertedBuild"
+    private let checkInterval: TimeInterval = 6 * 3600
+
+    private var installedBuild: Int {
+        Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0
+    }
+
+    /// The advertised build the UI should show right now: newer than
+    /// the installed build and not dismissed by the user.
+    var updateToShow: AdvertisedVersion? {
+        guard let advertised, advertised.build > installedBuild,
+              advertised.build > defaults.integer(forKey: dismissedKey)
+        else { return nil }
+        return advertised
+    }
+
+    func checkIfNeeded() {
+        let now = Date().timeIntervalSince1970
+        guard now - defaults.double(forKey: lastCheckKey) >= checkInterval
+        else { return }
+        defaults.set(now, forKey: lastCheckKey)
+        Task { await check() }
+    }
+
+    private func check() async {
+        guard let url = URL(string: "https://c12nfeather.07051969.xyz/alrashid-version.json")
+        else { return }
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 8
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let note = try? JSONDecoder().decode(AdvertisedVersion.self, from: data)
+        else { return }
+        advertised = note.build > installedBuild ? note : nil
+        if let update = updateToShow,
+           update.build > defaults.integer(forKey: alertedKey) {
+            defaults.set(update.build, forKey: alertedKey)
+            showAlert = true
+        }
+    }
+
+    /// "Later": stay quiet about this build (alert and Settings
+    /// section) until a newer one is advertised.
+    func dismiss() {
+        if let build = advertised?.build {
+            defaults.set(build, forKey: dismissedKey)
+        }
+        showAlert = false
     }
 }
