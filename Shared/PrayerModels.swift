@@ -919,9 +919,16 @@ enum Theme {
     // white/green below ~0.7 opacity.
 
     private static func themed(dark: UIColor, light: UIColor) -> Color {
-        Color(uiColor: UIColor { traits in
+        #if os(watchOS)
+        // watchOS has no Light Mode and UIColor's dynamic-provider
+        // initializer is unavailable there — the watch always uses
+        // the dark variant.
+        return Color(uiColor: dark)
+        #else
+        return Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark ? dark : light
         })
+        #endif
     }
 
     private static var deepGreenUI: UIColor { UIColor(red: 0.043, green: 0.239, blue: 0.180, alpha: 1) }
@@ -931,12 +938,17 @@ enum Theme {
     /// dark surfaces, deepened for light ones (the HSB adjustment keeps
     /// the hue, so gold stays gold). Defaults to the signature gold.
     static var adaptiveGold: Color {
-        Color(uiColor: UIColor { traits in
+        #if os(watchOS)
+        // Always-dark appearance on the watch (see themed above).
+        return Color(uiColor: AppAppearance.accentUIColor.adjustedForDarkSurface())
+        #else
+        return Color(uiColor: UIColor { traits in
             let base = AppAppearance.accentUIColor
             return traits.userInterfaceStyle == .dark
                 ? base.adjustedForDarkSurface()
                 : base.adjustedForLightSurface()
         })
+        #endif
     }
 
     // MARK: Theme colors (user-pickable, v1.0.5)
