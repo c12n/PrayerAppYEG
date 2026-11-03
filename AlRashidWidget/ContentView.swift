@@ -1638,7 +1638,7 @@ private struct QiblaCard: View {
 /// (alrashid-version.json). It only ever advertises a build Apple has
 /// approved for the public TestFlight link, so a prompt never sends
 /// anyone to an update that is not actually there for them.
-private struct AdvertisedVersion: Decodable {
+struct AdvertisedVersion: Decodable {
     let version: String
     let build: Int
     let url: String
