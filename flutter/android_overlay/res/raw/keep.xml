@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep the bundled Adhan sounds in release builds: they are
+     referenced by notification channels at runtime, and aapt's
+     resource shrinker would otherwise strip them as unused. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/adhan_chime,@raw/adhan_bell" />

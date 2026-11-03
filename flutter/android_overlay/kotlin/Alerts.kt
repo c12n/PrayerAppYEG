@@ -151,10 +151,12 @@ object AdhanNotifier {
         when (sound) {
             "default" ->
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            // R.raw references (not string-built URIs) so aapt's
+            // resource shrinker keeps the bundled sounds in the APK.
             "chime" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/raw/adhan_chime")
+                "android.resource://${context.packageName}/${R.raw.adhan_chime}")
             "bell" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/raw/adhan_bell")
+                "android.resource://${context.packageName}/${R.raw.adhan_bell}")
             else -> null // silent
         }
 
