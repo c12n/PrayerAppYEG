@@ -16,6 +16,10 @@
 		<string>AlRashid App Store</string>
 		<key>com.c12n.alrashidwidget.widget</key>
 		<string>AlRashid Widget App Store</string>
+		<key>com.c12n.alrashidwidget.watchkitapp</key>
+		<string>AlRashid Watch App Store</string>
+		<key>com.c12n.alrashidwidget.watchkitapp.widgets</key>
+		<string>AlRashid Watch Widgets App Store</string>
 	</dict>
 	<key>manageAppVersionAndBuildNumber</key>
 	<false/>
