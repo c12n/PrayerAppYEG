@@ -6,11 +6,11 @@ on:
 jobs:
   upload:
     name: Archive and upload to TestFlight
-    runs-on: macos-26
+    runs-on: [self-hosted, macOS, X64, macbook]
 
     env:
-      APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
-      APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+      APPSTORE_API_KEY_ID: ${{secrets.APPSTORE_API_KEY_ID}}
+      APPSTORE_API_ISSUER_ID: ${{secrets.APPSTORE_API_ISSUER_ID}}
 
     steps:
       - name: Checkout
@@ -21,8 +21,8 @@ jobs:
 
       - name: Import distribution certificate
         env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_CERTIFICATE_BASE64: ${{secrets.BUILD_CERTIFICATE_BASE64}}
+          P12_PASSWORD: ${{secrets.P12_PASSWORD}}
         run: |
           set -euo pipefail
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
@@ -44,7 +44,7 @@ jobs:
 
       - name: Write App Store Connect API key
         env:
-          APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+          APPSTORE_API_PRIVATE_KEY: ${{secrets.APPSTORE_API_PRIVATE_KEY}}
         run: |
           set -euo pipefail
           mkdir -p "$HOME/private_keys"
