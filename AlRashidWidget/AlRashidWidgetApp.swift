@@ -451,6 +451,10 @@ enum LiveActivityPushSync {
     private static let registeredAtKey = "pushsync.registeredAt"
     private static let syncedHashKey = "pushsync.syncedHash"
     private static let buildKey = "pushsync.appBuild"
+    // v1.6.0: push-to-start token state (see syncPushToStartToken).
+    private static let ptsTokenKey = "pushsync.ptsToken"
+    private static let ptsSyncedKey = "pushsync.ptsSyncedToken"
+    private static let ptsRegisteredAtKey = "pushsync.ptsRegisteredAt"
 
     private nonisolated static var defaults: UserDefaults { .standard }
     private static var tokenTasks: [String: Task<Void, Never>] = [:]
@@ -479,6 +483,31 @@ enum LiveActivityPushSync {
             Task {
                 for await activity in Activity<PrayerActivityAttributes>.activityUpdates {
                     observe(activity)
+                    // v1.6.0: an activity this build did not request was
+                    // started by the server (push-to-start resurrection
+                    // while the app wasn't running). It replaces whatever
+                    // came before: end the older activities so the Lock
+                    // Screen never stacks a frozen duplicate next to the
+                    // live one.
+                    if activity.id != defaults.string(forKey: activityIdKey) {
+                        for other in Activity<PrayerActivityAttributes>.activities
+                        where other.id != activity.id {
+                            await other.end(nil, dismissalPolicy: .immediate)
+                        }
+                    }
+                }
+            }
+            // v1.6.0: the push-to-start token lets the server begin a
+            // fresh activity at a prayer boundary when the standing one
+            // has died at the system lifetime cap (the 2026-11-02
+            // Maghrib failure: update pushes returned 410 ExpiredToken
+            // and nothing on the phone could resurrect it). Stream
+            // every token the system issues to the server.
+            if #available(iOS 17.2, *) {
+                Task {
+                    for await tokenData in Activity<PrayerActivityAttributes>.pushToStartTokenUpdates {
+                        await syncPushToStartToken(hex: hex(tokenData))
+                    }
                 }
             }
         }
@@ -535,8 +564,14 @@ enum LiveActivityPushSync {
 
     /// True when the tracked activity is old enough that the system's
     /// ~8-hour Live Activity lifetime could end it mid-day; refresh()
-    /// renews it (end + fresh request) after 6 hours. An activity this
-    /// build did not request gets its clock started at first sight.
+    /// renews it (end + fresh request) after 4 hours. The threshold
+    /// dropped from 6 h in v1.6.0: the 2026-11-02 Maghrib miss showed a
+    /// 6 h margin is too thin when the app may not run again before the
+    /// cap — and the primary fix now lives server-side anyway (the
+    /// server push-to-starts a fresh activity when one crosses ~6.5 h
+    /// at a boundary), so this in-app renewal is the backup, not the
+    /// mechanism. An activity this build did not request gets its
+    /// clock started at first sight.
     static func activityExpired(_ activity: Activity<PrayerActivityAttributes>) -> Bool {
         if defaults.string(forKey: activityIdKey) != activity.id {
             defaults.set(activity.id, forKey: activityIdKey)
@@ -545,7 +580,7 @@ enum LiveActivityPushSync {
         }
         let since = defaults.double(forKey: activitySinceKey)
         guard since > 0 else { return false }
-        return Date.now.timeIntervalSince1970 - since > 6 * 3600
+        return Date.now.timeIntervalSince1970 - since > 4 * 3600
     }
 
     /// Removes this install's registration (Live Activity turned off, or
@@ -555,7 +590,7 @@ enum LiveActivityPushSync {
         tokenTasks.removeAll()
         for key in [activityIdKey, activitySinceKey, pushCapableKey, requestErrorKey,
                     lastAttemptKey, lastHTTPKey, lastErrorKey, registeredAtKey, syncedHashKey,
-                    buildKey] {
+                    buildKey, ptsTokenKey, ptsSyncedKey, ptsRegisteredAtKey] {
             defaults.removeObject(forKey: key)
         }
         let url = serverBase.appendingPathComponent("v1/register/\(installationId)")
@@ -567,6 +602,50 @@ enum LiveActivityPushSync {
 
     private static func hex(_ data: Data) -> String {
         data.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// v1.6.0: streams the push-to-start token to the server. The token
+    /// is scoped to the activity attributes type, reusable across
+    /// starts, and rotates on system events, so every new value must
+    /// replace the server's copy. Deliberately separate from the
+    /// activity sync: the token has to reach the server even when no
+    /// activity is currently registered (e.g. right after install, or
+    /// after the standing activity died at the lifetime cap) — that is
+    /// exactly when the server needs it.
+    private static func syncPushToStartToken(hex tokenHex: String) async {
+        defaults.set(tokenHex, forKey: ptsTokenKey)
+        guard tokenHex != defaults.string(forKey: ptsSyncedKey) else { return }
+        let body: [String: Any] = [
+            "installationId": installationId,
+            "pushToStartToken": tokenHex,
+        ]
+        guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return }
+        var request = URLRequest(url: serverBase.appendingPathComponent("v1/push-to-start"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(registrationToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = payload
+        for attempt in 0..<3 {
+            if attempt > 0 {
+                try? await Task.sleep(nanoseconds: attempt == 1 ? 2_000_000_000 : 5_000_000_000)
+            }
+            let backgroundTask = UIApplication.shared.beginBackgroundTask(
+                withName: "LiveActivityPushToStartSync") { }
+            var ok = false
+            if let (_, response) = try? await URLSession.shared.data(for: request),
+               let status = (response as? HTTPURLResponse)?.statusCode,
+               (200..<300).contains(status) {
+                ok = true
+            }
+            if backgroundTask != .invalid {
+                UIApplication.shared.endBackgroundTask(backgroundTask)
+            }
+            if ok {
+                defaults.set(tokenHex, forKey: ptsSyncedKey)
+                defaults.set(Date.now.timeIntervalSince1970, forKey: ptsRegisteredAtKey)
+                return
+            }
+        }
     }
 
     /// v1.5.2: the POST now runs inside a background-task assertion with
@@ -583,12 +662,27 @@ enum LiveActivityPushSync {
            defaults.double(forKey: registeredAtKey) > Date.now.timeIntervalSince1970 - 6 * 3600 {
             return  // this exact token + schedule already reached the server
         }
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "installationId": installationId,
             "activityId": activity.id,
             "pushToken": tokenHex,
             "events": events,
         ]
+        // v1.6.0: the server does the lifetime-cap math itself (update
+        // vs. end + push-to-start a fresh activity at a boundary), so
+        // it needs the activity's birth time — and, when known, the
+        // push-to-start token. The dedicated token endpoint is the
+        // primary path; including it here keeps the server's copy
+        // fresh on every activity sync too.
+        if defaults.string(forKey: activityIdKey) == activity.id {
+            let since = defaults.double(forKey: activitySinceKey)
+            if since > 0 { body["activityStartedAt"] = Int(since) }
+        } else {
+            body["activityStartedAt"] = Int(Date.now.timeIntervalSince1970)
+        }
+        if let pts = defaults.string(forKey: ptsTokenKey), !pts.isEmpty {
+            body["pushToStartToken"] = pts
+        }
         guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return }
         var request = URLRequest(url: serverBase.appendingPathComponent("v1/register"))
         request.httpMethod = "POST"
