@@ -931,7 +931,7 @@ enum SettingsSync {
 
     static func start() {
         NotificationCenter.default.addObserver(
-            forName: NSUbiquitousKeyValueStoreDidChangeExternallyNotification,
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: cloud, queue: .main
         ) { notification in
             let reason = notification.userInfo?[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
