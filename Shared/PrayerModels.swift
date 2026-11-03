@@ -10,7 +10,9 @@
 //  Both targets need the App Groups capability with: group.com.c12n.alrashidwidget
 //
 
+#if canImport(ActivityKit)
 import ActivityKit
+#endif
 import Foundation
 import SwiftUI
 import UIKit
@@ -1482,7 +1484,9 @@ struct GoldProgressBar: View {
 /// Live Activity (Lock Screen + Dynamic Island) showing the countdown to
 /// the next prayer. The attributes type lives in this shared file so both
 /// the app (which starts/updates the activity) and the widget extension
-/// (which renders it) see the same definition.
+/// (which renders it) see the same definition. ActivityKit is iOS-only,
+/// so the watch targets skip this type (v1.8.0).
+#if canImport(ActivityKit)
 struct PrayerActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         var prayerName: String
@@ -1522,6 +1526,7 @@ struct PrayerActivityAttributes: ActivityAttributes {
 
     var mosqueName: String
 }
+#endif
 
 // MARK: - Language (v1.1.0)
 
@@ -1599,6 +1604,17 @@ enum L10n {
         "updateAvailableBody": [.en: "Version %@ of Al Rashid Prayer is ready in TestFlight.", .ar: "الإصدار %@ من تطبيق الراشد جاهز في TestFlight.", .fr: "La version %@ d'Al Rashid Prayer est prête dans TestFlight."],
         "updateNow": [.en: "Update in TestFlight", .ar: "التحديث في TestFlight", .fr: "Mettre à jour dans TestFlight"],
         "updateLater": [.en: "Later", .ar: "لاحقًا", .fr: "Plus tard"],
+        "version": [.en: "Version", .ar: "الإصدار", .fr: "Version"],
+        // What's New sheet + per-prayer sounds (v1.8.0)
+        "whatsNew": [.en: "What's New", .ar: "ما الجديد", .fr: "Nouveautés"],
+        "continue": [.en: "Continue", .ar: "متابعة", .fr: "Continuer"],
+        "wnWatch": [.en: "Apple Watch app with a next-prayer complication", .ar: "تطبيق Apple Watch مع واجهة للصلاة التالية", .fr: "App Apple Watch avec complication de la prochaine prière"],
+        "wnSounds": [.en: "A different alert sound — or silence — for each prayer", .ar: "صوت تنبيه مختلف — أو صامت — لكل صلاة", .fr: "Un son d'alerte différent — ou le silence — pour chaque prière"],
+        "wnSync": [.en: "Settings back up to iCloud and come back on a new phone", .ar: "تُحفظ الإعدادات في iCloud وتعود على الهاتف الجديد", .fr: "Les réglages sont sauvegardés dans iCloud et reviennent sur un nouvel iPhone"],
+        "wnText": [.en: "Widgets now follow your text-size choice", .ar: "الأدوات تتبع الآن حجم النص الذي تختاره", .fr: "Les widgets suivent maintenant votre taille de texte"],
+        "prayerSounds": [.en: "Per-prayer sounds", .ar: "أصوات لكل صلاة", .fr: "Sons par prière"],
+        "prayerSoundsFooter": [.en: "Override the app-wide sound for individual prayers — for example, silent for Asr at work, loud for Fajr.", .ar: "تجاوز الصوت العام لصلوات محددة — مثلًا صامت لصلاة العصر في العمل، ومرتفع للفجر.", .fr: "Remplacez le son général pour certaines prières — par exemple silencieux pour Asr au travail, fort pour Fajr."],
+        "useAppSound": [.en: "App default", .ar: "صوت التطبيق", .fr: "Son de l'app"],
         "notificationsOffWarning": [.en: "Notifications are turned off for this app in iOS Settings — enable them there to hear the Adhan alerts.", .ar: "الإشعارات متوقفة لهذا التطبيق في إعدادات iOS — فعّلها هناك لسماع تنبيهات الأذان.", .fr: "Les notifications sont désactivées pour cette app dans les Réglages iOS — activez-les pour entendre les alertes de l'Adhan."],
         // Alerts extras (v1.5)
         "reminder": [.en: "Pre-prayer reminder", .ar: "تذكير قبل الصلاة", .fr: "Rappel avant la prière"],

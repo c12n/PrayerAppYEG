@@ -99,6 +99,24 @@ private extension View {
     }
 }
 
+// MARK: - Widget text size (v1.8.0)
+
+/// Home Screen widget text scales with the in-app text-size setting
+/// (Settings → Text Size) — the same AppTextSize the phone UI honors.
+/// Lock Screen accessory widgets keep their fixed sizes: their
+/// canvases are system-fixed and already minimal.
+enum WidgetTextScale {
+    static var factor: CGFloat {
+        switch AppTextSize.current {
+        case .standard: 1.0
+        case .large: 1.12
+        case .extraLarge: 1.25
+        }
+    }
+
+    static func size(_ base: CGFloat) -> CGFloat { base * factor }
+}
+
 // MARK: - Small
 
 struct SmallPrayerWidgetView: View {
@@ -109,38 +127,38 @@ struct SmallPrayerWidgetView: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 Image(systemName: next.symbolName)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: WidgetTextScale.size(13), weight: .semibold))
                     .foregroundStyle(Theme.adaptiveGold)
                 Text(snapshot.isShowingTomorrow ? L10n.t("tomorrow") : L10n.t("nextPrayerCaps"))
-                    .font(.system(size: 11.5, weight: .bold))
+                    .font(.system(size: WidgetTextScale.size(11.5), weight: .bold))
                     .tracking(0.8)
                     .foregroundStyle(Theme.onSurfaceMuted)
                     .lineLimit(1)
                 Spacer(minLength: 2)
                 Text(PrayerFormat.shortDate(snapshot.day.date))
-                    .font(.system(size: 11.5, weight: .semibold))
+                    .font(.system(size: WidgetTextScale.size(11.5), weight: .semibold))
                     .foregroundStyle(Theme.onSurfaceMuted)
                     .lineLimit(1)
             }
             Text(next.name)
-                .font(.system(size: 27, weight: .bold))
+                .font(.system(size: WidgetTextScale.size(27), weight: .bold))
                 .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(PrayerFormat.time(next.adhan))
-                .font(.system(size: 18, weight: .semibold).monospacedDigit())
+                .font(.system(size: WidgetTextScale.size(18), weight: .semibold).monospacedDigit())
                 .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
             if let iqamah = next.iqamah {
                 Text("\(next.iqamahLabel) \(PrayerFormat.time(iqamah))")
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .font(.system(size: WidgetTextScale.size(13), weight: .semibold).monospacedDigit())
                     .foregroundStyle(Theme.adaptiveGold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
             Spacer(minLength: 0)
             Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                .font(.system(size: 25, weight: .bold, design: .rounded).monospacedDigit())
+                .font(.system(size: WidgetTextScale.size(25), weight: .bold, design: .rounded).monospacedDigit())
                 .foregroundStyle(Theme.adaptiveGold)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
@@ -159,11 +177,11 @@ struct MediumPrayerWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            WidgetHeaderView(snapshot: snapshot, nameSize: 14, detailSize: 11.5)
+            WidgetHeaderView(snapshot: snapshot, nameSize: WidgetTextScale.size(14), detailSize: WidgetTextScale.size(11.5))
             HStack(alignment: .top, spacing: 8) {
                 CompactNextPrayerPanel(snapshot: snapshot)
                     .frame(width: 100)
-                PrayerTableView(snapshot: snapshot, fontSize: 12, timeColumnWidth: 56, rowVerticalPadding: 0.75)
+                PrayerTableView(snapshot: snapshot, fontSize: WidgetTextScale.size(12), timeColumnWidth: WidgetTextScale.size(56), rowVerticalPadding: 0.75)
             }
             .frame(maxHeight: .infinity)
         }
@@ -206,30 +224,30 @@ struct CompactNextPrayerPanel: View {
         let next = snapshot.next
         VStack(alignment: .leading, spacing: 1.5) {
             Text(L10n.t("nextPrayerCaps"))
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: WidgetTextScale.size(10), weight: .bold))
                 .tracking(0.7)
                 .foregroundStyle(Theme.onSurfaceMuted)
                 .lineLimit(1)
             Text(next.name)
-                .font(.system(size: 19, weight: .bold))
+                .font(.system(size: WidgetTextScale.size(19), weight: .bold))
                 .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(PrayerFormat.time(next.adhan))
-                .font(.system(size: 13.5, weight: .semibold).monospacedDigit())
+                .font(.system(size: WidgetTextScale.size(13.5), weight: .semibold).monospacedDigit())
                 .foregroundStyle(Theme.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             if let iqamah = next.iqamah {
                 Text("\(next.iqamahLabel) \(PrayerFormat.time(iqamah))")
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .font(.system(size: WidgetTextScale.size(11), weight: .semibold).monospacedDigit())
                     .foregroundStyle(Theme.adaptiveGold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
             Spacer(minLength: 0)
             Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                .font(.system(size: 18, weight: .bold, design: .rounded).monospacedDigit())
+                .font(.system(size: WidgetTextScale.size(18), weight: .bold, design: .rounded).monospacedDigit())
                 .foregroundStyle(Theme.adaptiveGold)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
@@ -332,7 +350,7 @@ struct LargePrayerWidgetView: View {
         VStack(alignment: .leading, spacing: 8) {
             LargeHeaderView(snapshot: snapshot)
             LargeNextPrayerBanner(snapshot: snapshot)
-            PrayerTableView(snapshot: snapshot, fontSize: 15, timeColumnWidth: 74, rowVerticalPadding: 2)
+            PrayerTableView(snapshot: snapshot, fontSize: WidgetTextScale.size(15), timeColumnWidth: WidgetTextScale.size(74), rowVerticalPadding: 2)
                 .frame(maxHeight: .infinity)
             LargeVerseView(snapshot: snapshot)
             LargeFooterView(snapshot: snapshot)
@@ -349,12 +367,12 @@ struct LargeVerseView: View {
         let verse = DailyVerses.verse(for: snapshot.date)
         VStack(spacing: 2) {
             Text(verse.arabic)
-                .font(.system(size: 13.5, weight: .semibold))
+                .font(.system(size: WidgetTextScale.size(13.5), weight: .semibold))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .foregroundStyle(Theme.onSurface)
             Text(verse.reference(for: AppLanguage.current))
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: WidgetTextScale.size(11), weight: .semibold))
                 .foregroundStyle(Theme.adaptiveGold)
         }
         .frame(maxWidth: .infinity)
@@ -368,13 +386,13 @@ struct LargeHeaderView: View {
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
             Image(systemName: "moon.stars.fill")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: WidgetTextScale.size(14), weight: .semibold))
                 .foregroundStyle(Theme.adaptiveGold)
                 .frame(width: 28, height: 28)
                 .background(Theme.adaptiveGold.opacity(0.18), in: Circle())
             VStack(alignment: .leading, spacing: 1) {
                 Text(MosqueInfo.name)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: WidgetTextScale.size(18), weight: .bold))
                     .foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
                 HStack(spacing: 4) {
@@ -385,7 +403,7 @@ struct LargeHeaderView: View {
                     Text(PrayerFormat.shortDate(snapshot.day.date))
                         .foregroundStyle(Theme.onSurfaceSecondary)
                 }
-                .font(.system(size: 12.5, weight: .semibold))
+                .font(.system(size: WidgetTextScale.size(12.5), weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             }
@@ -404,7 +422,7 @@ struct WidgetPill: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 10.5, weight: .heavy))
+            .font(.system(size: WidgetTextScale.size(10.5), weight: .heavy))
             .tracking(0.6)
             .foregroundStyle(Theme.adaptiveGold)
             .padding(.horizontal, 6)
@@ -425,30 +443,30 @@ struct LargeNextPrayerBanner: View {
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 10) {
                 Image(systemName: next.symbolName)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: WidgetTextScale.size(18), weight: .semibold))
                     .foregroundStyle(Theme.adaptiveGold)
                     .frame(width: 34, height: 34)
                     .background(Theme.panelFill, in: Circle())
                 VStack(alignment: .leading, spacing: 1) {
                     Text(snapshot.isShowingTomorrow ? L10n.t("nextPrayerTomorrowCaps") : L10n.t("nextPrayerCaps"))
-                        .font(.system(size: 10.5, weight: .bold))
+                        .font(.system(size: WidgetTextScale.size(10.5), weight: .bold))
                         .tracking(0.7)
                         .foregroundStyle(Theme.onSurfaceMuted)
                         .lineLimit(1)
                     Text(next.name)
-                        .font(.system(size: 21, weight: .bold))
+                        .font(.system(size: WidgetTextScale.size(21), weight: .bold))
                         .foregroundStyle(Theme.onSurface)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(detailText)
-                        .font(.system(size: 12.5, weight: .medium).monospacedDigit())
+                        .font(.system(size: WidgetTextScale.size(12.5), weight: .medium).monospacedDigit())
                         .foregroundStyle(Theme.onSurfaceSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 4)
                 Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                    .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
+                    .font(.system(size: WidgetTextScale.size(28), weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(Theme.adaptiveGold)
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
@@ -497,7 +515,7 @@ struct LargeFooterView: View {
                     .minimumScaleFactor(0.8)
             }
         }
-        .font(.system(size: 12, weight: .medium))
+        .font(.system(size: WidgetTextScale.size(12), weight: .medium))
         .foregroundStyle(Theme.onSurfaceSecondary)
     }
 

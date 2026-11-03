@@ -20,6 +20,16 @@
 		C10000000000000000000011 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000013 /* PrivacyInfo.xcprivacy */; };
 		C10000000000000000000012 /* adhan_chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000014 /* adhan_chime.wav */; };
 		C10000000000000000000013 /* adhan_bell.wav in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000015 /* adhan_bell.wav */; };
+		C10000000000000000000014 /* AlRashidWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000016 /* AlRashidWatchApp.swift */; };
+		C10000000000000000000015 /* PrayerCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* PrayerCalculator.swift */; };
+		C10000000000000000000016 /* PrayerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* PrayerModels.swift */; };
+		C10000000000000000000017 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000013 /* PrivacyInfo.xcprivacy */; };
+		C10000000000000000000018 /* WatchWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000017 /* WatchWidget.swift */; };
+		C10000000000000000000019 /* PrayerCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* PrayerCalculator.swift */; };
+		C10000000000000000000020 /* PrayerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* PrayerModels.swift */; };
+		C10000000000000000000021 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000013 /* PrivacyInfo.xcprivacy */; };
+		C10000000000000000000022 /* AlRashidWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B10000000000000000000022 /* AlRashidWatch.app */; };
+		C10000000000000000000023 /* AlRashidWatchWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B10000000000000000000023 /* AlRashidWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +39,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = D10000000000000000000002;
 			remoteInfo = PrayerWidgetExtension;
+		};
+		A10000000000000000000012 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D10000000000000000000003;
+			remoteInfo = AlRashidWatch;
+		};
+		A10000000000000000000013 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D10000000000000000000004;
+			remoteInfo = AlRashidWatchWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -42,6 +66,28 @@
 				C10000000000000000000009 /* PrayerWidgetExtension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E10000000000000000000011 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C10000000000000000000023 /* AlRashidWatchWidgets.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E10000000000000000000015 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				C10000000000000000000022 /* AlRashidWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -62,6 +108,14 @@
 		B10000000000000000000013 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B10000000000000000000014 /* adhan_chime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = adhan_chime.wav; sourceTree = "<group>"; };
 		B10000000000000000000015 /* adhan_bell.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = adhan_bell.wav; sourceTree = "<group>"; };
+		B10000000000000000000016 /* AlRashidWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlRashidWatchApp.swift; sourceTree = "<group>"; };
+		B10000000000000000000017 /* WatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidget.swift; sourceTree = "<group>"; };
+		B10000000000000000000018 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B10000000000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B10000000000000000000020 /* AlRashidWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AlRashidWatch.entitlements; sourceTree = "<group>"; };
+		B10000000000000000000021 /* AlRashidWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AlRashidWatchWidgets.entitlements; sourceTree = "<group>"; };
+		B10000000000000000000022 /* AlRashidWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlRashidWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000023 /* AlRashidWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AlRashidWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,6 +133,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E10000000000000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E10000000000000000000013 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -88,6 +156,8 @@
 				A10000000000000000000003 /* AlRashidWidget */,
 				A10000000000000000000004 /* Shared */,
 				A10000000000000000000005 /* PrayerWidgetExtension */,
+				A10000000000000000000007 /* AlRashidWatch */,
+				A10000000000000000000008 /* AlRashidWatchWidgets */,
 				A10000000000000000000006 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -131,8 +201,30 @@
 			children = (
 				B10000000000000000000011 /* AlRashidWidget.app */,
 				B10000000000000000000012 /* PrayerWidgetExtension.appex */,
+				B10000000000000000000022 /* AlRashidWatch.app */,
+				B10000000000000000000023 /* AlRashidWatchWidgets.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000007 /* AlRashidWatch */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000016 /* AlRashidWatchApp.swift */,
+				B10000000000000000000018 /* Info.plist */,
+				B10000000000000000000020 /* AlRashidWatch.entitlements */,
+			);
+			path = AlRashidWatch;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000008 /* AlRashidWatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000017 /* WatchWidget.swift */,
+				B10000000000000000000019 /* Info.plist */,
+				B10000000000000000000021 /* AlRashidWatchWidgets.entitlements */,
+			);
+			path = AlRashidWatchWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -146,11 +238,13 @@
 				E10000000000000000000002 /* Frameworks */,
 				E10000000000000000000003 /* Resources */,
 				E10000000000000000000004 /* Embed App Extensions */,
+				E10000000000000000000015 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				A10000000000000000000010 /* PBXTargetDependency */,
+				A10000000000000000000014 /* PBXTargetDependency */,
 			);
 			name = AlRashidWidget;
 			productName = AlRashidWidget;
@@ -174,6 +268,42 @@
 			productReference = B10000000000000000000012 /* PrayerWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		D10000000000000000000003 /* AlRashidWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000000023 /* Build configuration list for PBXNativeTarget "AlRashidWatch" */;
+			buildPhases = (
+				E10000000000000000000008 /* Sources */,
+				E10000000000000000000009 /* Frameworks */,
+				E10000000000000000000010 /* Resources */,
+				E10000000000000000000011 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000015 /* PBXTargetDependency */,
+			);
+			name = AlRashidWatch;
+			productName = AlRashidWatch;
+			productReference = B10000000000000000000022 /* AlRashidWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D10000000000000000000004 /* AlRashidWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000000024 /* Build configuration list for PBXNativeTarget "AlRashidWatchWidgets" */;
+			buildPhases = (
+				E10000000000000000000012 /* Sources */,
+				E10000000000000000000013 /* Frameworks */,
+				E10000000000000000000014 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AlRashidWatchWidgets;
+			productName = AlRashidWatchWidgets;
+			productReference = B10000000000000000000023 /* AlRashidWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -195,6 +325,12 @@
 					D10000000000000000000002 = {
 						CreatedOnToolsVersion = 15.0;
 					};
+					D10000000000000000000003 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					D10000000000000000000004 = {
+						CreatedOnToolsVersion = 15.0;
+					};
 				};
 			};
 			buildConfigurationList = F10000000000000000000010 /* Build configuration list for PBXProject "AlRashidWidget" */;
@@ -212,6 +348,8 @@
 			targets = (
 				D10000000000000000000001 /* AlRashidWidget */,
 				D10000000000000000000002 /* PrayerWidgetExtension */,
+				D10000000000000000000003 /* AlRashidWatch */,
+				D10000000000000000000004 /* AlRashidWatchWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -233,6 +371,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				C10000000000000000000011 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E10000000000000000000010 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C10000000000000000000017 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E10000000000000000000014 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C10000000000000000000021 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,6 +414,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E10000000000000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C10000000000000000000014 /* AlRashidWatchApp.swift in Sources */,
+				C10000000000000000000015 /* PrayerCalculator.swift in Sources */,
+				C10000000000000000000016 /* PrayerModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E10000000000000000000012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C10000000000000000000018 /* WatchWidget.swift in Sources */,
+				C10000000000000000000019 /* PrayerCalculator.swift in Sources */,
+				C10000000000000000000020 /* PrayerModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -267,6 +441,16 @@
 			isa = PBXTargetDependency;
 			target = D10000000000000000000002 /* PrayerWidgetExtension */;
 			targetProxy = A10000000000000000000011 /* PBXContainerItemProxy */;
+		};
+		A10000000000000000000014 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D10000000000000000000003 /* AlRashidWatch */;
+			targetProxy = A10000000000000000000012 /* PBXContainerItemProxy */;
+		};
+		A10000000000000000000015 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D10000000000000000000004 /* AlRashidWatchWidgets */;
+			targetProxy = A10000000000000000000013 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -299,14 +483,14 @@
 				CODE_SIGN_ENTITLEMENTS = AlRashidWidget/AlRashidWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7.0;
+				MARKETING_VERSION = 1.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -330,14 +514,14 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid App Store";
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7.0;
+				MARKETING_VERSION = 1.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -356,7 +540,7 @@
 				CODE_SIGN_ENTITLEMENTS = PrayerWidgetExtension/PrayerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -364,7 +548,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.0;
+				MARKETING_VERSION = 1.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -385,7 +569,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Widget App Store";
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -393,7 +577,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.0;
+				MARKETING_VERSION = 1.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -402,6 +586,114 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F10000000000000000000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
+				CURRENT_PROJECT_VERSION = 23;
+				DEVELOPMENT_TEAM = QD29U585ZA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AlRashidWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		F10000000000000000000020 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch App Store";
+				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
+				CURRENT_PROJECT_VERSION = 23;
+				DEVELOPMENT_TEAM = QD29U585ZA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AlRashidWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		F10000000000000000000021 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
+				CURRENT_PROJECT_VERSION = 23;
+				DEVELOPMENT_TEAM = QD29U585ZA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		F10000000000000000000022 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch Widgets App Store";
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
+				CURRENT_PROJECT_VERSION = 23;
+				DEVELOPMENT_TEAM = QD29U585ZA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
@@ -431,6 +723,24 @@
 			buildConfigurations = (
 				F10000000000000000000015 /* Debug */,
 				F10000000000000000000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000000023 /* Build configuration list for PBXNativeTarget "AlRashidWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F10000000000000000000019 /* Debug */,
+				F10000000000000000000020 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000000024 /* Build configuration list for PBXNativeTarget "AlRashidWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F10000000000000000000021 /* Debug */,
+				F10000000000000000000022 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

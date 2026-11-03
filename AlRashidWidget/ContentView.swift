@@ -46,6 +46,9 @@ struct ContentView: View {
     @AppStorage(AppTextSize.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var textSizeRaw: String = AppTextSize.standard.rawValue
     @State private var showSettings = false
+    /// What's New sheet (v1.8.0): shown once after an update, never
+    /// on a fresh install.
+    @State private var showWhatsNew = false
     /// In-app update reminder (v1.7.0): checks the version note hosted
     /// in the c12nfeather source and prompts toward TestFlight when a
     /// newer public build than the installed one is advertised.
@@ -102,6 +105,9 @@ struct ContentView: View {
                 statusBarHidden = minY < -24
             }
             .statusBarHidden(statusBarHidden)
+            .sheet(isPresented: $showWhatsNew) {
+                WhatsNewView()
+            }
         }
         .id("\(appearanceStamp)#\(appearanceGeneration)")
         .background { AppBackground() }
@@ -131,6 +137,7 @@ struct ContentView: View {
         .onAppear {
             refreshWidgets()
             updateChecker.checkIfNeeded()
+            checkWhatsNew()
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
@@ -145,6 +152,21 @@ struct ContentView: View {
         provider.refreshCache()
         WidgetCenter.shared.reloadAllTimelines()
         AppServices.refresh()
+    }
+
+    /// Shows the What's New sheet once per version: a fresh install
+    /// just records the current version; an update to a version with
+    /// bundled notes presents the sheet and records it as seen.
+    private func checkWhatsNew() {
+        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        let key = "whatsnew.lastSeenVersion"
+        let lastSeen = UserDefaults.standard.string(forKey: key)
+        if lastSeen == nil {
+            UserDefaults.standard.set(current, forKey: key)
+        } else if lastSeen != current, WhatsNewView.entries(for: current) != nil {
+            UserDefaults.standard.set(current, forKey: key)
+            showWhatsNew = true
+        }
     }
 }
 
@@ -572,8 +594,10 @@ private struct SettingsView: View {
                 alertsSection
                 prayerAlertsSection
                 soundSection
+                prayerSoundsSection
                 privacySection
                 resetSection
+                versionSection
             }
             .id(resetGeneration)
             .navigationTitle(L10n.t("settings"))
@@ -791,6 +815,22 @@ private struct SettingsView: View {
         }
     }
 
+    /// Per-prayer sound overrides (v1.8.0): each prayer can follow
+    /// the app-wide sound or take its own — including Silent.
+    private var prayerSoundsSection: some View {
+        Section {
+            ForEach(Prayer.allCases) { prayer in
+                PrayerSoundRow(prayer: prayer) {
+                    AppServices.alertPreferencesChanged()
+                }
+            }
+        } header: {
+            Text(L10n.t("prayerSounds"))
+        } footer: {
+            Text(L10n.t("prayerSoundsFooter"))
+        }
+    }
+
     /// Master alert switches (v1.4 — moved from the Home screen's
     /// Alerts card): Adhan notifications on/off with the
     /// permission-denied warning, and the Live Activity on/off.
@@ -806,6 +846,18 @@ private struct SettingsView: View {
             return L10n.t("pushPending")
         case .localOnly:
             return L10n.t("pushLocalOnly")
+        }
+    }
+
+    /// App version, pinned to the very bottom of Settings (v1.8.0).
+    /// Read live from the bundle so it can never go stale.
+    private var versionSection: some View {
+        Section {
+            Text("\(L10n.t("version")) \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .listRowBackground(Color.clear)
         }
     }
 
@@ -1155,6 +1207,7 @@ private struct SettingsView: View {
     private func resetToDefaults() {
         AppAppearance.resetToDefaults()
         PrayerAlertSettings.reset()
+        PrayerSoundSettings.reset()
         UIApplication.shared.setAlternateIconName(nil)
         currentIconName = nil
         modeRaw = AppAppearance.Mode.system.rawValue
@@ -1339,6 +1392,49 @@ private struct PrayerAlertRow: View {
         }
         .buttonStyle(.plain)
         .onChange(of: isOn) { _, _ in onToggle() }
+    }
+}
+
+/// One row of the per-prayer sounds list (v1.8.0): the prayer's
+/// name, and a picker — App default, or one of the sounds (Silent
+/// mutes just this prayer's alert). Stored as the AdhanSound raw
+/// value in the App Group; empty means App default.
+private struct PrayerSoundRow: View {
+    let prayer: Prayer
+    let onChange: () -> Void
+    @AppStorage private var stored: String
+
+    init(prayer: Prayer, onChange: @escaping () -> Void) {
+        self.prayer = prayer
+        self.onChange = onChange
+        _stored = AppStorage(
+            wrappedValue: "",
+            PrayerSoundSettings.key(for: prayer),
+            store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+        )
+    }
+
+    private var selection: Binding<AdhanSound?> {
+        Binding(
+            get: { AdhanSound(rawValue: stored) },
+            set: { stored = $0?.rawValue ?? "" }
+        )
+    }
+
+    var body: some View {
+        Picker(selection: selection) {
+            Text(L10n.t("useAppSound")).tag(nil as AdhanSound?)
+            ForEach(AdhanSound.allCases) { sound in
+                Text(L10n.t(sound.l10nKey)).tag(sound as AdhanSound?)
+            }
+        } label: {
+            Label {
+                Text(prayer == .dhuhr ? L10n.t("dhuhrFriday") : prayer.displayName)
+            } icon: {
+                Image(systemName: prayer.symbolName)
+            }
+        }
+        .onChange(of: stored) { _, _ in onChange() }
     }
 }
 
@@ -1704,5 +1800,53 @@ final class UpdateChecker: ObservableObject {
             defaults.set(build, forKey: dismissedKey)
         }
         showAlert = false
+    }
+}
+
+// MARK: - What's New (v1.8.0)
+
+/// Shown once after an update: what changed in this version, in the
+/// user's language. Notes are bundled per version; a version with no
+/// entry never presents the sheet.
+struct WhatsNewView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    static func entries(for version: String) -> [(icon: String, key: String)]? {
+        switch version {
+        case "1.8.0":
+            return [
+                ("applewatch", "wnWatch"),
+                ("speaker.wave.2.fill", "wnSounds"),
+                ("icloud.fill", "wnSync"),
+                ("textformat.size", "wnText"),
+            ]
+        default:
+            return nil
+        }
+    }
+
+    var body: some View {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        NavigationStack {
+            List {
+                ForEach(Self.entries(for: version) ?? [], id: \.key) { entry in
+                    Label {
+                        Text(L10n.t(entry.key))
+                    } icon: {
+                        Image(systemName: entry.icon)
+                            .foregroundStyle(Theme.adaptiveGold)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .navigationTitle(L10n.t("whatsNew"))
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.t("continue")) { dismiss() }
+                }
+            }
+        }
+        .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+        .environment(\.locale, AppLanguage.current.locale)
     }
 }

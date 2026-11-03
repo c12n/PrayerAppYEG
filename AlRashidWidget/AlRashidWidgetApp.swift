@@ -23,6 +23,8 @@ struct AlRashidWidgetApp: App {
         // scene activation — a process woken in the background (by the
         // refresh task or a token rotation) is observed too.
         LiveActivityPushSync.startObserving()
+        // v1.8.0: restore/mirror the user's settings via iCloud KVS.
+        SettingsSync.start()
     }
 
     var body: some Scene {
@@ -114,6 +116,7 @@ enum AppServices {
 
     /// Called on launch and on every move to the active state.
     static func refresh() {
+        SettingsSync.pushLocal()
         Task {
             if AlertSettings.notificationsEnabled {
                 _ = await AdhanNotifications.requestAuthorizationIfNeeded()
@@ -175,6 +178,36 @@ enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
         case .silent: nil
         case .chime: UNNotificationSound(named: UNNotificationSoundName("adhan_chime.wav"))
         case .bell: UNNotificationSound(named: UNNotificationSoundName("adhan_bell.wav"))
+        }
+    }
+}
+
+// MARK: - Per-prayer alert sounds (v1.8.0)
+
+/// Optional per-prayer override of the app-wide Adhan sound, stored
+/// in the App Group next to the per-prayer on/off switches. No stored
+/// value means "follow the app-wide sound" — so existing users hear
+/// no change until they set an override. Setting one to Silent mutes
+/// just that prayer's alert.
+enum PrayerSoundSettings {
+    static func key(for prayer: Prayer) -> String { "alerts.sound.prayer.\(prayer.rawValue)" }
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static func override(for prayer: Prayer) -> AdhanSound? {
+        guard let raw = sharedDefaults.string(forKey: key(for: prayer)) else { return nil }
+        return AdhanSound(rawValue: raw)
+    }
+
+    static func effectiveSound(for prayer: Prayer) -> AdhanSound {
+        override(for: prayer) ?? AdhanSound.current
+    }
+
+    static func reset() {
+        for prayer in Prayer.allCases {
+            sharedDefaults.removeObject(forKey: key(for: prayer))
         }
     }
 }
@@ -253,7 +286,7 @@ enum AdhanNotifications {
                         content.body = L10n.f("adhanAtTime", PrayerFormat.time(slot.adhan))
                     }
                 }
-                content.sound = AdhanSound.current.notificationSound
+                content.sound = PrayerSoundSettings.effectiveSound(for: slot.prayer).notificationSound
                 let identifier = identifierPrefix + String(Int(slot.adhan.timeIntervalSince1970))
                 scheduled.append((slot.adhan, makeRequest(identifier: identifier, content: content, fireDate: slot.adhan)))
 
@@ -848,6 +881,113 @@ enum BackgroundRefresh {
         Task {
             _ = await work.result
             task.setTaskCompleted(success: !work.isCancelled)
+        }
+    }
+}
+
+// MARK: - iCloud settings sync (v1.8.0)
+
+/// Mirrors the user's settings to iCloud Key-Value Storage so a
+/// reinstall — or a move between TestFlight and a sideload — brings
+/// them back on first launch. Only preference keys are mirrored,
+/// never tokens or device state. Where the ubiquity entitlement is
+/// not in the signing profile (some sideload routes), the store
+/// simply never syncs and everything keeps working locally.
+enum SettingsSync {
+    private static var cloud: NSUbiquitousKeyValueStore { .default }
+    private static var applying = false
+
+    private static var suite: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    /// (key, inAppGroupSuite) pairs mirrored to iCloud. Values ride
+    /// as the plist types UserDefaults already stores.
+    private static var mirroredKeys: [(key: String, suite: Bool)] {
+        var keys: [(String, Bool)] = [
+            (AppAppearance.modeKey, true),
+            (AppAppearance.primaryKey, true),
+            (AppAppearance.accentKey, true),
+            (AppAppearance.textKey, true),
+            (AppAppearance.iconKey, true),
+            (AppAppearance.savedThemesKey, true),
+            (HijriOffset.storageKey, true),
+            (AppLanguage.storageKey, true),
+            (AppTextSize.storageKey, true),
+            (AdhanSound.storageKey, true),
+            (AlertSettings.notificationsKey, false),
+            (AlertSettings.liveActivityKey, false),
+            (AlertSettings.reminderKey, false),
+            (AlertSettings.reminderLeadKey, false),
+            (AlertSettings.jumuahReminderKey, false),
+            (CompassSettings.hapticsKey, false),
+        ]
+        for prayer in Prayer.allCases {
+            keys.append((PrayerAlertSettings.key(for: prayer), true))
+            keys.append((PrayerSoundSettings.key(for: prayer), true))
+        }
+        return keys
+    }
+
+    static func start() {
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStoreDidChangeExternallyNotification,
+            object: cloud, queue: .main
+        ) { notification in
+            let reason = notification.userInfo?[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
+            if reason == NSUbiquitousKeyValueStoreServerChange
+                || reason == NSUbiquitousKeyValueStoreInitialSyncChange {
+                applyFromCloud()
+            }
+        }
+        cloud.synchronize()
+        // A cloud snapshot with no local language set means this is
+        // a fresh install on a known iCloud account: restore first.
+        if UserDefaults.standard.string(forKey: "whatsnew.lastSeenVersion") == nil,
+           !cloud.dictionaryRepresentation.isEmpty {
+            applyFromCloud()
+        }
+        pushLocal()
+    }
+
+    /// Local → iCloud, for every mirrored key present locally.
+    static func pushLocal() {
+        guard !applying else { return }
+        for entry in mirroredKeys {
+            let store = entry.suite ? suite : UserDefaults.standard
+            if let value = store.object(forKey: entry.key),
+               !valuesEqual(value, cloud.object(forKey: entry.key)) {
+                cloud.set(value, forKey: entry.key)
+            }
+        }
+        cloud.synchronize()
+    }
+
+    /// iCloud → local, then refresh whatever depends on settings.
+    private static func applyFromCloud() {
+        applying = true
+        var changed = false
+        for entry in mirroredKeys {
+            guard let value = cloud.object(forKey: entry.key) else { continue }
+            let store = entry.suite ? suite : UserDefaults.standard
+            if !valuesEqual(value, store.object(forKey: entry.key)) {
+                store.set(value, forKey: entry.key)
+                changed = true
+            }
+        }
+        applying = false
+        if changed {
+            PrayerProvider.standard.refreshCache()
+            WidgetCenter.shared.reloadAllTimelines()
+            AppServices.refresh()
+        }
+    }
+
+    private static func valuesEqual(_ a: Any?, _ b: Any?) -> Bool {
+        switch (a, b) {
+        case (nil, nil): return true
+        case let (x as NSObject, y as NSObject): return x == y
+        default: return false
         }
     }
 }
