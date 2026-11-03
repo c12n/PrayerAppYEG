@@ -25,11 +25,17 @@ class PlannedNotification {
   final String title;
   final String body;
 
+  /// Alert sound name (v1.8.0): 'default', 'silent', 'chime' or
+  /// 'bell'. The native side posts on the notification channel for
+  /// this sound. Reminders keep the default sound, like iOS.
+  final String sound;
+
   const PlannedNotification({
     required this.id,
     required this.epochMillis,
     required this.title,
     required this.body,
+    this.sound = 'default',
   });
 
   Map<String, dynamic> toChannelMap() => {
@@ -37,6 +43,7 @@ class PlannedNotification {
         'epochMillis': epochMillis,
         'title': title,
         'body': body,
+        'sound': sound,
       };
 }
 
@@ -104,6 +111,9 @@ class AlertScheduler {
           epochMillis: slot.adhan.millisecondsSinceEpoch,
           title: title,
           body: body,
+          // Per-prayer sound override wins, else the app sound (v1.8.0).
+          // Jumu'ah slots carry prayer == dhuhr, like iOS.
+          sound: settings.effectiveSound(slot.prayer),
         ));
 
         // Pre-prayer reminder: the five prayers only — Sunrise has

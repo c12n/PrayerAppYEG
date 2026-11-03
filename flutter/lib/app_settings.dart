@@ -16,6 +16,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'hijri_calendar.dart';
 import 'prayer_models.dart';
 
+/// App version identity (v1.8.0) — keep in step with pubspec.yaml's
+/// version (1.8.0+15). Shown in the Settings footer and used by the
+/// What's New sheet to decide whether to appear.
+const kAppVersion = '1.8.0';
+const kAppBuildNumber = '15';
+
+/// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
+/// what travel over the alerts MethodChannel and name the Android
+/// notification channels.
+const alertSoundNames = ['default', 'silent', 'chime', 'bell'];
+
 class SavedTheme {
   final String id;
   final String name;
@@ -66,6 +77,10 @@ class AppSettings extends ChangeNotifier {
   static const reminderEnabledKey = 'alerts.reminderEnabled';
   static const reminderLeadKey = 'alerts.reminderLeadMinutes';
   static const jumuahReminderEnabledKey = 'alerts.jumuahReminderEnabled';
+  // Alert sounds (v1.8.0, same keys as iOS): one app-wide sound plus
+  // optional per-prayer overrides (absent = follow the app sound).
+  static const alertSoundKey = 'alerts.sound';
+  static String prayerSoundKey(Prayer p) => 'alerts.sound.prayer.${p.name}';
   static const hijriOffsetKey = 'hijri.offsetDays';
   static const hapticsEnabledKey = 'compass.hapticsEnabled';
   static const reminderLeadOptions = [5, 10, 15, 20, 30];
@@ -98,6 +113,15 @@ class AppSettings extends ChangeNotifier {
   bool reminderEnabled = true;
   int reminderLeadMinutes = 10;
   bool jumuahReminderEnabled = true;
+
+  /// Alert sounds (v1.8.0): the app-wide Adhan sound plus optional
+  /// per-prayer overrides. See [effectiveSound].
+  String alertSound = 'default';
+  final Map<Prayer, String> prayerSoundOverrides = {};
+
+  /// The sound an Adhan alert for [prayer] actually uses.
+  String effectiveSound(Prayer prayer) =>
+      prayerSoundOverrides[prayer] ?? alertSound;
 
   /// Hijri date adjustment (v1.5): −1..+1 days on the displayed date.
   int hijriOffsetDays = 0;
@@ -136,6 +160,16 @@ class AppSettings extends ChangeNotifier {
         reminderLeadOptions.contains(lead) ? lead : 10;
     s.jumuahReminderEnabled =
         prefs.getBool(jumuahReminderEnabledKey) ?? true;
+    final storedSound = prefs.getString(alertSoundKey);
+    if (storedSound != null && alertSoundNames.contains(storedSound)) {
+      s.alertSound = storedSound;
+    }
+    for (final p in Prayer.values) {
+      final override = prefs.getString(prayerSoundKey(p));
+      if (override != null && alertSoundNames.contains(override)) {
+        s.prayerSoundOverrides[p] = override;
+      }
+    }
     s.hijriOffsetDays =
         (prefs.getInt(hijriOffsetKey) ?? 0).clamp(-1, 1);
     HijriState.offsetDays = s.hijriOffsetDays;
@@ -176,6 +210,15 @@ class AppSettings extends ChangeNotifier {
     await prefs.setBool(reminderEnabledKey, reminderEnabled);
     await prefs.setInt(reminderLeadKey, reminderLeadMinutes);
     await prefs.setBool(jumuahReminderEnabledKey, jumuahReminderEnabled);
+    await prefs.setString(alertSoundKey, alertSound);
+    for (final p in Prayer.values) {
+      final override = prayerSoundOverrides[p];
+      if (override != null) {
+        await prefs.setString(prayerSoundKey(p), override);
+      } else {
+        await prefs.remove(prayerSoundKey(p));
+      }
+    }
     await prefs.setInt(hijriOffsetKey, hijriOffsetDays);
     HijriState.offsetDays = hijriOffsetDays;
     await prefs.setBool(hapticsEnabledKey, hapticsEnabled);
@@ -227,6 +270,8 @@ class AppSettings extends ChangeNotifier {
         reminderEnabled = true;
         reminderLeadMinutes = 10;
         jumuahReminderEnabled = true;
+        alertSound = 'default';
+        prayerSoundOverrides.clear();
         hijriOffsetDays = 0;
         hapticsEnabled = true;
       });

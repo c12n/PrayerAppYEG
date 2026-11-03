@@ -24,31 +24,38 @@ import org.json.JSONObject
 /// notification when it fires, and re-arms the following item.
 
 /// One item of the alert plan computed by the Dart scheduler.
+/// `sound` (v1.8.0) is the effective alert sound for the item —
+/// 'default', 'silent', 'chime' or 'bell' — and selects the
+/// notification channel the item posts on.
 data class AlertItem(
     val id: Int,
     val epochMillis: Long,
     val title: String,
-    val body: String
+    val body: String,
+    val sound: String = "default"
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("id", id)
         .put("epochMillis", epochMillis)
         .put("title", title)
         .put("body", body)
+        .put("sound", sound)
 
     companion object {
         fun fromJson(o: JSONObject): AlertItem = AlertItem(
             o.getInt("id"),
             o.getLong("epochMillis"),
             o.optString("title"),
-            o.optString("body")
+            o.optString("body"),
+            o.optString("sound", "default")
         )
 
         fun fromChannelMap(m: Map<*, *>): AlertItem = AlertItem(
             (m["id"] as Number).toInt(),
             (m["epochMillis"] as Number).toLong(),
             m["title"] as? String ?: "",
-            m["body"] as? String ?: ""
+            m["body"] as? String ?: "",
+            m["sound"] as? String ?: "default"
         )
     }
 }
@@ -125,29 +132,65 @@ object AlertArmer {
     }
 }
 
-/// Posts alert notifications on the 'adhan_alerts' channel
-/// (IMPORTANCE_HIGH, default notification sound, app icon).
+/// Posts alert notifications on one channel per alert sound
+/// (v1.8.0): a channel's sound is fixed at creation on Android, so
+/// each sound gets its own IMPORTANCE_HIGH channel — 'adhan_alerts'
+/// (the original channel, kept so existing users keep their system
+/// settings for it) for the default sound, plus _chime / _bell /
+/// _silent variants. The bundled chime and bell are the same WAV
+/// files the iOS app ships, in res/raw.
 object AdhanNotifier {
     const val CHANNEL_ID = "adhan_alerts"
 
-    fun ensureChannel(context: Context) {
+    private val SOUNDS = listOf("default", "chime", "bell", "silent")
+
+    fun channelId(sound: String): String =
+        if (sound == "default") CHANNEL_ID else "adhan_alerts_$sound"
+
+    private fun soundUri(context: Context, sound: String): android.net.Uri? =
+        when (sound) {
+            "default" ->
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            "chime" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/raw/adhan_chime")
+            "bell" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/raw/adhan_bell")
+            else -> null // silent
+        }
+
+    private fun channelName(sound: String): String = when (sound) {
+        "chime" -> "Adhan Alerts · Gentle Chime"
+        "bell" -> "Adhan Alerts · Soft Bell"
+        "silent" -> "Adhan Alerts · Silent"
+        else -> "Adhan Alerts"
+    }
+
+    fun ensureChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE)
             as NotificationManager
-        if (nm.getNotificationChannel(CHANNEL_ID) != null) return
-        val channel = NotificationChannel(
-            CHANNEL_ID, "Adhan Alerts", NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description =
-                "Adhan alerts, pre-prayer reminders and the Jumu'ah reminder"
-            setSound(
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
+        for (sound in SOUNDS) {
+            val id = channelId(sound)
+            if (nm.getNotificationChannel(id) != null) continue
+            val channel = NotificationChannel(
+                id, channelName(sound), NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description =
+                    "Adhan alerts, pre-prayer reminders and the Jumu'ah reminder"
+                val uri = soundUri(context, sound)
+                if (uri != null) {
+                    setSound(
+                        uri,
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                } else {
+                    setSound(null, null)
+                }
+            }
+            nm.createNotificationChannel(channel)
         }
-        nm.createNotificationChannel(channel)
     }
 
     fun post(context: Context, item: AlertItem) {
@@ -155,7 +198,7 @@ object AdhanNotifier {
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) return
-        ensureChannel(context)
+        ensureChannels(context)
         val launch = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -163,7 +206,7 @@ object AdhanNotifier {
             context, item.id, launch,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val notification = Notification.Builder(context, CHANNEL_ID)
+        val builder = Notification.Builder(context, channelId(item.sound))
             .setSmallIcon(context.applicationInfo.icon)
             .setContentTitle(item.title)
             .setContentText(item.body)
@@ -171,11 +214,14 @@ object AdhanNotifier {
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .setCategory(Notification.CATEGORY_REMINDER)
-            .setDefaults(Notification.DEFAULT_SOUND)
-            .build()
+        // The channel carries the sound; only the default channel
+        // also asks for the system default sound explicitly.
+        if (item.sound == "default") {
+            builder.setDefaults(Notification.DEFAULT_SOUND)
+        }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE)
             as NotificationManager
-        nm.notify(item.id, notification)
+        nm.notify(item.id, builder.build())
     }
 }
 

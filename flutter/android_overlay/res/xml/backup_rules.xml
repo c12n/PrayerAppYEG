@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto Backup rules (v1.8.0, item 4: settings survive reinstalls).
+     Backs up the Flutter settings file and the native alert plan
+     with the device's Google backup, so a reinstall on the same
+     account restores them. Used pre-Android 12 via
+     android:fullBackupContent. -->
+<full-backup-content>
+    <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+    <include domain="sharedpref" path="alrashid_alerts.xml" />
+</full-backup-content>

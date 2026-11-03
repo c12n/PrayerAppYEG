@@ -6,6 +6,9 @@
 - v1.5 notification engine: POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM
   and RECEIVE_BOOT_COMPLETED permissions, plus the alarm and boot
   receivers from Alerts.kt
+- v1.8 settings backup: allowBackup + fullBackupContent +
+  dataExtractionRules pointing at the overlay's res/xml rules, so
+  the Flutter settings restore after a reinstall
 
 Usage: patch_android.py <path-to-generated-android-dir>
 """
@@ -73,6 +76,17 @@ def main() -> None:
     text, n = re.subn(r'android:label="[^"]*"', 'android:label="Al Rashid Prayer"', text, count=1)
     if n != 1:
         raise SystemExit("could not patch app label in AndroidManifest.xml")
+    # Settings backup (v1.8.0): opt the app into Auto Backup with the
+    # overlay's rules files (copied into res/xml before this runs).
+    if "<application" not in text:
+        raise SystemExit("no <application> tag in AndroidManifest.xml")
+    text = text.replace(
+        "<application",
+        '<application android:allowBackup="true"'
+        ' android:fullBackupContent="@xml/backup_rules"'
+        ' android:dataExtractionRules="@xml/data_extraction_rules"',
+        1,
+    )
     if "</application>" not in text:
         raise SystemExit("no </application> in AndroidManifest.xml")
     text = text.replace("</application>", RECEIVERS, 1)

@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.util.TypedValue
 import android.widget.RemoteViews
 import java.time.DayOfWeek
 import java.time.Duration
@@ -42,6 +43,17 @@ object WidgetPrefs {
     fun hijriOffsetDays(context: Context): Int =
         prefs(context).getLong("flutter.hijri.offsetDays", 0L)
             .toInt().coerceIn(-1, 1)
+
+    /// Widget text scale (v1.8.0, Settings → Text Size): the widgets
+    /// follow the app's text-size choice with gentler factors than
+    /// the in-app scale, so the fixed widget layouts don't overflow
+    /// (the same factors the iOS widgets use).
+    fun textScaleFactor(context: Context): Float =
+        when (prefs(context).getString("flutter.appearance.textSize", null)) {
+            "large" -> 1.12f
+            "extraLarge" -> 1.25f
+            else -> 1.0f
+        }
 
     fun accentColor(context: Context): Int? {
         val raw = prefs(context).getLong("flutter.appearance.accentHex", -1L)
@@ -299,6 +311,22 @@ abstract class BaseWidgetProvider : AppWidgetProvider() {
     abstract fun layoutId(): Int
     abstract fun buildViews(context: Context, model: WidgetData.Model): RemoteViews
 
+    /// Applies the user's text-size factor (v1.8.0) to the given
+    /// (view id → layout base size in sp) pairs. A standard-size
+    /// choice leaves the layouts exactly as designed.
+    protected fun applyTextScale(
+        context: Context,
+        views: RemoteViews,
+        vararg sizes: Pair<Int, Float>
+    ) {
+        val factor = WidgetPrefs.textScaleFactor(context)
+        if (factor == 1.0f) return
+        for ((id, baseSp) in sizes) {
+            views.setTextViewTextSize(
+                id, TypedValue.COMPLEX_UNIT_SP, baseSp * factor)
+        }
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -363,6 +391,10 @@ class NextPrayerWidgetProvider : BaseWidgetProvider() {
             views.setTextColor(R.id.widget_caption, accent)
             views.setTextColor(R.id.widget_countdown, accent)
         }
+        applyTextScale(context, views,
+            R.id.widget_caption to 12f, R.id.widget_date to 12f,
+            R.id.widget_next_name to 28f, R.id.widget_next_time to 17f,
+            R.id.widget_countdown to 24f, R.id.widget_iqamah to 13f)
         return views
     }
 }
@@ -380,6 +412,13 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
         WidgetPrefs.accentColor(context)?.let { accent ->
             views.setTextColor(R.id.widget_header_countdown, accent)
         }
+        applyTextScale(context, views,
+            R.id.widget_header_next to 16f,
+            R.id.widget_header_countdown to 16f,
+            R.id.widget_date to 11f,
+            R.id.widget_col_prayer to 10f,
+            R.id.widget_col_adhan to 10f,
+            R.id.widget_col_iqamah to 10f)
         fillRows(context, views, model)
         return views
     }
@@ -388,7 +427,15 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
         /// Row colors come from values/widget_colors.xml (+ values-night),
         /// so the table follows Light/Dark Mode like the layouts do. The
         /// "next" row uses the user's picked accent color when set.
-        fun fillRows(context: Context, views: RemoteViews, model: WidgetData.Model) {
+        /// [rowSp] is the layout's base row text size (14sp in the
+        /// schedule widget, 16sp in the large one); rows scale with
+        /// the user's text-size factor (v1.8.0).
+        fun fillRows(
+            context: Context,
+            views: RemoteViews,
+            model: WidgetData.Model,
+            rowSp: Float = 14f
+        ) {
             val accent = WidgetPrefs.accentColor(context)
                 ?: context.getColor(R.color.widget_accent)
             val primary = context.getColor(R.color.widget_primary)
@@ -422,6 +469,17 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
                 views.setTextColor(adhanIds[i], color)
                 views.setTextColor(iqamahIds[i], color)
             }
+            val factor = WidgetPrefs.textScaleFactor(context)
+            if (factor != 1.0f) {
+                for (i in model.rows.indices) {
+                    views.setTextViewTextSize(nameIds[i],
+                        TypedValue.COMPLEX_UNIT_SP, rowSp * factor)
+                    views.setTextViewTextSize(adhanIds[i],
+                        TypedValue.COMPLEX_UNIT_SP, rowSp * factor)
+                    views.setTextViewTextSize(iqamahIds[i],
+                        TypedValue.COMPLEX_UNIT_SP, rowSp * factor)
+                }
+            }
         }
     }
 }
@@ -443,7 +501,15 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
             views.setTextColor(R.id.widget_countdown, accent)
             views.setTextColor(R.id.widget_next_label, accent)
         }
-        ScheduleWidgetProvider.fillRows(context, views, model)
+        applyTextScale(context, views,
+            R.id.widget_mosque to 14f, R.id.widget_hijri to 13f,
+            R.id.widget_next_label to 13f, R.id.widget_next_name to 32f,
+            R.id.widget_next_time to 19f, R.id.widget_countdown to 28f,
+            R.id.widget_iqamah to 14f,
+            R.id.widget_col_prayer to 11f, R.id.widget_col_adhan to 11f,
+            R.id.widget_col_iqamah to 11f,
+            R.id.widget_verse to 14f, R.id.widget_verse_ref to 11f)
+        ScheduleWidgetProvider.fillRows(context, views, model, rowSp = 16f)
         // Quran quote of the day under the schedule (v1.5), the same
         // verse the app shows today.
         val language = WidgetPrefs.language(context)

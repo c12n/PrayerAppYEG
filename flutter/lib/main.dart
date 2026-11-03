@@ -27,6 +27,7 @@ import 'prayer_models.dart';
 import 'settings_page.dart';
 import 'daily_verse.dart';
 import 'strings.dart';
+import 'whats_new.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -135,6 +136,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // permission on first launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AlertScheduler.refresh(SettingsScope.of(context), askPermission: true);
+      // Show the What's New dialog once after an update (v1.8.0).
+      WhatsNew.maybeShow(context);
     });
   }
 

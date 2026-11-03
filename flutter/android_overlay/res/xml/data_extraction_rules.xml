@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Data extraction rules (v1.8.0, item 4) — the Android 12+
+     counterpart of backup_rules.xml: the Flutter settings file and
+     the native alert plan join cloud backups and device-to-device
+     transfers, so settings survive a reinstall or a new phone. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+        <include domain="sharedpref" path="alrashid_alerts.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+        <include domain="sharedpref" path="alrashid_alerts.xml" />
+    </device-transfer>
+</data-extraction-rules>

@@ -174,6 +174,38 @@ class SettingsPage extends StatelessWidget {
                   AlertScheduler.refresh(settings);
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.volume_up),
+                title: Text(S.t('alertSound')),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(S.t('sound.${settings.alertSound}')),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+                onTap: () => _pickSound(context),
+              ),
+              _sectionHeader(context, S.t('prayerSounds')),
+              for (final prayer in Prayer.values)
+                ListTile(
+                  leading: Icon(_prayerIcon(prayer)),
+                  title: Text(prayer == Prayer.dhuhr
+                      ? S.t('dhuhrFriday')
+                      : prayer.displayName),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(settings.prayerSoundOverrides[prayer] != null
+                          ? S.t(
+                              'sound.${settings.prayerSoundOverrides[prayer]}')
+                          : S.t('useAppSound')),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                  onTap: () => _pickPrayerSound(context, prayer),
+                ),
+              _sectionNote(context, S.t('prayerSoundsFooter')),
               _sectionHeader(context, S.t('qibla')),
               SwitchListTile(
                 secondary: const Icon(Icons.vibration),
@@ -221,6 +253,18 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _confirmReset(context),
               ),
               _sectionNote(context, S.t('resetNote')),
+              Padding(
+                padding: const EdgeInsets.only(top: 28),
+                child: Center(
+                  child: Text(
+                    '${S.t('version')} $kAppVersion ($kAppBuildNumber)',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -308,6 +352,75 @@ class SettingsPage extends StatelessWidget {
     );
     if (picked == null) return;
     settings.update(() => settings.reminderLeadMinutes = picked);
+    AlertScheduler.refresh(settings);
+  }
+
+  /// App-wide Adhan sound picker (v1.8.0).
+  Future<void> _pickSound(BuildContext context) async {
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(S.t('alertSound')),
+        children: [
+          for (final sound in alertSoundNames)
+            ListTile(
+              title: Text(S.t('sound.$sound')),
+              trailing: settings.alertSound == sound
+                  ? Icon(Icons.check_circle,
+                      color:
+                          accentFor(Theme.of(context).brightness, settings))
+                  : null,
+              onTap: () => Navigator.pop(context, sound),
+            ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    settings.update(() => settings.alertSound = picked);
+    AlertScheduler.refresh(settings);
+  }
+
+  /// Per-prayer sound picker (v1.8.0): "App default" clears the
+  /// override; any sound sets one. The dialog returns '' for the
+  /// "App default" row so a barrier dismiss (null) changes nothing.
+  Future<void> _pickPrayerSound(BuildContext context, Prayer prayer) async {
+    final current = settings.prayerSoundOverrides[prayer];
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(prayer == Prayer.dhuhr
+            ? S.t('dhuhrFriday')
+            : prayer.displayName),
+        children: [
+          ListTile(
+            title: Text(S.t('useAppSound')),
+            trailing: current == null
+                ? Icon(Icons.check_circle,
+                    color: accentFor(Theme.of(context).brightness, settings))
+                : null,
+            onTap: () => Navigator.pop(context, ''),
+          ),
+          for (final sound in alertSoundNames)
+            ListTile(
+              title: Text(S.t('sound.$sound')),
+              trailing: current == sound
+                  ? Icon(Icons.check_circle,
+                      color:
+                          accentFor(Theme.of(context).brightness, settings))
+                  : null,
+              onTap: () => Navigator.pop(context, sound),
+            ),
+        ],
+      ),
+    );
+    if (picked == null) return; // Dismissed — no change.
+    settings.update(() {
+      if (picked.isEmpty) {
+        settings.prayerSoundOverrides.remove(prayer);
+      } else {
+        settings.prayerSoundOverrides[prayer] = picked;
+      }
+    });
     AlertScheduler.refresh(settings);
   }
 }
