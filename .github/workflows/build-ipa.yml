@@ -11,6 +11,7 @@ on:
 
 jobs:
   build:
+        name: Build unsigned IPA
     runs-on: macos-26
 
     steps:
