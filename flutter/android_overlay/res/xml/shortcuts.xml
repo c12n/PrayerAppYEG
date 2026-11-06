@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App Actions / shortcuts (v2.0.0, feature 7 — Android leg).
+  Assistant & Gemini reach these through the OPEN_APP_FEATURE
+  built-in-intent style capability; the static shortcuts also serve
+  as launcher long-press shortcuts, and Bixby consumes the same
+  deep-link actions where supported (a standalone Bixby capsule
+  needs Samsung's developer program — out of scope for a sideload
+  build). Every intent lands in MainActivity with a "prayer" extra,
+  which the Dart home page answers ("next" or a prayer name).
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetClass="com.c12n.alrashidwidget.MainActivity">
+            <parameter
+                android:name="feature"
+                android:key="prayer" />
+        </intent>
+    </capability>
+
+    <shortcut
+        android:shortcutId="next_prayer"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_next_prayer">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetClass="com.c12n.alrashidwidget.MainActivity">
+            <extra
+                android:name="prayer"
+                android:value="next" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="fajr"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_fajr">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetClass="com.c12n.alrashidwidget.MainActivity">
+            <extra
+                android:name="prayer"
+                android:value="fajr" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="dhuhr"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_dhuhr">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetClass="com.c12n.alrashidwidget.MainActivity">
+            <extra
+                android:name="prayer"
+                android:value="dhuhr" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="asr"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_asr">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetClass="com.c12n.alrashidwidget.MainActivity">
+            <extra
+                android:name="prayer"
+                android:value="asr" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="maghrib"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_maghrib">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetClass="com.c12n.alrashidwidget.MainActivity">
+            <extra
+                android:name="prayer"
+                android:value="maghrib" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="isha"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_isha">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetClass="com.c12n.alrashidwidget.MainActivity">
+            <extra
+                android:name="prayer"
+                android:value="isha" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

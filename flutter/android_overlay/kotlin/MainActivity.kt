@@ -7,6 +7,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Bundle
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -30,6 +31,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
     private var sensorManager: SensorManager? = null
     private var headingSink: EventChannel.EventSink? = null
     private var permissionResult: MethodChannel.Result? = null
+    private var pickResult: MethodChannel.Result? = null
 
     private val gravity = FloatArray(3)
     private val geomagnetic = FloatArray(3)
@@ -71,6 +73,28 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/backup")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "driveBackup" -> DriveBackup.run(
+                        this, "driveBackup", call.argument<String>("json"), result)
+                    "driveRestore" -> DriveBackup.run(
+                        this, "driveRestore", null, result)
+                    "driveLastBackup" -> {
+                        val millis = DriveBackup.lastBackupMillis(this)
+                        result.success(if (millis > 0) millis else null)
+                    }
+                    "pickFile" -> {
+                        pickResult = result
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "application/json"
+                        }
+                        startActivityForResult(intent, FILE_PICK_REQUEST)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/share")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -107,6 +131,51 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         )
     }
 
+    // Assistant / Bixby deep links (v2.0.0, feature 7): shortcuts.xml
+    // and App Actions land here with a "prayer" extra ('next' or a
+    // prayer name). The query is parked in the Flutter preferences;
+    // the Dart home page answers it in a dialog when it surfaces.
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        captureAssistantQuery(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureAssistantQuery(intent)
+    }
+
+    private fun captureAssistantQuery(intent: Intent?) {
+        val prayer = intent?.getStringExtra("prayer") ?: return
+        getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            .edit()
+            .putString("flutter.assistant.queryPrayer", prayer)
+            .putLong("flutter.assistant.queryAt", System.currentTimeMillis())
+            .apply()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (DriveBackup.onActivityResult(this, requestCode, data)) return
+        if (requestCode == FILE_PICK_REQUEST) {
+            val result = pickResult
+            pickResult = null
+            val uri = data?.data
+            if (resultCode != RESULT_OK || uri == null) {
+                result?.success(null)
+                return
+            }
+            try {
+                val text = contentResolver.openInputStream(uri)
+                    ?.bufferedReader()?.readText()
+                result?.success(text)
+            } catch (e: Exception) {
+                result?.success(null)
+            }
+        }
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -123,6 +192,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
 
     companion object {
         private const val NOTIFICATION_PERMISSION_REQUEST = 0xAD11
+        private const val FILE_PICK_REQUEST = 0xDB02
     }
 
     private fun startSensors() {

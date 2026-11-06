@@ -8,7 +8,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
 import android.util.TypedValue
 import android.widget.RemoteViews
 import java.time.DayOfWeek
@@ -55,21 +61,112 @@ object WidgetPrefs {
             else -> 1.0f
         }
 
-    fun accentColor(context: Context): Int? {
-        val raw = prefs(context).getLong("flutter.appearance.accentHex", -1L)
-        if (raw < 0) return null
-        val night = (context.resources.configuration.uiMode and
-            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    /// Widget colors mode (v1.9.0): "separate" = the home widgets
+    /// have their own theme (flat keys written by the Flutter app);
+    /// anything else = match the app theme.
+    fun widgetColorSeparate(context: Context): Boolean =
+        prefs(context).getString("flutter.appearance.widgetColorMode", null) == "separate"
+
+    /// Minimal Mode (v2.0.0): widgets are already plain time lists;
+    /// Minimal only drops the Ramadan hero naming below.
+    fun minimalMode(context: Context): Boolean =
+        prefs(context).getBoolean("flutter.appearance.minimalMode", false)
+
+    private fun rawHex(context: Context, separateKey: String, appKey: String, default: Long): Long {
+        val key = if (widgetColorSeparate(context)) separateKey else appKey
+        val v = prefs(context).getLong(key, -1L)
+        return if (v >= 0) v else default
+    }
+
+    /// Effective widget theme raws (v1.9.0) — defaults are the
+    /// signature green / gold / white, so widgets are colored even
+    /// before Settings is ever opened.
+    fun effectivePrimaryRaw(context: Context): Long = rawHex(context,
+        "flutter.appearance.widgetTheme.home.primaryHex",
+        "flutter.appearance.primaryHex", 0x0B3D2EL)
+    fun effectiveAccentRaw(context: Context): Long = rawHex(context,
+        "flutter.appearance.widgetTheme.home.accentHex",
+        "flutter.appearance.accentHex", 0xD4AF37L)
+    fun effectiveTextRaw(context: Context): Long = rawHex(context,
+        "flutter.appearance.widgetTheme.home.textHex",
+        "flutter.appearance.textHex", 0xFFFFFFL)
+
+    /// The widgets' accent color (v1.9.0): the effective accent,
+    /// brightened for the (always deep) colored widget surface the
+    /// same way the apps brighten for dark surfaces. Never null now:
+    /// the signature gold is the fallback.
+    fun accentColor(context: Context): Int {
+        val raw = effectiveAccentRaw(context)
         val hsv = FloatArray(3)
         Color.colorToHSV((0xFF000000 or raw).toInt(), hsv)
-        if (night) {
-            hsv[1] = minOf(hsv[1], 0.9f)
-            hsv[2] = maxOf(hsv[2], 0.82f)
-        } else {
-            hsv[1] = hsv[1].coerceIn(0.55f, 1.0f)
-            hsv[2] = minOf(hsv[2], 0.42f)
-        }
+        hsv[1] = minOf(hsv[1], 0.9f)
+        hsv[2] = maxOf(hsv[2], 0.82f)
         return Color.HSVToColor(hsv)
+    }
+
+}
+
+
+/// Widget surface colors (v1.9.0): paints the colored gradient
+/// background bitmap and provides the palette text colors that the
+/// providers stamp over the layouts' Light/Dark resource defaults —
+/// the widgets are full-color surfaces now, like the iOS ones.
+object WidgetColors {
+    fun primary(context: Context): Int =
+        (0xFF000000 or WidgetPrefs.effectivePrimaryRaw(context)).toInt()
+
+    fun text(context: Context): Int =
+        (0xFF000000 or WidgetPrefs.effectiveTextRaw(context)).toInt()
+
+    fun textSecondary(context: Context): Int = withAlpha(text(context), 0.85f)
+    fun textMuted(context: Context): Int = withAlpha(text(context), 0.72f)
+
+    private fun withAlpha(color: Int, alpha: Float): Int =
+        Color.argb((alpha * 255).toInt(), Color.red(color), Color.green(color), Color.blue(color))
+
+    private fun shade(color: Int, factor: Float): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[2] = (hsv[2] * factor).coerceIn(0f, 1f)
+        if (factor > 1f) hsv[1] = hsv[1] * 0.9f
+        return Color.HSVToColor(hsv)
+    }
+
+    /// Rounded gradient (bright -> primary -> deep) as a bitmap for
+    /// the layouts' background ImageView; RemoteViews cannot attach a
+    /// generated drawable, so a bitmap is the portable route.
+    fun applyBackground(context: Context, views: RemoteViews) {
+        val size = 880
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val base = primary(context)
+        val shader = LinearGradient(
+            0f, 0f, size.toFloat(), size.toFloat(),
+            intArrayOf(shade(base, 1.35f), base, shade(base, 0.62f)),
+            null, Shader.TileMode.CLAMP
+        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
+        canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), 72f, 72f, paint)
+        views.setImageViewBitmap(R.id.widget_bg_image, bitmap)
+    }
+
+    /// Stamps palette colors onto the given id groups.
+    fun paint(
+        context: Context, views: RemoteViews,
+        accentIds: IntArray = intArrayOf(),
+        textIds: IntArray = intArrayOf(),
+        secondaryIds: IntArray = intArrayOf(),
+        mutedIds: IntArray = intArrayOf()
+    ) {
+        applyBackground(context, views)
+        val accent = WidgetPrefs.accentColor(context)
+        val text = text(context)
+        val secondary = textSecondary(context)
+        val muted = textMuted(context)
+        for (id in accentIds) views.setTextColor(id, accent)
+        for (id in textIds) views.setTextColor(id, text)
+        for (id in secondaryIds) views.setTextColor(id, secondary)
+        for (id in mutedIds) views.setTextColor(id, muted)
     }
 }
 
@@ -100,6 +197,12 @@ object WidgetStrings {
 
     fun jumuah(language: String): String =
         if (language == "ar") "الجمعة" else "Jumu'ah"
+
+    fun iftar(language: String): String =
+        if (language == "ar") "الإفطار" else "Iftar"
+
+    fun suhoor(language: String): String =
+        if (language == "ar") "السحور" else "Suhoor"
 
     fun iqamahLabel(isJumuah: Boolean, language: String): String = when {
         isJumuah && language == "ar" -> "الخطبة"
@@ -253,8 +356,19 @@ object WidgetData {
         }
 
         val isJumuahNext = nextDay.isFriday && nextName == "Dhuhr"
+        // Ramadan (v1.9.0): widgets label Maghrib "Iftar" and Fajr
+        // "Suhoor" in the hero line during Hijri month 9 (with the
+        // user's Hijri offset applied, like the date line below).
+        val ramadanGregorian =
+            nextDay.date.plusDays(WidgetPrefs.hijriOffsetDays(context).toLong())
+        val isRamadan = UmmAlQuraCalendar.hijri(
+            ramadanGregorian.year, ramadanGregorian.monthValue,
+            ramadanGregorian.dayOfMonth
+        )?.month == 9
         val displayName =
             if (isJumuahNext) WidgetStrings.jumuah(language)
+            else if (isRamadan && !WidgetPrefs.minimalMode(context) && nextName == "Maghrib") WidgetStrings.iftar(language)
+            else if (isRamadan && !WidgetPrefs.minimalMode(context) && nextName == "Fajr") WidgetStrings.suhoor(language)
             else WidgetStrings.prayerName(nextName, language)
         val nextAdhan = nextDay.adhan(nextName)
         val nextIqamah = nextDay.iqamah(nextName)
@@ -327,6 +441,15 @@ abstract class BaseWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    /// v1.9.0: colored surface + palette text for this widget.
+    protected fun paintWidget(
+        context: Context, views: RemoteViews,
+        accentIds: IntArray = intArrayOf(),
+        textIds: IntArray = intArrayOf(),
+        secondaryIds: IntArray = intArrayOf(),
+        mutedIds: IntArray = intArrayOf()
+    ) = WidgetColors.paint(context, views, accentIds, textIds, secondaryIds, mutedIds)
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -387,10 +510,11 @@ class NextPrayerWidgetProvider : BaseWidgetProvider() {
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_iqamah, model.nextIqamahText ?: "")
-        WidgetPrefs.accentColor(context)?.let { accent ->
-            views.setTextColor(R.id.widget_caption, accent)
-            views.setTextColor(R.id.widget_countdown, accent)
-        }
+        paintWidget(context, views,
+            accentIds = intArrayOf(R.id.widget_caption, R.id.widget_countdown),
+            textIds = intArrayOf(R.id.widget_next_name),
+            secondaryIds = intArrayOf(R.id.widget_next_time),
+            mutedIds = intArrayOf(R.id.widget_date, R.id.widget_iqamah))
         applyTextScale(context, views,
             R.id.widget_caption to 12f, R.id.widget_date to 12f,
             R.id.widget_next_name to 28f, R.id.widget_next_time to 17f,
@@ -409,9 +533,11 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
             "${model.nextName} · ${model.nextTime}")
         views.setTextViewText(R.id.widget_header_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_date, model.dateText)
-        WidgetPrefs.accentColor(context)?.let { accent ->
-            views.setTextColor(R.id.widget_header_countdown, accent)
-        }
+        paintWidget(context, views,
+            accentIds = intArrayOf(R.id.widget_header_countdown),
+            textIds = intArrayOf(R.id.widget_header_next),
+            mutedIds = intArrayOf(R.id.widget_date, R.id.widget_col_prayer,
+                R.id.widget_col_adhan, R.id.widget_col_iqamah))
         applyTextScale(context, views,
             R.id.widget_header_next to 16f,
             R.id.widget_header_countdown to 16f,
@@ -436,10 +562,11 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
             model: WidgetData.Model,
             rowSp: Float = 14f
         ) {
+            // v1.9.0: rows wear the widget palette (was Light/Dark
+            // resource colors before the widgets went full-color).
             val accent = WidgetPrefs.accentColor(context)
-                ?: context.getColor(R.color.widget_accent)
-            val primary = context.getColor(R.color.widget_primary)
-            val muted = context.getColor(R.color.widget_muted)
+            val primary = WidgetColors.text(context)
+            val muted = WidgetColors.textMuted(context)
             val nameIds = intArrayOf(
                 R.id.row0_name, R.id.row1_name, R.id.row2_name,
                 R.id.row3_name, R.id.row4_name, R.id.row5_name
@@ -497,10 +624,13 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_iqamah, model.nextIqamahText ?: "")
-        WidgetPrefs.accentColor(context)?.let { accent ->
-            views.setTextColor(R.id.widget_countdown, accent)
-            views.setTextColor(R.id.widget_next_label, accent)
-        }
+        paintWidget(context, views,
+            accentIds = intArrayOf(R.id.widget_countdown, R.id.widget_next_label,
+                R.id.widget_mosque),
+            textIds = intArrayOf(R.id.widget_next_name, R.id.widget_verse),
+            secondaryIds = intArrayOf(R.id.widget_next_time, R.id.widget_iqamah),
+            mutedIds = intArrayOf(R.id.widget_hijri, R.id.widget_col_prayer,
+                R.id.widget_col_adhan, R.id.widget_col_iqamah))
         applyTextScale(context, views,
             R.id.widget_mosque to 14f, R.id.widget_hijri to 13f,
             R.id.widget_next_label to 13f, R.id.widget_next_name to 32f,
@@ -518,9 +648,7 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
         views.setTextViewText(R.id.widget_verse, verse.arabic)
         views.setTextViewText(
             R.id.widget_verse_ref, DailyVerses.reference(verse, language))
-        WidgetPrefs.accentColor(context)?.let { accent ->
-            views.setTextColor(R.id.widget_verse_ref, accent)
-        }
+        views.setTextColor(R.id.widget_verse_ref, WidgetPrefs.accentColor(context))
         return views
     }
 }

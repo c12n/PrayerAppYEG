@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ImageView android:id="@+id/widget_bg_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:contentDescription="@null" />
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
     android:orientation="vertical"
     android:padding="16dp">
     <TextView android:id="@+id/widget_mosque" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AL RASHID MOSQUE" android:textSize="14sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
@@ -55,3 +62,4 @@
     <TextView android:id="@+id/widget_verse" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="2" android:ellipsize="end" android:textSize="14sp" android:textStyle="bold" android:textColor="@color/widget_primary" />
     <TextView android:id="@+id/widget_verse_ref" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:layout_marginTop="2dp" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
 </LinearLayout>
+</FrameLayout>

@@ -58,6 +58,28 @@ RECEIVERS = """        <receiver
             android:name=".AdhanAlarmReceiver"
             android:exported="false">
         </receiver>
+        <service
+            android:name=".SilenceNextTileService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="Silence Next Alert"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".PrayerCarService"
+            android:exported="true"
+            android:label="Al Rashid Prayer">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.POI" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.car.app.minCarApiLevel"
+                android:value="1" />
+        </service>
         <receiver
             android:name=".BootReceiver"
             android:exported="true">
@@ -90,6 +112,20 @@ def main() -> None:
     if "</application>" not in text:
         raise SystemExit("no </application> in AndroidManifest.xml")
     text = text.replace("</application>", RECEIVERS, 1)
+    # App Actions / shortcuts (v2.0.0): attach res/xml/shortcuts.xml
+    # to MainActivity's <activity> element.
+    activity_match = re.search(
+        r'(<activity[^>]*android:name="\.MainActivity"[^>]*>)(.*?)(</activity>)',
+        text, re.DOTALL)
+    if not activity_match:
+        raise SystemExit("could not find MainActivity in AndroidManifest.xml")
+    text = (text[:activity_match.start()]
+            + activity_match.group(1)
+            + '\n            <meta-data android:name="android.app.shortcuts"'
+              ' android:resource="@xml/shortcuts" />'
+            + activity_match.group(2)
+            + activity_match.group(3)
+            + text[activity_match.end():])
     # Notification permissions go right after the <manifest ...> tag.
     match = re.search(r"<manifest\b[^>]*>", text)
     if not match:
@@ -103,9 +139,19 @@ def main() -> None:
         gradle = gradle.replace("minSdk = flutter.minSdkVersion", "minSdk = 26")
     elif "minSdk" not in gradle:
         raise SystemExit("no minSdk line found in build.gradle.kts")
+    # v2.0.0: Android Auto (androidx.car.app) + Google sign-in for
+    # the Drive settings backup (play-services-auth).
+    if "androidx.car.app" not in gradle:
+        deps = (
+            "\ndependencies {\n"
+            '    implementation("androidx.car.app:app:1.7.0")\n'
+            '    implementation("com.google.android.gms:play-services-auth:21.2.0")\n'
+            "}\n"
+        )
+        gradle = gradle.rstrip() + "\n" + deps
     gradle_path.write_text(gradle)
 
-    print("patched AndroidManifest.xml (label + 3 widget receivers + alert receivers + notification permissions) and build.gradle.kts (minSdk 26)")
+    print("patched AndroidManifest.xml (label + widget receivers + alert receivers + QS tile + CarAppService + shortcuts + notification permissions) and build.gradle.kts (minSdk 26 + car app + play-services-auth)")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_next_prayer">Next prayer</string>
+    <string name="shortcut_fajr">Fajr time</string>
+    <string name="shortcut_dhuhr">Dhuhr time</string>
+    <string name="shortcut_asr">Asr time</string>
+    <string name="shortcut_maghrib">Maghrib time</string>
+    <string name="shortcut_isha">Isha time</string>
+</resources>
