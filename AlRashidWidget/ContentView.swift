@@ -5,8 +5,10 @@
 //  Target Membership: AlRashidWidget only.
 //
 
+import AppIntents
 import CoreMotion
 import SwiftUI
+import UniformTypeIdentifiers
 import UIKit
 import WidgetKit
 
@@ -46,6 +48,14 @@ struct ContentView: View {
     @AppStorage(AppTextSize.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var textSizeRaw: String = AppTextSize.standard.rawValue
     @State private var showSettings = false
+    /// iPhone Duo (v2.0.0): the icon rail's Qibla sheet and its
+    /// Day/Tomorrow switch for the right-hand pane.
+    @State private var showDuoCompass = false
+    @State private var duoShowTomorrow = false
+    /// Monthly calendar sheet (v2.0.0, feature 2).
+    @State private var showCalendar = false
+    /// StandBy nightstand (v2.0.0, feature 4).
+    @State private var showStandBy = false
     /// What's New sheet (v1.8.0): shown once after an update, never
     /// on a fresh install.
     @State private var showWhatsNew = false
@@ -77,36 +87,29 @@ struct ContentView: View {
         TimelineView(.everyMinute) { context in
             let snapshot = provider.snapshot(at: context.date)
             let todaySchedule = provider.day(for: context.date)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Scroll-offset sentinel for the status-bar hide.
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: HomeScrollOffsetKey.self,
-                                        value: proxy.frame(in: .named("homeScroll")).minY)
-                    }
-                    .frame(height: 0)
-                    HeaderView(today: todaySchedule, now: context.date) {
-                        showSettings = true
-                    }
-                    NextPrayerCard(snapshot: snapshot)
-                    ScheduleCard(snapshot: snapshot)
-                    DailyVerseCard()
-                    QiblaCard()
-                    FooterView()
+            GeometryReader { proxy in
+                // Layout routing (v2.0.0): iPad at regular width gets
+                // the multi-column iPad layout; any phone-width window
+                // of 600 pt or more (Pro Max / Plus landscape) gets the
+                // iPhone Duo two-pane layout; everything else keeps the
+                // single column. Width — never text size — decides, and
+                // Dynamic Type only ever grows the panes' rows.
+                if MinimalMode.enabled {
+                    minimalLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
+                } else if UIDevice.current.userInterfaceIdiom == .pad,
+                   proxy.size.width >= 700 {
+                    iPadLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
+                } else if proxy.size.width >= 600 {
+                    duoLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
+                } else {
+                    phoneLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 32)
             }
-            .scrollIndicators(.hidden)
-            .coordinateSpace(name: "homeScroll")
-            .onPreferenceChange(HomeScrollOffsetKey.self) { minY in
-                statusBarHidden = minY < -24
-            }
-            .statusBarHidden(statusBarHidden)
             .sheet(isPresented: $showWhatsNew) {
                 WhatsNewView()
+            }
+            .fullScreenCover(isPresented: $showStandBy) {
+                StandByView(snapshot: snapshot)
             }
         }
         .id("\(appearanceStamp)#\(appearanceGeneration)")
@@ -136,16 +139,275 @@ struct ContentView: View {
         }
         .onAppear {
             refreshWidgets()
-            updateChecker.checkIfNeeded()
-            checkWhatsNew()
+            if !MinimalMode.enabled {
+                updateChecker.checkIfNeeded()
+                checkWhatsNew()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 appearanceGeneration += 1
                 refreshWidgets()
-                updateChecker.checkIfNeeded()
+                if !MinimalMode.enabled {
+                    updateChecker.checkIfNeeded()
+                }
             }
         }
+    }
+
+    // MARK: Layouts (v2.0.0)
+
+    /// The original single column: portrait phones and narrow windows.
+    private func phoneLayout(snapshot: PrayerSnapshot, today: PrayerDay, now: Date) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Scroll-offset sentinel for the status-bar hide.
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: HomeScrollOffsetKey.self,
+                                    value: proxy.frame(in: .named("homeScroll")).minY)
+                }
+                .frame(height: 0)
+                HeaderView(today: today, now: now) {
+                    showSettings = true
+                }
+                NextPrayerCard(snapshot: snapshot)
+                ScheduleCard(snapshot: snapshot)
+                HStack(spacing: 12) {
+                    DuoChip(title: L10n.t("monthlyCalendar"), detail: "") {
+                        showCalendar = true
+                    }
+                    DuoChip(title: L10n.t("standBy"), detail: "") {
+                        showStandBy = true
+                    }
+                }
+                DailyVerseCard()
+                QiblaCard()
+                FooterView()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 32)
+        }
+        .scrollIndicators(.hidden)
+        .coordinateSpace(name: "homeScroll")
+        .onPreferenceChange(HomeScrollOffsetKey.self) { minY in
+            statusBarHidden = minY < -24
+        }
+        .statusBarHidden(statusBarHidden)
+        .sheet(isPresented: $showCalendar) {
+            MonthlyCalendarView(snapshot: snapshot)
+        }
+    }
+
+    /// iPhone Duo: two panes at 600 pt and wider (Pro Max / Plus
+    /// landscape), per the approved design — a slim icon rail, the
+    /// "Now" pane (next prayer, countdown, progress, verse), and the
+    /// full-day schedule with the tomorrow strip and quick chips.
+    /// Both panes scroll independently so large Dynamic Type sizes
+    /// grow rows and scroll instead of shrinking text.
+
+    // MARK: Minimal Mode layout (v2.0.0, workstream 10)
+
+    /// Minimal Mode: the essentials only, at every width — next
+    /// prayer + plain countdown, today's Adhan/Iqamah list, and the
+    /// fasting times row on fasting days and throughout Ramadan.
+    /// No verse card, no Qibla, no calendar, no tomorrow strip.
+    /// Settings stays reachable from the header gear, as always.
+    private func minimalLayout(snapshot: PrayerSnapshot, today: PrayerDay, now: Date) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HeaderView(today: today, now: now) {
+                    showSettings = true
+                }
+                NextPrayerCard(snapshot: snapshot)
+                if RamadanMode.isRamadan(on: now, timeZone: provider.calendar.timeZone)
+                    || FastingSettings.isFastingDay(now, timeZone: provider.calendar.timeZone) {
+                    FastingTimesRow(day: today)
+                }
+                ScheduleCard(snapshot: snapshot)
+                FooterView()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 32)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func duoLayout(snapshot: PrayerSnapshot, today: PrayerDay, now: Date) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            duoRail
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    DuoNowHeader(today: today, now: now)
+                    NextPrayerCard(snapshot: snapshot)
+                    DailyVerseCard()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+            .frame(width: 330)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if duoShowTomorrow {
+                        DuoDayCard(
+                            day: tomorrowDay(from: now),
+                            title: L10n.t("tomorrowTimes"),
+                            snapshot: snapshot
+                        )
+                    } else {
+                        ScheduleCard(snapshot: snapshot)
+                    }
+                    DuoTomorrowStrip(now: now)
+                    HStack(spacing: 12) {
+                        DuoChip(title: L10n.t("qibla"),
+                                detail: "\(Int(QiblaMath.bearingFromMosque.rounded()))°") {
+                            showDuoCompass = true
+                        }
+                        DuoChip(title: L10n.t("widgetColors"),
+                                detail: AppAppearance.effectiveTheme(for: .home).name) {
+                            showSettings = true
+                        }
+                    }
+                    QiblaCard()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+        }
+        .sheet(isPresented: $showDuoCompass) {
+            QiblaCompassView()
+        }
+        .sheet(isPresented: $showCalendar) {
+            MonthlyCalendarView(snapshot: snapshot)
+        }
+    }
+
+    /// The Duo icon rail: Day / Qibla / Calendar (today⇄tomorrow) /
+    /// Settings, one thumb-reach away without eating schedule width.
+    private var duoRail: some View {
+        VStack(spacing: 14) {
+            DuoRailButton(systemImage: "sun.max.fill", label: L10n.t("today"),
+                          isActive: !duoShowTomorrow) {
+                duoShowTomorrow = false
+            }
+            DuoRailButton(systemImage: "location.north.circle.fill", label: L10n.t("qibla"),
+                          isActive: false) {
+                showDuoCompass = true
+            }
+                        DuoRailButton(systemImage: "moon.zzz.fill", label: L10n.t("standBy"),
+                          isSelected: false) {
+                showStandBy = true
+            }
+DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),
+                          isActive: false) {
+                showCalendar = true
+            }
+            Spacer()
+            DuoRailButton(systemImage: "gearshape.fill", label: L10n.t("settings"),
+                          isActive: false) {
+                showSettings = true
+            }
+        }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 8)
+        .frame(width: 60)
+        .background(Color.black.opacity(0.18))
+    }
+
+    /// Proper iPad UI: a fixed left column (header, next prayer, verse)
+    /// beside a scrolling two-column card grid — the iPhone column is
+    /// never just stretched. All features stay reachable: Settings via
+    /// the header gear, Qibla as a full card, Schedule with its own
+    /// Today/Tomorrow toggle.
+    private func iPadLayout(snapshot: PrayerSnapshot, today: PrayerDay, now: Date) -> some View {
+        HStack(alignment: .top, spacing: 20) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HeaderView(today: today, now: now) {
+                        showSettings = true
+                    }
+                    NextPrayerCard(snapshot: snapshot)
+                    DailyVerseCard()
+                    FooterView()
+                }
+                .padding(.vertical, 20)
+            }
+            .frame(width: 360)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    ScheduleCard(snapshot: snapshot)
+                    HStack(alignment: .top, spacing: 20) {
+                        DuoTomorrowStrip(now: now)
+                        DuoChip(title: L10n.t("widgetColors"),
+                                detail: AppAppearance.effectiveTheme(for: .home).name) {
+                            showSettings = true
+                        }
+                        DuoChip(title: L10n.t("monthlyCalendar"), detail: "") {
+                            showCalendar = true
+                        }
+                        DuoChip(title: L10n.t("standBy"), detail: "") {
+                            showStandBy = true
+                        }
+                    }
+                    QiblaCard()
+                }
+                .padding(.vertical, 20)
+                .padding(.trailing, 20)
+            }
+        }
+        .padding(.leading, 20)
+        .sheet(isPresented: $showCalendar) {
+            MonthlyCalendarView(snapshot: snapshot)
+        }
+    }
+
+    /// Tomorrow's PrayerDay via the provider's own calendar (DST-safe).
+    private func tomorrowDay(from now: Date) -> PrayerDay {
+        let start = provider.calendar.startOfDay(for: now)
+        let next = provider.calendar.date(byAdding: .day, value: 1, to: start)
+            ?? now.addingTimeInterval(86_400)
+        return provider.day(for: next)
+    }
+
+    /// The Duo tomorrow strip: tomorrow's Fajr at a glance (plus the
+    /// Khutbah time when tomorrow is Friday); tapping jumps the Duo
+    /// right pane to tomorrow's full schedule.
+    private func DuoTomorrowStrip(now: Date) -> some View {
+        let tomorrow = tomorrowDay(from: now)
+        let fajr = tomorrow.slots.first { $0.prayer == .fajr }
+        return Button {
+            duoShowTomorrow = true
+        } label: {
+            HStack(spacing: 10) {
+                Text(L10n.t("tomorrow"))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.onSurface)
+                if let fajr {
+                    Text("\(fajr.name) \(PrayerFormat.time(fajr.adhan))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                }
+                if tomorrow.isFriday {
+                    Text("· \(L10n.t("jumuahBadge")) \(PrayerFormat.khutbahTime(on: tomorrow.date))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(Theme.adaptiveGold)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .adaptiveCard(cornerRadius: 16)
+        }
+        .buttonStyle(.plain)
     }
 
     private func refreshWidgets() {
@@ -167,6 +429,420 @@ struct ContentView: View {
             UserDefaults.standard.set(current, forKey: key)
             showWhatsNew = true
         }
+    }
+}
+
+
+// MARK: - Fasting times row (v2.0.0)
+
+/// Suhoor (Fajr) and Iftar (Maghrib) for a day — shown in Minimal
+/// Mode on fasting days and every day in Ramadan, and wherever the
+/// essentials are listed.
+private struct FastingTimesRow: View {
+    let day: PrayerDay
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Label {
+                Text("\(L10n.t("suhoor")) · \(PrayerFormat.time(day.fajr))")
+            } icon: {
+                Image(systemName: "moon.haze.fill").foregroundStyle(AppAppearance.accent)
+            }
+            Spacer(minLength: 4)
+            Label {
+                Text("\(L10n.t("iftar")) · \(PrayerFormat.time(day.maghrib))")
+            } icon: {
+                Image(systemName: "sunset.fill").foregroundStyle(AppAppearance.accent)
+            }
+        }
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(Theme.onSurface)
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(Theme.primary.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+// MARK: - StandBy (v2.0.0, feature 4)
+
+/// In-app StandBy: a landscape nightstand view — the next prayer
+/// huge, a live countdown, the rest of today beneath, all in the
+/// app theme. The screen stays awake while it is up; tap anywhere
+/// to leave. (True system StandBy is Apple's own mode for the Lock
+/// Screen widgets; this is the in-app equivalent the brief asks
+/// for, reached from the Duo rail, the iPad chips, or Settings.)
+private struct StandByView: View {
+    @Environment(\.dismiss) private var dismiss
+    let snapshot: PrayerSnapshot
+
+    var body: some View {
+        let next = snapshot.next
+        let palette = PartPalette(theme: AppAppearance.effectiveTheme(for: .liveActivity))
+        ZStack {
+            ColoredSurfaceBackground(palette: palette)
+            VStack(spacing: 10) {
+                Text(next.name)
+                    .font(.system(size: 84, weight: .bold, design: .rounded))
+                    .foregroundStyle(palette.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                Text(PrayerFormat.time(next.adhan))
+                    .font(.system(size: 40, weight: .semibold, design: .rounded))
+                    .foregroundStyle(palette.textSecondary)
+                Text(timerInterval: snapshot.date...next.adhan, countsDown: true)
+                    .font(.system(size: 64, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(palette.accent)
+                Text(snapshot.day.hijriDate)
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(palette.textSecondary)
+            }
+            .padding(32)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { dismiss() }
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+    }
+}
+
+// MARK: - Duo & iPad pieces (v2.0.0)
+
+/// The Duo "Now" pane header: brand, Gregorian date, Hijri date —
+/// the HeaderView content minus the settings gear (the rail has it).
+private struct DuoNowHeader: View {
+    let today: PrayerDay
+    let now: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 7) {
+                Image(systemName: "moon.stars.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.adaptiveGold)
+                Text(MosqueInfo.name.uppercased())
+                    .font(.caption.weight(.heavy))
+                    .tracking(1.1)
+                    .foregroundStyle(Theme.adaptiveGold)
+                    .lineLimit(1)
+            }
+            Text(PrayerFormat.longDate(now))
+                .font(.headline)
+                .foregroundStyle(Theme.onSurface)
+            Text(today.hijriDate)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.onSurfaceSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A full-day schedule card for an arbitrary day (the Duo right pane's
+/// Tomorrow view): same rows as ScheduleCard, without its toggle.
+private struct DuoDayCard: View {
+    let day: PrayerDay
+    let title: String
+    let snapshot: PrayerSnapshot
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(Theme.onSurface)
+                Spacer(minLength: 8)
+                Text(PrayerFormat.shortDate(day.date))
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.onSurfaceSecondary)
+            }
+            HStack(spacing: 8) {
+                Text(L10n.t("colPrayer")).frame(maxWidth: .infinity, alignment: .leading)
+                Text(L10n.t("colAdhan")).frame(width: 86, alignment: .trailing)
+                Text(L10n.t("colIqamah")).frame(width: 86, alignment: .trailing)
+            }
+            .font(.caption2.weight(.bold))
+            .tracking(0.8)
+            .foregroundStyle(Theme.onSurfaceMuted)
+            .padding(.horizontal, 12)
+            VStack(spacing: 4) {
+                ForEach(day.slots) { slot in
+                    ScheduleRow(
+                        slot: slot,
+                        isNext: day.date == snapshot.day.date && snapshot.isNext(slot)
+                    )
+                }
+            }
+            if day.isFriday {
+                Label(L10n.f("jumuahReplaces", PrayerFormat.khutbahTime(on: day.date)),
+                      systemImage: "building.columns.fill")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.adaptiveGold)
+            }
+            if RamadanMode.isRamadan(on: day.date, timeZone: PrayerProvider.standard.calendar.timeZone) {
+                HStack(spacing: 10) {
+                    Image(systemName: "moon.haze.fill")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 26)
+                        .foregroundStyle(Theme.adaptiveGold)
+                    Text(L10n.t("taraweeh"))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.onSurface)
+                    Text(L10n.t("estimate"))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.onSurfaceMuted)
+                    Spacer()
+                    Text(PrayerFormat.time(RamadanMode.taraweehTime(for: day)))
+                        .font(.body.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Theme.onSurface)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .adaptiveCard(cornerRadius: 26)
+    }
+}
+
+/// One Duo quick chip (Qibla, Widget Colors): title + gold detail.
+private struct DuoChip: View {
+    let title: String
+    let detail: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.onSurface)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Text(detail)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.adaptiveGold)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.adaptiveGold)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .adaptiveCard(cornerRadius: 16)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// One Duo rail button: icon tile, gold when active.
+private struct DuoRailButton: View {
+    let systemImage: String
+    let label: String
+    let isActive: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .frame(width: 40, height: 40)
+                .background {
+                    if isActive {
+                        LinearGradient(colors: [Theme.lightGold, Theme.gold],
+                                       startPoint: .top, endPoint: .bottom)
+                    } else {
+                        Theme.panelFill
+                    }
+                }
+                .foregroundStyle(isActive ? Theme.primaryDeep : Theme.onSurfaceSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+// MARK: - Monthly calendar (v2.0.0, feature 2)
+
+/// A full month of Adhan/Iqamah times: a day grid (Fajr + Maghrib in
+/// each cell), tap a day to preview its full schedule, and share or
+/// print the whole month as a text table through the share sheet.
+/// On iPad/Duo widths the grid and the day preview sit side by side.
+struct MonthlyCalendarView: View {
+    let snapshot: PrayerSnapshot
+    @Environment(\.dismiss) private var dismiss
+    @State private var monthAnchor: Date = .now
+    @State private var selectedDate: Date = .now
+    @State private var daysByStart: [TimeInterval: PrayerDay] = [:]
+
+    private var provider: PrayerProvider { .standard }
+
+    private var monthDates: [Date] {
+        let cal = provider.calendar
+        guard let interval = cal.dateInterval(of: .month, for: monthAnchor),
+              let range = cal.range(of: .day, in: .month, for: monthAnchor)
+        else { return [] }
+        return range.map { cal.date(byAdding: .day, value: $0 - 1, to: interval.start) ?? interval.start }
+    }
+
+    private var leadingBlanks: Int {
+        let cal = provider.calendar
+        guard let first = monthDates.first else { return 0 }
+        return (cal.component(.weekday, from: first) - cal.firstWeekday + 7) % 7
+    }
+
+    private var selectedDay: PrayerDay? {
+        daysByStart[provider.calendar.startOfDay(for: selectedDate).timeIntervalSince1970]
+    }
+
+    var body: some View {
+        NavigationStack {
+            GeometryReader { proxy in
+                if proxy.size.width >= 700 {
+                    HStack(alignment: .top, spacing: 20) {
+                        grid
+                            .frame(maxWidth: .infinity)
+                        ScrollView { dayPreview }
+                            .frame(width: 360)
+                    }
+                    .padding(20)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            grid
+                            dayPreview
+                        }
+                        .padding(16)
+                    }
+                }
+            }
+            .navigationTitle(L10n.t("monthlyCalendar"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        shiftMonth(-1)
+                    } label: { Image(systemName: "chevron.left") }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        shiftMonth(1)
+                    } label: { Image(systemName: "chevron.right") }
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    ShareLink(item: monthTableText) {
+                        Label(L10n.t("shareMonth"), systemImage: "square.and.arrow.up")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L10n.t("done")) { dismiss() }
+                }
+            }
+        }
+        .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+        .environment(\.locale, AppLanguage.current.locale)
+        .onAppear { loadMonth() }
+        .onChange(of: monthAnchor) { _, _ in loadMonth() }
+    }
+
+    private var grid: some View {
+        VStack(spacing: 10) {
+            Text(monthAnchor, format: .dateTime.month(.wide).year())
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Theme.onSurface)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
+                ForEach(0..<leadingBlanks, id: \.self) { _ in Color.clear }
+                ForEach(monthDates, id: \.self) { date in
+                    dayCell(date)
+                }
+            }
+        }
+    }
+
+    private func dayCell(_ date: Date) -> some View {
+        let cal = provider.calendar
+        let day = daysByStart[cal.startOfDay(for: date).timeIntervalSince1970]
+        let isSelected = cal.isDate(date, inSameDayAs: selectedDate)
+        let isToday = cal.isDateInToday(date)
+        return Button {
+            selectedDate = date
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(cal.component(.day, from: date))")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(isSelected ? Theme.adaptiveGold : Theme.onSurface)
+                if let day {
+                    Text("\(Prayer.fajr.displayName) \(PrayerFormat.compactTime(day.fajr))")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text("\(Prayer.maghrib.displayName) \(PrayerFormat.compactTime(day.maghrib))")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+            }
+            .padding(6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                (isSelected ? Theme.adaptiveGold.opacity(0.22) : Theme.panelFill),
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(isToday ? Theme.adaptiveGold : Theme.hairline,
+                                   lineWidth: isToday ? 1.5 : 0.5)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var dayPreview: some View {
+        if let day = selectedDay {
+            DuoDayCard(
+                day: day,
+                title: PrayerFormat.longDate(day.date),
+                snapshot: snapshot
+            )
+        }
+    }
+
+    private func shiftMonth(_ delta: Int) {
+        if let next = provider.calendar.date(byAdding: .month, value: delta, to: monthAnchor) {
+            monthAnchor = next
+        }
+    }
+
+    private func loadMonth() {
+        var map: [TimeInterval: PrayerDay] = [:]
+        for date in monthDates {
+            let day = provider.computeDay(for: date)
+            map[day.date.timeIntervalSince1970] = day
+        }
+        daysByStart = map
+    }
+
+    /// The whole month as a plain-text table (shared / printed).
+    private var monthTableText: String {
+        let title = monthAnchor.formatted(.dateTime.month(.wide).year())
+        var lines = ["\(MosqueInfo.name) — \(title)", ""]
+        lines.append("Date\tFajr\tSunrise\tDhuhr\tAsr\tMaghrib\tIsha")
+        for date in monthDates {
+            guard let day = daysByStart[provider.calendar.startOfDay(for: date).timeIntervalSince1970]
+            else { continue }
+            let row = [day.fajr, day.sunrise, day.dhuhr, day.asr, day.maghrib, day.isha]
+                .map { PrayerFormat.compactTime($0) }
+            lines.append("\(PrayerFormat.shortDate(date))\t" + row.joined(separator: "\t"))
+        }
+        lines.append("")
+        lines.append("Iqamah: Fajr +20m · Dhuhr +10m · Asr +10m · Maghrib +5m · Isha +10m")
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -223,13 +899,30 @@ private struct NextPrayerCard: View {
 
     var body: some View {
         let next = snapshot.next
-        let caption = snapshot.isShowingTomorrow ? L10n.t("nextPrayerTomorrow") : L10n.t("nextPrayer")
+        // Iqamah-first (v2.0.0): between a prayer's Adhan and its
+        // Iqamah, the hero flips to that prayer and counts down to
+        // the Iqamah instead of the following Adhan.
+        let phase = PrayerProvider.standard.iqamahPhase(at: snapshot.date)
+        let phaseIqamah = phase?.iqamah
+        let caption = phase != nil
+            ? L10n.t("iqamahNow")
+            : (snapshot.isShowingTomorrow ? L10n.t("nextPrayerTomorrow") : L10n.t("nextPrayer"))
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label(caption, systemImage: next.symbolName)
+                Label(caption, systemImage: (phase ?? next).symbolName)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.adaptiveGold)
                 Spacer()
+                if RamadanMode.isRamadan(on: snapshot.date, timeZone: PrayerProvider.standard.calendar.timeZone),
+                   (phase ?? next).prayer == .maghrib || (phase ?? next).prayer == .fajr {
+                    Text(L10n.t((phase ?? next).prayer == .maghrib ? "iftar" : "suhoor"))
+                        .font(.caption2.weight(.heavy))
+                        .tracking(0.8)
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.adaptiveGold.opacity(0.25), in: Capsule())
+                }
                 if next.isJumuah {
                     Text(L10n.t("jumuahBadge"))
                         .font(.caption2.weight(.heavy))
@@ -241,32 +934,58 @@ private struct NextPrayerCard: View {
                 }
             }
             HStack(alignment: .firstTextBaseline) {
-                Text(next.name)
+                Text((phase ?? next).name)
                     .font(.system(size: nameSize, weight: .bold))
                     .foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Spacer(minLength: 8)
-                Text(PrayerFormat.time(next.adhan))
+                Text(PrayerFormat.time(phaseIqamah ?? next.adhan))
                     .font(.title2.weight(.semibold).monospacedDigit())
                     .foregroundStyle(Theme.onSurface)
                     .lineLimit(1)
             }
-            if let iqamah = next.iqamah {
-                Label("\(next.iqamahLabel) \(L10n.t("at")) \(PrayerFormat.time(iqamah))", systemImage: "person.3.fill")
+            if let phase, let phaseIqamah {
+                Label(L10n.f("adhanWasAt", PrayerFormat.time(phase.adhan)), systemImage: "megaphone.fill")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Theme.onSurfaceSecondary)
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                Text(timerInterval: snapshot.countdownRange, countsDown: true)
-                    .font(.system(size: countdownSize, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(Theme.adaptiveGold)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                GoldProgressBar(range: snapshot.progressRange)
-                Text(L10n.f("untilAdhan", next.name))
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Theme.onSurfaceMuted)
+                Label("\(L10n.t("nextPrayer")): \(next.name) \(L10n.t("at")) \(PrayerFormat.time(next.adhan))", systemImage: "arrow.forward.circle")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.onSurfaceSecondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(timerInterval: phase.adhan...phaseIqamah, countsDown: true)
+                        .font(.system(size: countdownSize, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    GoldProgressBar(range: phase.adhan...phaseIqamah)
+                    Text(L10n.f("untilIqamah", phase.name))
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Theme.onSurfaceMuted)
+                    if IqamahCountdownSettings.leaveLeadMinutes > 0,
+                       snapshot.date >= phaseIqamah.addingTimeInterval(-Double(IqamahCountdownSettings.leaveLeadMinutes) * 60) {
+                        Label(L10n.t("timeToLeave"), systemImage: "figure.walk")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(Theme.adaptiveGold)
+                    }
+                }
+            } else {
+                if let iqamah = next.iqamah {
+                    Label("\(next.iqamahLabel) \(L10n.t("at")) \(PrayerFormat.time(iqamah))", systemImage: "person.3.fill")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(timerInterval: snapshot.countdownRange, countsDown: true)
+                        .font(.system(size: countdownSize, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    GoldProgressBar(range: snapshot.progressRange)
+                    Text(L10n.f("untilAdhan", next.name))
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Theme.onSurfaceMuted)
+                }
             }
         }
         .padding(20)
@@ -278,6 +997,11 @@ private struct NextPrayerCard: View {
 
     /// "Maghrib in 42 minutes" — what VoiceOver announces for the card.
     private var accessibilitySummary: String {
+        if let phase = PrayerProvider.standard.iqamahPhase(at: snapshot.date),
+           let iqamah = phase.iqamah {
+            let minutes = max(0, Int(iqamah.timeIntervalSince(snapshot.date) / 60))
+            return L10n.f("inMinutes", phase.iqamahLabel + " " + phase.name, minutes)
+        }
         let minutes = max(0, Int(snapshot.next.adhan.timeIntervalSince(snapshot.date) / 60))
         return L10n.f("inMinutes", snapshot.next.name, minutes)
     }
@@ -350,6 +1074,26 @@ private struct ScheduleCard: View {
                 Label(L10n.f("jumuahReplaces", PrayerFormat.khutbahTime(on: day.date)), systemImage: "building.columns.fill")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.adaptiveGold)
+            }
+            if RamadanMode.isRamadan(on: day.date, timeZone: PrayerProvider.standard.calendar.timeZone) {
+                HStack(spacing: 10) {
+                    Image(systemName: "moon.haze.fill")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 26)
+                        .foregroundStyle(Theme.adaptiveGold)
+                    Text(L10n.t("taraweeh"))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.onSurface)
+                    Text(L10n.t("estimate"))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.onSurfaceMuted)
+                    Spacer()
+                    Text(PrayerFormat.time(RamadanMode.taraweehTime(for: day)))
+                        .font(.body.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Theme.onSurface)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
             }
         }
         .padding(18)
@@ -565,6 +1309,12 @@ private struct SettingsView: View {
     @AppStorage(AlertSettings.jumuahReminderKey) private var jumuahReminderOn = true
     @State private var notificationsDenied = false
 
+    @AppStorage(AppAppearance.widgetColorModeKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var widgetColorModeRaw: String = AppAppearance.WidgetColorMode.match.rawValue
+    /// Bumped whenever a per-part theme is picked, so the (non-observed)
+    /// stored part themes re-read and the swatches repaint.
+    @State private var partThemesRevision = 0
+
     @AppStorage(HijriOffset.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var hijriOffset: Int = 0
 
@@ -585,17 +1335,24 @@ private struct SettingsView: View {
                 updateSection
                 languageSection
                 appearanceSection
+                minimalModeSection
                 colorsSection
                 themesSection
+                widgetColorsSection
+                ramadanSection
+                fastingSection
                 textSizeSection
                 iconSection
                 hijriSection
                 qiblaSection
                 alertsSection
+                iqamahCountdownSection
+                siriSection
                 prayerAlertsSection
                 soundSection
                 prayerSoundsSection
                 privacySection
+                backupSection
                 resetSection
                 versionSection
             }
@@ -617,6 +1374,7 @@ private struct SettingsView: View {
             .onChange(of: accentHex) { _, _ in settingsChanged() }
             .onChange(of: textHex) { _, _ in settingsChanged() }
             .onChange(of: languageCode) { _, _ in settingsChanged() }
+            .onChange(of: widgetColorModeRaw) { _, _ in settingsChanged() }
             .onChange(of: textSizeRaw) { _, _ in settingsChanged() }
             .onChange(of: soundRaw) { _, _ in settingsChanged() }
             .alert(L10n.t("saveThemeTitle"), isPresented: $showSaveTheme) {
@@ -673,6 +1431,267 @@ private struct SettingsView: View {
         } footer: {
             Text(L10n.t("colorsFooter"))
         }
+    }
+
+    // MARK: Minimal Mode (v2.0.0, workstream 10)
+
+    @AppStorage(MinimalMode.key, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var minimalModeOn = false
+
+    private var minimalModeSection: some View {
+        Section {
+            Toggle(L10n.t("minimalMode"), isOn: $minimalModeOn)
+        } header: {
+            Text(L10n.t("minimalMode"))
+        } footer: {
+            Text(L10n.t("minimalModeFooter"))
+        }
+        .onChange(of: minimalModeOn) { _, _ in settingsChanged() }
+    }
+
+    // MARK: Sunnah fasting (v2.0.0, workstream 9)
+
+    @AppStorage(FastingSettings.mondayThursdayKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var fastingMonThu = false
+    @AppStorage(FastingSettings.whiteDaysKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var fastingWhiteDays = false
+
+    private var fastingSection: some View {
+        Section {
+            Toggle(L10n.t("fastingMonThu"), isOn: $fastingMonThu)
+            Toggle(L10n.t("fastingWhiteDays"), isOn: $fastingWhiteDays)
+        } header: {
+            Text(L10n.t("fasting"))
+        } footer: {
+            Text(L10n.t("fastingFooter"))
+        }
+        .onChange(of: fastingMonThu) { _, _ in settingsChanged() }
+        .onChange(of: fastingWhiteDays) { _, _ in settingsChanged() }
+    }
+
+    // MARK: Siri & Controls (v2.0.0, feature 7)
+
+    @State private var siriTipVisible = true
+
+    private var siriSection: some View {
+        Section {
+            SiriTipView(intent: NextPrayerIntent(), isVisible: $siriTipVisible)
+            SiriTipView(intent: SilenceNextAlertIntent(), isVisible: $siriTipVisible)
+        } header: {
+            Text(L10n.t("siri"))
+        } footer: {
+            Text(L10n.t("siriFooter"))
+        }
+    }
+
+    // MARK: Settings backup (v2.0.0, workstream 9)
+
+    @State private var showBackupImporter = false
+    @State private var backupMessage: String?
+
+    /// The export file, rebuilt on each appearance of the section.
+    private var backupExportURL: URL? {
+        guard let data = SettingsBackup.exportData() else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AlRashidSettingsBackup.json")
+        try? data.write(to: url, options: .atomic)
+        return url
+    }
+
+    private var backupSection: some View {
+        Section {
+            if SettingsBackup.cloudAvailable {
+                Button(L10n.t("backupToICloud")) {
+                    backupMessage = SettingsBackup.backupToCloud()
+                        ? L10n.t("backupDone") : L10n.t("actionFailed")
+                }
+                Button(L10n.t("restoreFromICloud")) {
+                    let ok = SettingsBackup.restoreFromCloud()
+                    backupMessage = ok ? L10n.t("restoreDone") : L10n.t("actionFailed")
+                    if ok { settingsChanged(); resetGeneration += 1 }
+                }
+                if let last = SettingsBackup.lastCloudBackup {
+                    Text(L10n.f("lastBackup", last.formatted(date: .abbreviated, time: .shortened)))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(L10n.t("noBackupYet"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text(L10n.t("iCloudUnavailable"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            if let url = backupExportURL {
+                ShareLink(item: url) {
+                    Label(L10n.t("exportSettings"), systemImage: "square.and.arrow.up")
+                }
+            }
+            Button {
+                showBackupImporter = true
+            } label: {
+                Label(L10n.t("importSettings"), systemImage: "square.and.arrow.down")
+            }
+            if let backupMessage {
+                Text(backupMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text(L10n.t("backup"))
+        } footer: {
+            Text(L10n.t("backupFooter"))
+        }
+        .fileImporter(isPresented: $showBackupImporter,
+                      allowedContentTypes: [.json]) { result in
+            guard case .success(let url) = result,
+                  url.startAccessingSecurityScopedResource(),
+                  let data = try? Data(contentsOf: url) else {
+                backupMessage = L10n.t("actionFailed")
+                return
+            }
+            url.stopAccessingSecurityScopedResource()
+            let ok = SettingsBackup.importData(data)
+            backupMessage = ok ? L10n.t("restoreDone") : L10n.t("actionFailed")
+            if ok { settingsChanged(); resetGeneration += 1 }
+        }
+    }
+    // MARK: Ramadan (v2.0.0)
+
+    @AppStorage(RamadanMode.taraweehOffsetKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var taraweehOffset = 15
+
+    private var ramadanSection: some View {
+        Section {
+            Picker(L10n.t("taraweehAfterIsha"), selection: $taraweehOffset) {
+                ForEach(RamadanMode.taraweehOptions, id: \.self) { minutes in
+                    Text(L10n.f("taraweehOffset", minutes)).tag(minutes)
+                }
+            }
+        } header: {
+            Text(L10n.t("ramadan"))
+        } footer: {
+            Text(L10n.t("ramadanFooter"))
+        }
+        .onChange(of: taraweehOffset) { _, _ in settingsChanged() }
+    }
+
+    // MARK: Widget colors (v2.0.0)
+
+    /// Settings → Appearance → Widget Colors: Match (default) makes
+    /// every widget surface follow the app theme; Separate gives the
+    /// Home widgets, Lock Screen widgets and Live Activity their own
+    /// theme each, picked from the same presets (plus any saved theme).
+    private var widgetColorsSection: some View {
+        Section {
+            Picker(L10n.t("widgetColors"), selection: $widgetColorModeRaw) {
+                Text(L10n.t("widgetColorMode.match"))
+                    .tag(AppAppearance.WidgetColorMode.match.rawValue)
+                Text(L10n.t("widgetColorMode.separate"))
+                    .tag(AppAppearance.WidgetColorMode.separate.rawValue)
+            }
+            .pickerStyle(.segmented)
+            if widgetColorModeRaw == AppAppearance.WidgetColorMode.separate.rawValue {
+                ForEach(AppAppearance.WidgetPart.allCases, id: \.rawValue) { part in
+                    partThemePicker(part)
+                }
+            }
+        } header: {
+            Text(L10n.t("widgetColors"))
+        } footer: {
+            Text(L10n.t(widgetColorModeRaw == AppAppearance.WidgetColorMode.separate.rawValue
+                        ? "widgetColorsFooterSeparate" : "widgetColorsFooterMatch"))
+        }
+    }
+
+    /// One part's theme picker in Separate mode: the part's current
+    /// effective theme name plus a swatch row — the preset themes and
+    /// the user's saved themes, with an "App theme" reset swatch.
+    private func partThemePicker(_ part: AppAppearance.WidgetPart) -> some View {
+        let stored = AppAppearance.storedPartTheme(for: part)
+        let effective = AppAppearance.effectiveTheme(for: part)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L10n.t("widgetPart.\(part.rawValue)"))
+                    .font(.body.weight(.semibold))
+                Spacer(minLength: 8)
+                Text(stored?.name ?? L10n.t("appTheme"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    partThemeSwatch(part: part, theme: nil, isActive: stored == nil)
+                    ForEach(AppAppearance.presetThemes + savedThemes) { theme in
+                        partThemeSwatch(
+                            part: part, theme: theme,
+                            isActive: stored.map { sameTheme($0, theme) } ?? false
+                        )
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            // Live mini preview in the part's own colors.
+            HStack(spacing: 8) {
+                Image(systemName: "moon.stars.fill")
+                Text(Prayer.fajr.displayName)
+                    .font(.subheadline.weight(.bold))
+                Spacer()
+                Text(previewTime)
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+            }
+            .foregroundStyle(PartPalette(theme: effective).text)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                LinearGradient(
+                    colors: [PartPalette(theme: effective).primaryBright,
+                             PartPalette(theme: effective).primary],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
+        }
+        .id("\(part.rawValue)-\(partThemesRevision)")
+        .padding(.vertical, 2)
+    }
+
+    /// A two-tone swatch (primary disc, accent ring) for one part-theme
+    /// choice; a nil theme is the "follow the app theme" reset.
+    private func partThemeSwatch(
+        part: AppAppearance.WidgetPart,
+        theme: AppAppearance.ThemeChoice?,
+        isActive: Bool
+    ) -> some View {
+        let primary = theme.map { Color(hex: $0.primaryHex) } ?? Theme.primary
+        let accent = theme.map { Color(hex: $0.accentHex) } ?? Theme.adaptiveGold
+        return Button {
+            AppAppearance.setPartTheme(theme, for: part)
+            partThemesRevision += 1
+            settingsChanged()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(primary)
+                    .frame(width: 34, height: 34)
+                    .overlay { Circle().strokeBorder(accent, lineWidth: 3) }
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.6), radius: 2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(theme?.name ?? L10n.t("appTheme"))
+    }
+
+    private func sameTheme(_ a: AppAppearance.ThemeChoice, _ b: AppAppearance.ThemeChoice) -> Bool {
+        a.primaryHex == b.primaryHex && a.accentHex == b.accentHex
+            && a.textHex == b.textHex && a.modeRaw == b.modeRaw
     }
 
     private var themesSection: some View {
@@ -893,6 +1912,33 @@ private struct SettingsView: View {
                 .padding(.vertical, 4)
             }
         }
+    }
+
+    // MARK: Iqamah-first countdown (v2.0.0)
+
+    @AppStorage(IqamahCountdownSettings.enabledKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var iqamahFirstEnabled = true
+    @AppStorage(IqamahCountdownSettings.leaveLeadKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
+    private var leaveLeadMinutes = 0
+
+    private var iqamahCountdownSection: some View {
+        Section {
+            Toggle(L10n.t("iqamahFirst"), isOn: $iqamahFirstEnabled)
+            if iqamahFirstEnabled {
+                Picker(L10n.t("leaveNudge"), selection: $leaveLeadMinutes) {
+                    Text(L10n.t("leaveOff")).tag(0)
+                    ForEach([5, 10, 15, 20], id: \.self) { minutes in
+                        Text(L10n.f("leaveMinutes", minutes)).tag(minutes)
+                    }
+                }
+            }
+        } header: {
+            Text(L10n.t("iqamahFirst"))
+        } footer: {
+            Text(L10n.t("iqamahFirstFooter"))
+        }
+        .onChange(of: iqamahFirstEnabled) { _, _ in settingsChanged() }
+        .onChange(of: leaveLeadMinutes) { _, _ in settingsChanged() }
     }
 
     private var alertsSection: some View {
@@ -1206,11 +2252,18 @@ private struct SettingsView: View {
 
     private func resetToDefaults() {
         AppAppearance.resetToDefaults()
+        IqamahCountdownSettings.reset()
+        RamadanMode.reset()
+        FastingSettings.reset()
+        MinimalMode.reset()
+        SilenceNextAlert.clear()
         PrayerAlertSettings.reset()
         PrayerSoundSettings.reset()
         UIApplication.shared.setAlternateIconName(nil)
         currentIconName = nil
         modeRaw = AppAppearance.Mode.system.rawValue
+        widgetColorModeRaw = AppAppearance.WidgetColorMode.match.rawValue
+        partThemesRevision += 1
         primaryHex = Int(AppAppearance.defaultPrimaryHex)
         accentHex = Int(AppAppearance.defaultAccentHex)
         textHex = Int(AppAppearance.defaultTextHex)
@@ -1813,6 +2866,16 @@ struct WhatsNewView: View {
 
     static func entries(for version: String) -> [(icon: String, key: String)]? {
         switch version {
+        case "2.0.0":
+            return [
+                ("paintpalette.fill", "wnWidgets200"),
+                ("rectangle.split.2x1.fill", "wnDuo200"),
+                ("ipad", "wnPad200"),
+                ("moon.stars.fill", "wnRamadan200"),
+                ("calendar", "wnCalendar200"),
+                ("timer", "wnIqamah200"),
+                ("line.3.horizontal.decrease", "wnMinimal200"),
+            ]
         case "1.8.0":
             return [
                 ("applewatch", "wnWatch"),

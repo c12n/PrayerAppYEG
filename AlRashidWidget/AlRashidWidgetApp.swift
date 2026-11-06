@@ -238,6 +238,7 @@ enum AdhanNotifications {
 
     private static let reminderPrefix = "reminder."
     private static let jumuahPrefix = "jumuah."
+    private static let fastingPrefix = "fasting."
     /// iOS refuses more than 64 pending requests per app; with Adhan
     /// alerts plus the v1.5 reminders the 7-day window can exceed
     /// that, so the earliest requests win and the rest are dropped —
@@ -288,12 +289,18 @@ enum AdhanNotifications {
                 }
                 content.sound = PrayerSoundSettings.effectiveSound(for: slot.prayer).notificationSound
                 let identifier = identifierPrefix + String(Int(slot.adhan.timeIntervalSince1970))
-                scheduled.append((slot.adhan, makeRequest(identifier: identifier, content: content, fireDate: slot.adhan)))
+                // Silence-next (v2.0.0): the one-shot flag from Siri /
+                // the Control Center control drops exactly this one
+                // Adhan alert; its reminder and all later alerts are
+                // unaffected.
+                if SilenceNextAlert.pendingEpoch != Int(slot.adhan.timeIntervalSince1970) {
+                    scheduled.append((slot.adhan, makeRequest(identifier: identifier, content: content, fireDate: slot.adhan)))
+                }
 
                 // Pre-prayer reminder (v1.5): the five prayers only —
                 // Sunrise has no reminder, and the Jumu'ah slot is
                 // covered by its own Khutbah reminder below.
-                if AlertSettings.reminderEnabled, slot.prayer.isPrayer, !slot.isJumuah {
+                if AlertSettings.reminderEnabled, !MinimalMode.enabled, slot.prayer.isPrayer, !slot.isJumuah {
                     let fire = slot.adhan.addingTimeInterval(-Double(lead) * 60)
                     if fire > now {
                         let reminderContent = UNMutableNotificationContent()
@@ -307,7 +314,7 @@ enum AdhanNotifications {
             }
 
             // Jumu'ah reminder (v1.5): one hour before the Khutbah.
-            if day.isFriday, AlertSettings.jumuahReminderEnabled, let khutbah = day.jumuahKhutbah {
+            if day.isFriday, AlertSettings.jumuahReminderEnabled, !MinimalMode.enabled, let khutbah = day.jumuahKhutbah {
                 let fire = khutbah.addingTimeInterval(-3600)
                 if fire > now {
                     let jumuahContent = UNMutableNotificationContent()
@@ -319,6 +326,31 @@ enum AdhanNotifications {
                 }
             }
         }
+        // Sunnah fasting reminders (v2.0.0): one reminder at 20:00
+        // the evening before each selected fasting day in the
+        // window, carrying that day's Suhoor (Fajr) and Iftar
+        // (Maghrib). Shares the same 60-request budget — the sort +
+        // cap below keeps the earliest, so core Adhan alerts (all
+        // earlier than a 20:00 reminder for a later day, and rebuilt
+        // on every activation) are not displaced in practice.
+        if FastingSettings.anyEnabled {
+            for offset in 0..<7 {
+                guard let dayStart = calendar.date(byAdding: .day, value: offset, to: todayStart) else { continue }
+                guard FastingSettings.isFastingDay(dayStart, timeZone: calendar.timeZone) else { continue }
+                let day = provider.computeDay(for: dayStart)
+                guard let fire = calendar.date(bySettingHour: 20, minute: 0, second: 0,
+                                               of: dayStart.addingTimeInterval(-86_400)),
+                      fire > now else { continue }
+                let fastingContent = UNMutableNotificationContent()
+                fastingContent.title = L10n.f("mosqueTitle", L10n.t("fastingDay"), MosqueInfo.name)
+                fastingContent.body = L10n.f("fastingReminderBody",
+                                             PrayerFormat.time(day.fajr),
+                                             PrayerFormat.time(day.maghrib))
+                fastingContent.sound = .default
+                let fastingID = fastingPrefix + String(Int(dayStart.timeIntervalSince1970))
+                scheduled.append((fire, makeRequest(identifier: fastingID, content: fastingContent, fireDate: fire)))
+            }
+        }
         for entry in scheduled.sorted(by: { $0.fireDate < $1.fireDate }).prefix(maxPendingRequests) {
             try? await center.add(entry.request)
         }
@@ -326,7 +358,7 @@ enum AdhanNotifications {
 
     static func cancelAll() async {
         let pending = await center.pendingNotificationRequests()
-        let prefixes = [identifierPrefix, reminderPrefix, jumuahPrefix]
+        let prefixes = [identifierPrefix, reminderPrefix, jumuahPrefix, fastingPrefix]
         let identifiers = pending.map(\.identifier).filter { id in prefixes.contains { id.hasPrefix($0) } }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
@@ -359,7 +391,11 @@ enum LiveActivityController {
         // prayer instead. Every refresh re-stages the set and moves the
         // stale date to the new next Adhan. Since v1.3 the server push
         // is the primary rollover; the stale flip is the fallback.
-        let content = ActivityContent(state: state, staleDate: next.adhan, relevanceScore: 100)
+        // v2.0.0: with Iqamah-first on, the stale flip waits for the
+        // Iqamah, so the activity counts down to it after the Adhan
+        // instead of promoting the following prayer immediately.
+        let staleDate = (IqamahCountdownSettings.enabled ? next.iqamah : nil) ?? next.adhan
+        let content = ActivityContent(state: state, staleDate: staleDate, relevanceScore: 100)
 
         // v1.5.2: reuse the running activity WHATEVER its push state.
         // The v1.3–1.5.1 filter demanded pushToken != nil — but the
@@ -807,7 +843,7 @@ enum LiveActivityPushSync {
                   let object = try? JSONSerialization.jsonObject(with: data) else { continue }
             events.append([
                 "eventTime": Int(boundary.timeIntervalSince1970),
-                "staleDate": Int(state.adhan.timeIntervalSince1970),
+                "staleDate": Int(((IqamahCountdownSettings.enabled ? state.iqamah : nil) ?? state.adhan).timeIntervalSince1970),
                 "contentState": object,
             ])
         }
@@ -911,6 +947,16 @@ enum SettingsSync {
             (AppAppearance.textKey, true),
             (AppAppearance.iconKey, true),
             (AppAppearance.savedThemesKey, true),
+            (AppAppearance.widgetColorModeKey, true),
+            (IqamahCountdownSettings.enabledKey, true),
+            (IqamahCountdownSettings.leaveLeadKey, true),
+            (RamadanMode.taraweehOffsetKey, true),
+            (FastingSettings.mondayThursdayKey, true),
+            (FastingSettings.whiteDaysKey, true),
+            (MinimalMode.key, true),
+            (AppAppearance.partThemeKey(.home), true),
+            (AppAppearance.partThemeKey(.lock), true),
+            (AppAppearance.partThemeKey(.liveActivity), true),
             (HijriOffset.storageKey, true),
             (AppLanguage.storageKey, true),
             (AppTextSize.storageKey, true),
@@ -989,5 +1035,147 @@ enum SettingsSync {
         case let (x as NSObject, y as NSObject): return x == y
         default: return false
         }
+    }
+}
+
+// MARK: - Settings backup file (v2.0.0, workstream 9)
+
+/// Export / import of the full settings as one JSON file, shared
+/// with the Android app (same canonical keys; the Android side
+/// translates its two divergent key spellings). Contains NO secrets:
+/// themes, per-part widget colors, sounds and per-prayer mutes,
+/// reminders, fasting toggles, Minimal Mode, Hijri offset, language
+/// and text size. The Live Activity push tokens and installation ids
+/// are deliberately NOT settings and never enter this file.
+enum SettingsBackup {
+    static let formatVersion = 1
+
+    /// (key, inAppGroupSuite) — the same split the stores use.
+    private static var keys: [(key: String, suite: Bool)] {
+        var list: [(String, Bool)] = [
+            (AppAppearance.modeKey, true),
+            (AppAppearance.primaryKey, true),
+            (AppAppearance.accentKey, true),
+            (AppAppearance.textKey, true),
+            (AppAppearance.iconKey, true),
+            (AppAppearance.savedThemesKey, true),
+            (AppAppearance.widgetColorModeKey, true),
+            (AppAppearance.partThemeKey(.home), true),
+            (AppAppearance.partThemeKey(.lock), true),
+            (AppAppearance.partThemeKey(.liveActivity), true),
+            (IqamahCountdownSettings.enabledKey, true),
+            (IqamahCountdownSettings.leaveLeadKey, true),
+            (RamadanMode.taraweehOffsetKey, true),
+            (FastingSettings.mondayThursdayKey, true),
+            (FastingSettings.whiteDaysKey, true),
+            (MinimalMode.key, true),
+            (HijriOffset.storageKey, true),
+            (AppLanguage.storageKey, true),
+            (AppTextSize.storageKey, true),
+            (AdhanSound.storageKey, true),
+            (AlertSettings.notificationsKey, false),
+            (AlertSettings.liveActivityKey, false),
+            (AlertSettings.reminderKey, false),
+            (AlertSettings.reminderLeadKey, false),
+            (AlertSettings.jumuahReminderKey, false),
+            (CompassSettings.hapticsKey, false),
+        ]
+        for prayer in Prayer.allCases {
+            list.append((PrayerAlertSettings.key(for: prayer), true))
+            list.append((PrayerSoundSettings.key(for: prayer), true))
+        }
+        return list
+    }
+
+    private static func store(suite: Bool) -> UserDefaults {
+        suite ? (UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard) : .standard
+    }
+
+    /// The backup document as JSON data (pretty, sorted keys).
+    static func exportData() -> Data? {
+        var values: [String: Any] = [:]
+        for entry in keys {
+            if let value = store(suite: entry.suite).object(forKey: entry.key) {
+                values[entry.key] = value
+            }
+        }
+        let document: [String: Any] = [
+            "app": "AlRashidPrayer",
+            "kind": "settings-backup",
+            "version": formatVersion,
+            "values": values,
+        ]
+        return try? JSONSerialization.data(withJSONObject: document,
+                                           options: [.prettyPrinted, .sortedKeys])
+    }
+
+    /// Applies a backup document. Returns false for anything that is
+    /// not an Al Rashid settings backup. Unknown keys are ignored, so
+    /// an Android-made file (no Lock / Live Activity parts) imports
+    /// cleanly and vice versa.
+    static func importData(_ data: Data) -> Bool {
+        guard let document = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              document["kind"] as? String == "settings-backup",
+              let values = document["values"] as? [String: Any] else { return false }
+        let known = Dictionary(uniqueKeysWithValues: keys.map { ($0.key, $0.suite) })
+        for (key, value) in values {
+            guard let suite = known[key] else { continue }
+            store(suite: suite).set(value, forKey: key)
+        }
+        SettingsSync.pushLocal()
+        return true
+    }
+}
+
+// MARK: - iCloud Documents backup (v2.0.0, workstream 9 amendment)
+
+/// The same backup JSON as a document in the app's iCloud container
+/// — the explicit Back Up / Restore counterpart to the silent KVS
+/// sync (KVS carries the small live keys; this is the full document
+/// the user can trigger and restore from in Settings → Backup).
+/// Degrades gracefully: with no iCloud account or no container the
+/// methods return false and Settings shows the file route instead.
+extension SettingsBackup {
+    static let cloudFileName = "AlRashidSettingsBackup.json"
+    static let lastCloudBackupKey = "backup.lastCloudAt"
+
+    static var cloudAvailable: Bool { cloudURL != nil }
+
+    private static var cloudURL: URL? {
+        guard let container = FileManager.default
+            .url(forUbiquityContainerIdentifier: nil) else { return nil }
+        return container
+            .appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent(cloudFileName)
+    }
+
+    static var lastCloudBackup: Date? {
+        let stored = UserDefaults.standard.double(forKey: lastCloudBackupKey)
+        return stored > 0 ? Date(timeIntervalSince1970: stored) : nil
+    }
+
+    /// Writes the current backup JSON to iCloud Documents.
+    static func backupToCloud() -> Bool {
+        guard let url = cloudURL, let data = exportData() else { return false }
+        do {
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+            UserDefaults.standard.set(Date.now.timeIntervalSince1970,
+                                      forKey: lastCloudBackupKey)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Reads the iCloud backup (downloading it first if needed) and
+    /// applies it through the same importer as the file route.
+    static func restoreFromCloud() -> Bool {
+        guard let url = cloudURL else { return false }
+        try? FileManager.default.startDownloadingUbiquitousItem(at: url)
+        guard let data = try? Data(contentsOf: url) else { return false }
+        return importData(data)
     }
 }
