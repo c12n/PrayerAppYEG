@@ -1,0 +1,57 @@
+{
+  "name": "Al Rashid Prayer",
+  "identifier": "com.c12n.alrashidprayer.source",
+  "subtitle": "Prayer times for AlRashid Mosque, Edmonton",
+  "description": "The official Feather source for Al Rashid Prayer only. Prayer times for AlRashid Mosque in Edmonton, calibrated to the mosque's own timetable. Free, no ads, no tracking.",
+  "iconURL": "https://raw.githubusercontent.com/c12n/alrashid-widget/main/AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png",
+  "headerImageURL": "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/00-feature-graphic.png",
+  "website": "https://prayer.07051969.xyz",
+  "tintColor": "#0B3D2E",
+  "featuredApps": [
+    "com.c12n.alrashidwidget"
+  ],
+  "apps": [
+    {
+      "name": "Al Rashid Prayer",
+      "bundleIdentifier": "com.c12n.alrashidwidget",
+      "developerName": "c12n Apps",
+      "subtitle": "AlRashid Mosque Edmonton prayer times & widgets",
+      "localizedDescription": "Prayer times for AlRashid Mosque in Edmonton, from the mosque's own timetable. Home Screen and Lock Screen widgets, a Live Activity that counts down to the next prayer and flips to the Iqamah countdown at Adhan time, Dynamic Island, an Apple Watch app, Qibla compass (about 25 degrees from north in Edmonton), Quran verse of the day, Adhan sound choices, and large text sizes built in.\n\nVersion 2.0.0 | Colored widgets, a proper iPad layout, iPhone Duo, Ramadan mode, a monthly calendar, Iqamah first countdowns, StandBy, Siri and Control Center controls, Sunnah fasting reminders, Minimal Mode, and settings backup to a file or iCloud.",
+      "iconURL": "https://raw.githubusercontent.com/c12n/alrashid-widget/main/AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png",
+      "tintColor": "#0B3D2E",
+      "category": "lifestyle",
+      "screenshotURLs": [
+        "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/01-home.png",
+        "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/02-widgets.png",
+        "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/03-ramadan.png",
+        "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/04-calendar.png",
+        "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/05-minimal.png",
+        "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/06-standby.png",
+        "https://raw.githubusercontent.com/c12n/alrashid-widget/main/screenshots/07-duo.png"
+      ],
+      "versions": [
+        {
+          "version": "2.0.0",
+          "buildVersion": "24",
+          "date": "2026-11-06T17:59:00Z",
+          "localizedDescription": "2.0.0 | Our biggest update yet: colored widgets, Ramadan mode, a monthly calendar, Minimal Mode, iPad and iPhone Duo layouts, StandBy, Siri and Control Center controls, Sunnah fasting reminders, and settings backup.",
+          "downloadURL": "https://github.com/c12n/alrashid-widget/releases/download/v2.0.0/AlRashidWidget-2.0.0.ipa",
+          "size": 3424994,
+          "minOSVersion": "17.0"
+        }
+      ],
+      "version": "2.0.0",
+      "versionDate": "2026-11-06T17:59:00Z",
+      "versionDescription": "2.0.0 | Our biggest update yet: colored widgets, Ramadan mode, a monthly calendar, Minimal Mode, iPad and iPhone Duo layouts, StandBy, Siri and Control Center controls, Sunnah fasting reminders, and settings backup.",
+      "downloadURL": "https://github.com/c12n/alrashid-widget/releases/download/v2.0.0/AlRashidWidget-2.0.0.ipa",
+      "size": 3424994,
+      "minOSVersion": "17.0",
+      "beta": false,
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      }
+    }
+  ],
+  "news": []
+}
