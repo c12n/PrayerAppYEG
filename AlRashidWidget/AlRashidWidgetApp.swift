@@ -17,6 +17,13 @@ import WidgetKit
 
 @main
 struct AlRashidWidgetApp: App {
+    /// Quran player (v2.1.0-private): one engine + one download
+    /// store for the whole app, injected for ContentView's mini
+    /// player overlay and the Quran cover. The player's init
+    /// restores the last session (paused — never autoplays).
+    @StateObject private var quranPlayer = QuranPlayer()
+    @StateObject private var quranDownloads = QuranDownloads()
+
     init() {
         BackgroundRefresh.register()
         // v1.5.2: token observers attach at process launch, not only on
@@ -30,6 +37,8 @@ struct AlRashidWidgetApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(quranPlayer)
+                .environmentObject(quranDownloads)
                 .tint(Theme.adaptiveGold)
         }
     }
