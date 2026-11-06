@@ -2,6 +2,26 @@
 
 Prayer time widgets for **AlRashid Mosque, Edmonton, Canada** (13070 113 St NW) — a small companion app whose main purpose is its Home Screen and Lock Screen widgets: today's Adhan and Iqamah times, the next prayer, and a live countdown, in a deep-green and gold design.
 
+## Screenshots
+
+**2.0.0 — our biggest update yet.**
+
+![Al Rashid Prayer 2.0.0 — feature overview](screenshots/00-feature-graphic.png)
+
+| <img src="screenshots/01-home.png" width="300" alt="Today screen"> | <img src="screenshots/02-widgets.png" width="300" alt="Colored widgets"> |
+| :---: | :---: |
+| **Today** — next prayer, live countdown, Adhan + Iqamah | **Colored widgets** — Match your theme, or Separate colors |
+| <img src="screenshots/03-ramadan.png" width="300" alt="Ramadan mode"> | <img src="screenshots/04-calendar.png" width="300" alt="Monthly calendar"> |
+| **Ramadan mode** — Iftar & Suhoor countdowns, Taraweeh | **Monthly calendar** — tap a day to preview it |
+| <img src="screenshots/05-minimal.png" width="300" alt="Minimal Mode"> | |
+| **Minimal Mode** — just the essentials, alerts always on | |
+
+| <img src="screenshots/06-standby.png" width="460" alt="StandBy"> | <img src="screenshots/07-duo.png" width="460" alt="iPhone Duo"> |
+| :---: | :---: |
+| **StandBy** — a nightstand view of the next prayer | **iPhone Duo** — turn a big iPhone sideways |
+
+*Screenshots are design-faithful renders of the shipped 2.0.0 interface.*
+
 ## Features
 
 - **Medium widget** — the full day at a glance: Fajr, Sunrise, Dhuhr, Asr, Maghrib and Isha with **Adhan and Iqamah columns**, the next prayer highlighted, plus the Hijri date and a live countdown to the next prayer.
