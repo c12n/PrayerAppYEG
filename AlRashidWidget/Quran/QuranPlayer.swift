@@ -333,8 +333,8 @@ final class QuranPlayer: ObservableObject {
             ?? QuranLibrary.streamURL(surahNumber: surah.number, reciterId: reciterId)
         guard let url else { return }
 
-        if let endObserver {
-            NotificationCenter.default.removeObserver(endObserver)
+        if let existingEndObserver = endObserver {
+            NotificationCenter.default.removeObserver(existingEndObserver)
             endObserver = nil
         }
         let item = AVPlayerItem(url: url)
