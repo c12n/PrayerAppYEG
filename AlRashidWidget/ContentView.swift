@@ -355,6 +355,9 @@ DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),
                     }
                     NextPrayerCard(snapshot: snapshot)
                     DailyVerseCard()
+                    DuoChip(title: "Quran", detail: "Listen") {
+                        showQuran = true
+                    }
                     FooterView()
                 }
                 .padding(.vertical, 20)
