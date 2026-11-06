@@ -131,12 +131,16 @@ Al Rashid Prayer does not collect analytics or usage data and shows no ads. Pray
 - **iOS:** SwiftUI · WidgetKit · ActivityKit · App Intents | native Xcode project
 - **Android:** Flutter port with the identical calculator and mosque calibration, validated to the minute against the iOS implementation
 
-<details>
-<summary><b>Build from source & technical notes</b></summary>
+## 🛠️ Build It Yourself
 
-Requires Xcode 15+ (the GitHub Actions workflow uses the Xcode on `macos-26` runners).
+### iOS
+
+You need a Mac with Xcode 15 or later (CI uses the Xcode on `macos-26` runners).
 
 ```sh
+git clone https://github.com/c12n/alrashid-widget.git
+cd alrashid-widget
+
 xcodebuild \
   -project AlRashidWidget.xcodeproj \
   -scheme AlRashidWidget \
@@ -147,7 +151,49 @@ xcodebuild \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM=""
 ```
 
-Every push to `main` runs the **Build IPA** workflow, which archives the app unsigned (widget extension embedded in `PlugIns/`) and uploads `AlRashidWidget-IPA` as a build artifact.
+That gives you an unsigned archive. To run it on your own device, open the project in Xcode instead, pick your own team under Signing & Capabilities, and Run. To make an IPA from the archive, zip the `.app` inside a `Payload` folder and rename the zip to `.ipa`, then sign it with your own certificate and provisioning profiles (or let your sideloading tool sign it).
+
+### Android
+
+You need Flutter 3.47.8 (stable channel), Java 17, and Python 3 with Pillow. The Android project is assembled from `flutter/` plus the overlay in `flutter/android_overlay/`, the same way CI does it:
+
+```sh
+git clone https://github.com/c12n/alrashid-widget.git
+cd alrashid-widget
+
+# Generate the platform scaffolding (only needed once)
+flutter create --project-name alrashidwidget --org com.c12n \
+  --platforms=android,ios /tmp/alrashid-scaffold
+cp -r /tmp/alrashid-scaffold/android /tmp/alrashid-scaffold/ios flutter/
+
+# Apply the native overlay (car service, widgets, tiles) and patches
+mkdir -p flutter/android/app/src/main/kotlin/com/c12n/alrashidwidget
+cp -r flutter/android_overlay/kotlin/. flutter/android/app/src/main/kotlin/com/c12n/alrashidwidget/
+cp -r flutter/android_overlay/res/. flutter/android/app/src/main/res/
+python3 flutter/android_overlay/patch_android.py flutter/android
+
+cd flutter
+flutter pub get
+flutter test            # calculator validation tests
+flutter build apk --release
+```
+
+The APK lands at `flutter/build/app/outputs/flutter-apk/app-release.apk`. It is debug-signed by Flutter for local use; sign it with your own keystore before distributing it.
+
+### GitHub Actions
+
+Three workflows live in `.github/workflows/`:
+
+| Workflow | Runs when | What you get |
+| --- | --- | --- |
+| **Build IPA** | Every push to `main` (outside `flutter/`), pull requests, or by hand | An unsigned IPA as the `AlRashidWidget-IPA` run artifact |
+| **Build APK (Flutter)** | Pushes that touch `flutter/**`, or by hand | A release APK as the `AlRashidWidget-APK` run artifact |
+| **TestFlight** | By hand only (Run workflow) | Archives with the committed App Store profiles and uploads the build to App Store Connect |
+
+To use them on your own fork: open the **Actions** tab, pick a workflow, and press **Run workflow**, then download the artifact from the finished run. The TestFlight workflow needs signing material (a distribution certificate, the App Store provisioning profiles, and an App Store Connect API key as repo secrets), so on a fork you would supply your own.
+
+<details>
+<summary><b>Project layout and calibration notes</b></summary>
 
 **Project layout**
 
@@ -165,10 +211,6 @@ The calculator is fitted to the mosque's published May to December 2026 tables (
 </details>
 
 ---
-
-## Credits
-
-Timetable and Iqamah schedule: **AlRashid Mosque** (published tables) · Hijri calendar: Umm al-Qura · Built and maintained by **c12n Apps**
 
 ## Disclaimer
 
