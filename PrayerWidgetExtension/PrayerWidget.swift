@@ -51,6 +51,21 @@ struct PrayerWidgetEntryView: View {
     @Environment(\.colorScheme) private var systemColorScheme
     let entry: PrayerEntry
 
+    /// Accessory (Lock Screen) families belong to the Lock part; the
+    /// system families belong to Home (v2.0.0 widget colors).
+    private var part: AppAppearance.WidgetPart {
+        switch family {
+        case .accessoryRectangular, .accessoryCircular, .accessoryInline:
+            return .lock
+        default:
+            return .home
+        }
+    }
+
+    private var palette: PartPalette {
+        PartPalette(theme: AppAppearance.effectiveTheme(for: part))
+    }
+
     var body: some View {
         // The user's Light/Dark choice in Settings wins over the system
         // appearance (v1.0.5): the stored mode is resolved against the
@@ -58,6 +73,7 @@ struct PrayerWidgetEntryView: View {
         // included, so widgets always match the app.
         content
             .environment(\.colorScheme, AppAppearance.resolvedColorScheme(system: systemColorScheme))
+            .environment(\.partPalette, palette)
             .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
             .environment(\.locale, AppLanguage.current.locale)
     }
@@ -88,13 +104,22 @@ struct PrayerWidgetEntryView: View {
 }
 
 private extension View {
-    /// Widget surface that follows the system appearance (v1.0.4): warm
-    /// white in Light Mode, green glass in Dark Mode. (Before v1.0.4 the
-    /// widgets forced Dark Mode in both appearances.)
+    /// Home Screen widget surface (v2.0.0): the Home part's palette as
+    /// a full-color gradient, per the approved colored-widgets design.
+    /// (v1.0.4–v1.8.0 used the black/white AdaptiveSurfaceBackground.)
     func homeScreenGlass(watermark: Bool) -> some View {
-        self
+        modifier(HomeColoredBackground(watermark: watermark))
+    }
+}
+
+private struct HomeColoredBackground: ViewModifier {
+    @Environment(\.partPalette) private var palette
+    let watermark: Bool
+
+    func body(content: Content) -> some View {
+        content
             .containerBackground(for: .widget) {
-                AdaptiveSurfaceBackground(showsWatermark: watermark)
+                ColoredSurfaceBackground(palette: palette, showsWatermark: watermark)
             }
     }
 }
@@ -120,51 +145,63 @@ enum WidgetTextScale {
 // MARK: - Small
 
 struct SmallPrayerWidgetView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
         let next = snapshot.next
+        // Iqamah-first (v2.0.0): in the iqamah phase the small
+        // widget counts down to the Iqamah, like the app hero.
+        // Minimal Mode (v2.0.0): plain next-prayer variant — no
+        // iqamah phase, no Ramadan dressing.
+        let phase = MinimalMode.enabled ? nil : PrayerProvider.standard.iqamahPhase(at: snapshot.date)
+        let hero = phase ?? next
+        let heroTarget = phase?.iqamah ?? next.adhan
+        let heroRange = phase.map { $0.adhan...($0.iqamah ?? $0.adhan) } ?? snapshot.countdownRange
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
-                Image(systemName: next.symbolName)
+                Image(systemName: hero.symbolName)
                     .font(.system(size: WidgetTextScale.size(13), weight: .semibold))
-                    .foregroundStyle(Theme.adaptiveGold)
-                Text(snapshot.isShowingTomorrow ? L10n.t("tomorrow") : L10n.t("nextPrayerCaps"))
+                    .foregroundStyle(palette.accent)
+                Text(phase != nil ? L10n.t("iqamahNow").uppercased()
+                     : !MinimalMode.enabled && RamadanMode.isRamadan(on: snapshot.date, timeZone: PrayerProvider.standard.calendar.timeZone) && hero.prayer == .maghrib ? L10n.t("iftar").uppercased()
+                     : !MinimalMode.enabled && RamadanMode.isRamadan(on: snapshot.date, timeZone: PrayerProvider.standard.calendar.timeZone) && hero.prayer == .fajr ? L10n.t("suhoor").uppercased()
+                     : (snapshot.isShowingTomorrow ? L10n.t("tomorrow") : L10n.t("nextPrayerCaps")))
                     .font(.system(size: WidgetTextScale.size(11.5), weight: .bold))
                     .tracking(0.8)
-                    .foregroundStyle(Theme.onSurfaceMuted)
+                    .foregroundStyle(palette.textMuted)
                     .lineLimit(1)
                 Spacer(minLength: 2)
                 Text(PrayerFormat.shortDate(snapshot.day.date))
                     .font(.system(size: WidgetTextScale.size(11.5), weight: .semibold))
-                    .foregroundStyle(Theme.onSurfaceMuted)
+                    .foregroundStyle(palette.textMuted)
                     .lineLimit(1)
             }
-            Text(next.name)
+            Text(hero.name)
                 .font(.system(size: WidgetTextScale.size(27), weight: .bold))
-                .foregroundStyle(Theme.onSurface)
+                .foregroundStyle(palette.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            Text(PrayerFormat.time(next.adhan))
+            Text(PrayerFormat.time(heroTarget))
                 .font(.system(size: WidgetTextScale.size(18), weight: .semibold).monospacedDigit())
-                .foregroundStyle(Theme.onSurface)
+                .foregroundStyle(palette.text)
                 .lineLimit(1)
-            if let iqamah = next.iqamah {
+            if phase == nil, let iqamah = next.iqamah {
                 Text("\(next.iqamahLabel) \(PrayerFormat.time(iqamah))")
                     .font(.system(size: WidgetTextScale.size(13), weight: .semibold).monospacedDigit())
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
             Spacer(minLength: 0)
-            Text(timerInterval: snapshot.countdownRange, countsDown: true)
+            Text(timerInterval: heroRange, countsDown: true)
                 .font(.system(size: WidgetTextScale.size(25), weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(Theme.adaptiveGold)
+                .foregroundStyle(palette.accent)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            GoldProgressBar(range: snapshot.progressRange)
+            GoldProgressBar(range: phase != nil ? heroRange : snapshot.progressRange, tint: palette.accent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -173,6 +210,7 @@ struct SmallPrayerWidgetView: View {
 // MARK: - Medium
 
 struct MediumPrayerWidgetView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
@@ -190,6 +228,7 @@ struct MediumPrayerWidgetView: View {
 }
 
 struct WidgetHeaderView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
     let nameSize: CGFloat
     let detailSize: CGFloat
@@ -198,15 +237,15 @@ struct WidgetHeaderView: View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
             Image(systemName: "moon.stars.fill")
                 .font(.system(size: nameSize - 1, weight: .semibold))
-                .foregroundStyle(Theme.adaptiveGold)
+                .foregroundStyle(palette.accent)
             Text(MosqueInfo.name)
                 .font(.system(size: nameSize, weight: .bold))
-                .foregroundStyle(Theme.onSurface)
+                .foregroundStyle(palette.text)
                 .lineLimit(1)
             Spacer(minLength: 4)
             Text(hijriText)
                 .font(.system(size: detailSize, weight: .semibold))
-                .foregroundStyle(Theme.adaptiveGold)
+                .foregroundStyle(palette.accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -218,37 +257,42 @@ struct WidgetHeaderView: View {
 }
 
 struct CompactNextPrayerPanel: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
         let next = snapshot.next
+        let phase = PrayerProvider.standard.iqamahPhase(at: snapshot.date)
+        let hero = phase ?? next
+        let heroTarget = phase?.iqamah ?? next.adhan
+        let heroRange = phase.map { $0.adhan...($0.iqamah ?? $0.adhan) } ?? snapshot.countdownRange
         VStack(alignment: .leading, spacing: 1.5) {
-            Text(L10n.t("nextPrayerCaps"))
+            Text(phase != nil ? L10n.t("iqamahNow").uppercased() : L10n.t("nextPrayerCaps"))
                 .font(.system(size: WidgetTextScale.size(10), weight: .bold))
                 .tracking(0.7)
-                .foregroundStyle(Theme.onSurfaceMuted)
+                .foregroundStyle(palette.textMuted)
                 .lineLimit(1)
-            Text(next.name)
+            Text(hero.name)
                 .font(.system(size: WidgetTextScale.size(19), weight: .bold))
-                .foregroundStyle(Theme.onSurface)
+                .foregroundStyle(palette.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            Text(PrayerFormat.time(next.adhan))
+            Text(PrayerFormat.time(heroTarget))
                 .font(.system(size: WidgetTextScale.size(13.5), weight: .semibold).monospacedDigit())
-                .foregroundStyle(Theme.onSurface)
+                .foregroundStyle(palette.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            if let iqamah = next.iqamah {
+            if phase == nil, let iqamah = next.iqamah {
                 Text("\(next.iqamahLabel) \(PrayerFormat.time(iqamah))")
                     .font(.system(size: WidgetTextScale.size(11), weight: .semibold).monospacedDigit())
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
             Spacer(minLength: 0)
-            Text(timerInterval: snapshot.countdownRange, countsDown: true)
+            Text(timerInterval: heroRange, countsDown: true)
                 .font(.system(size: WidgetTextScale.size(18), weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(Theme.adaptiveGold)
+                .foregroundStyle(palette.accent)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -256,10 +300,10 @@ struct CompactNextPrayerPanel: View {
         }
         .padding(6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Theme.panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(palette.panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Theme.hairline, lineWidth: 0.5)
+                .strokeBorder(palette.hairline, lineWidth: 0.5)
         }
     }
 }
@@ -267,6 +311,7 @@ struct CompactNextPrayerPanel: View {
 // MARK: - Shared table (medium & large)
 
 struct PrayerTableView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
     let fontSize: CGFloat
     let timeColumnWidth: CGFloat
@@ -281,7 +326,7 @@ struct PrayerTableView: View {
             }
             .font(.system(size: max(fontSize - 3, 8.5), weight: .bold))
             .tracking(0.5)
-            .foregroundStyle(Theme.onSurfaceMuted)
+            .foregroundStyle(palette.textMuted)
             .lineLimit(1)
             .padding(.horizontal, 6)
             .padding(.bottom, 2)
@@ -294,10 +339,10 @@ struct PrayerTableView: View {
                     .background {
                         if isNext {
                             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(Theme.adaptiveGold.opacity(0.22))
+                                .fill(palette.accent.opacity(0.22))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .strokeBorder(Theme.adaptiveGold.opacity(0.65), lineWidth: 0.6)
+                                        .strokeBorder(palette.accent.opacity(0.65), lineWidth: 0.6)
                                 }
                         }
                     }
@@ -307,6 +352,7 @@ struct PrayerTableView: View {
 }
 
 struct PrayerTableRow: View {
+    @Environment(\.partPalette) private var palette
     let slot: PrayerSlot
     let isNext: Bool
     let fontSize: CGFloat
@@ -336,14 +382,15 @@ struct PrayerTableRow: View {
     }
 
     private var foreground: Color {
-        if isNext { return Theme.adaptiveGold }
-        return slot.prayer == .sunrise ? Theme.onSurfaceMuted : Theme.onSurface
+        if isNext { return palette.accent }
+        return slot.prayer == .sunrise ? palette.textMuted : palette.text
     }
 }
 
 // MARK: - Large
 
 struct LargePrayerWidgetView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
@@ -361,6 +408,7 @@ struct LargePrayerWidgetView: View {
 
 /// The Quran quote of the day, under the prayer table (v1.5).
 struct LargeVerseView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
@@ -370,10 +418,10 @@ struct LargeVerseView: View {
                 .font(.system(size: WidgetTextScale.size(13.5), weight: .semibold))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .foregroundStyle(Theme.onSurface)
+                .foregroundStyle(palette.text)
             Text(verse.reference(for: AppLanguage.current))
                 .font(.system(size: WidgetTextScale.size(11), weight: .semibold))
-                .foregroundStyle(Theme.adaptiveGold)
+                .foregroundStyle(palette.accent)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 2)
@@ -381,27 +429,28 @@ struct LargeVerseView: View {
 }
 
 struct LargeHeaderView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
             Image(systemName: "moon.stars.fill")
                 .font(.system(size: WidgetTextScale.size(14), weight: .semibold))
-                .foregroundStyle(Theme.adaptiveGold)
+                .foregroundStyle(palette.accent)
                 .frame(width: 28, height: 28)
-                .background(Theme.adaptiveGold.opacity(0.18), in: Circle())
+                .background(palette.accent.opacity(0.18), in: Circle())
             VStack(alignment: .leading, spacing: 1) {
                 Text(MosqueInfo.name)
                     .font(.system(size: WidgetTextScale.size(18), weight: .bold))
-                    .foregroundStyle(Theme.onSurface)
+                    .foregroundStyle(palette.text)
                     .lineLimit(1)
                 HStack(spacing: 4) {
                     Text(snapshot.day.hijriDate)
-                        .foregroundStyle(Theme.adaptiveGold)
+                        .foregroundStyle(palette.accent)
                     Text("·")
-                        .foregroundStyle(Theme.onSurfaceMuted)
+                        .foregroundStyle(palette.textMuted)
                     Text(PrayerFormat.shortDate(snapshot.day.date))
-                        .foregroundStyle(Theme.onSurfaceSecondary)
+                        .foregroundStyle(palette.textSecondary)
                 }
                 .font(.system(size: WidgetTextScale.size(12.5), weight: .semibold))
                 .lineLimit(1)
@@ -418,24 +467,26 @@ struct LargeHeaderView: View {
 }
 
 struct WidgetPill: View {
+    @Environment(\.partPalette) private var palette
     let text: String
 
     var body: some View {
         Text(text)
             .font(.system(size: WidgetTextScale.size(10.5), weight: .heavy))
             .tracking(0.6)
-            .foregroundStyle(Theme.adaptiveGold)
+            .foregroundStyle(palette.accent)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
-            .background(Theme.adaptiveGold.opacity(0.22), in: Capsule())
+            .background(palette.accent.opacity(0.22), in: Capsule())
             .overlay {
                 Capsule()
-                    .strokeBorder(Theme.adaptiveGold.opacity(0.5), lineWidth: 0.5)
+                    .strokeBorder(palette.accent.opacity(0.5), lineWidth: 0.5)
             }
     }
 }
 
 struct LargeNextPrayerBanner: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
@@ -444,42 +495,42 @@ struct LargeNextPrayerBanner: View {
             HStack(alignment: .center, spacing: 10) {
                 Image(systemName: next.symbolName)
                     .font(.system(size: WidgetTextScale.size(18), weight: .semibold))
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
                     .frame(width: 34, height: 34)
-                    .background(Theme.panelFill, in: Circle())
+                    .background(palette.panelFill, in: Circle())
                 VStack(alignment: .leading, spacing: 1) {
                     Text(snapshot.isShowingTomorrow ? L10n.t("nextPrayerTomorrowCaps") : L10n.t("nextPrayerCaps"))
                         .font(.system(size: WidgetTextScale.size(10.5), weight: .bold))
                         .tracking(0.7)
-                        .foregroundStyle(Theme.onSurfaceMuted)
+                        .foregroundStyle(palette.textMuted)
                         .lineLimit(1)
                     Text(next.name)
                         .font(.system(size: WidgetTextScale.size(21), weight: .bold))
-                        .foregroundStyle(Theme.onSurface)
+                        .foregroundStyle(palette.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(detailText)
                         .font(.system(size: WidgetTextScale.size(12.5), weight: .medium).monospacedDigit())
-                        .foregroundStyle(Theme.onSurfaceSecondary)
+                        .foregroundStyle(palette.textSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 4)
                 Text(timerInterval: snapshot.countdownRange, countsDown: true)
                     .font(.system(size: WidgetTextScale.size(28), weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .frame(width: 110, alignment: .trailing)
             }
-            GoldProgressBar(range: snapshot.progressRange)
+            GoldProgressBar(range: snapshot.progressRange, tint: palette.accent)
         }
         .padding(10)
-        .background(Theme.panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(palette.panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Theme.hairline, lineWidth: 0.75)
+                .strokeBorder(palette.hairline, lineWidth: 0.75)
         }
     }
 
@@ -492,31 +543,32 @@ struct LargeNextPrayerBanner: View {
 }
 
 struct LargeFooterView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Rectangle()
-                .fill(Theme.hairline)
+                .fill(palette.hairline)
                 .frame(height: 0.5)
                 .padding(.bottom, 2)
             HStack(spacing: 5) {
                 Image(systemName: "mappin.and.ellipse")
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
                 Text(MosqueInfo.address)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             HStack(spacing: 5) {
                 Image(systemName: "building.columns.fill")
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
                 Text(jumuahNote)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
         }
         .font(.system(size: WidgetTextScale.size(12), weight: .medium))
-        .foregroundStyle(Theme.onSurfaceSecondary)
+        .foregroundStyle(palette.textSecondary)
     }
 
     private var jumuahNote: String {
@@ -531,6 +583,7 @@ struct LargeFooterView: View {
 // MARK: - Lock Screen: rectangular
 
 struct RectangularPrayerWidgetView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
@@ -573,6 +626,7 @@ struct RectangularPrayerWidgetView: View {
 // MARK: - Lock Screen: circular
 
 struct CircularPrayerWidgetView: View {
+    @Environment(\.partPalette) private var palette
     let snapshot: PrayerSnapshot
 
     var body: some View {
@@ -617,6 +671,26 @@ struct PrayerWidgetBundle: WidgetBundle {
     var body: some Widget {
         PrayerWidget()
         PrayerLiveActivity()
+        if #available(iOS 18.0, *) {
+            SilenceNextAlertControl()
+        }
+    }
+}
+
+/// iOS 18 Control Center / Lock Screen control (v2.0.0, feature 7):
+/// one tap silences only the next Adhan alert. Runs
+/// SilenceNextAlertIntent from this extension; the flag lands in the
+/// App Group and the app's scheduler applies it on its next rebuild.
+@available(iOS 18.0, *)
+struct SilenceNextAlertControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "com.c12n.alrashidwidget.silenceNextAlert") {
+            ControlButton(action: SilenceNextAlertIntent()) {
+                Label("Silence Next Alert", systemImage: "bell.slash.fill")
+            }
+        }
+        .displayName("Silence Next Alert")
+        .description("Silence only the next Adhan alert from Al Rashid Prayer.")
     }
 }
 
@@ -705,23 +779,60 @@ private func displayedPrayers(
     // countdown range below is still built purely from staged dates.
     let now = Date()
     while index + 1 < prayers.count, prayers[index].adhan <= now {
+        // Jumu'ah mode holds the Jumu'ah prayer until the Khutbah.
+        if !MinimalMode.enabled,
+           prayers[index].symbolName == "building.columns.fill",
+           let khutbah = prayers[index].iqamah, now < khutbah {
+            break
+        }
         index += 1
     }
     let current = prayers[index]
+    // Minimal Mode (v2.0.0): the activity reduces to the basic
+    // next-prayer countdown — no following-prayer line, no
+    // Iqamah-first or Jumu'ah dressing.
+    if MinimalMode.enabled {
+        let plainStart = index == 0
+            ? (state.stagedAt ?? current.adhan.addingTimeInterval(-6 * 3600))
+            : prayers[index - 1].adhan
+        return (current, nil, plainStart...current.adhan)
+    }
     let then = index + 1 < prayers.count ? prayers[index + 1] : nil
     let start = index == 0
         ? (state.stagedAt ?? state.adhan.addingTimeInterval(-6 * 3600))
         : prayers[index - 1].adhan
+    // Jumu'ah mode (v2.0.0, workstream 9): on Fridays from midday
+    // the displayed Jumu'ah prayer counts down to the 1:30 PM
+    // Khutbah (its iqamah slot) — labelled Jumu'ah, never Dhuhr —
+    // then the normal flow resumes after the Khutbah.
+    if current.symbolName == "building.columns.fill",
+       let khutbah = current.iqamah, now < khutbah,
+       Calendar.current.component(.hour, from: now) >= 12 {
+        let jumuahStart = index == 0
+            ? (state.stagedAt ?? current.adhan.addingTimeInterval(-6 * 3600))
+            : prayers[index - 1].adhan
+        return (current, then, jumuahStart...khutbah)
+    }
+    // Iqamah-first (v2.0.0): if the displayed prayer's Adhan has
+    // passed but its Iqamah is still ahead, count down to the
+    // Iqamah instead of the Adhan (which would sit at 0:00).
+    if IqamahCountdownSettings.enabled, let iqamah = current.iqamah,
+       current.adhan <= now, now < iqamah {
+        return (current, then, current.adhan...iqamah)
+    }
     return (current, then, start...current.adhan)
 }
 
 struct PrayerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PrayerActivityAttributes.self) { context in
-            LiveActivityRootView(state: context.state, isStale: context.isStale)
-                .activityBackgroundTint(Theme.activityTint)
-                .activitySystemActionForegroundColor(Theme.onSurface)
+            // The Live Activity part's palette (v2.0.0 widget colors).
+            let palette = PartPalette(theme: AppAppearance.effectiveTheme(for: .liveActivity))
+            LiveActivityRootView(state: context.state, isStale: context.isStale, palette: palette)
+                .activityBackgroundTint(palette.primaryDeep)
+                .activitySystemActionForegroundColor(palette.text)
         } dynamicIsland: { context in
+            let palette = PartPalette(theme: AppAppearance.effectiveTheme(for: .liveActivity))
             let state = context.state
             let display = displayedPrayers(state: state, isStale: context.isStale)
             let phase = display.current
@@ -729,17 +840,17 @@ struct PrayerLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
                         Image(systemName: phase.symbolName)
-                            .foregroundStyle(Theme.adaptiveGold)
+                            .foregroundStyle(palette.accent)
                         Text(phase.name)
                             .font(.headline)
-                            .foregroundStyle(Color.white)
+                            .foregroundStyle(palette.text)
                     }
                     .padding(.leading, 6)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(timerInterval: display.countdown, countsDown: true)
                         .font(.title3.weight(.bold).monospacedDigit())
-                        .foregroundStyle(Theme.adaptiveGold)
+                        .foregroundStyle(palette.accent)
                         .frame(maxWidth: 92, alignment: .trailing)
                         .padding(.trailing, 6)
                 }
@@ -752,22 +863,22 @@ struct PrayerLiveActivity: Widget {
                         }
                     }
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.white.opacity(0.85))
+                    .foregroundStyle(palette.textSecondary)
                     .padding(.horizontal, 6)
                 }
             } compactLeading: {
                 Image(systemName: phase.symbolName)
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
             } compactTrailing: {
                 Text(timerInterval: display.countdown, countsDown: true)
                     .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
                     .frame(maxWidth: 64, alignment: .trailing)
             } minimal: {
                 Image(systemName: phase.symbolName)
-                    .foregroundStyle(Theme.adaptiveGold)
+                    .foregroundStyle(palette.accent)
             }
-            .keylineTint(Theme.adaptiveGold)
+            .keylineTint(palette.accent)
         }
     }
 }
@@ -778,9 +889,11 @@ private struct LiveActivityRootView: View {
     @Environment(\.colorScheme) private var systemColorScheme
     let state: PrayerActivityAttributes.ContentState
     let isStale: Bool
+    let palette: PartPalette
 
     var body: some View {
         LiveActivityLockScreenView(state: state, isStale: isStale)
+            .environment(\.partPalette, palette)
             .environment(\.colorScheme, AppAppearance.resolvedColorScheme(system: systemColorScheme))
             .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
             .environment(\.locale, AppLanguage.current.locale)
@@ -788,6 +901,7 @@ private struct LiveActivityRootView: View {
 }
 
 private struct LiveActivityLockScreenView: View {
+    @Environment(\.partPalette) private var palette
     let state: PrayerActivityAttributes.ContentState
     let isStale: Bool
 
@@ -796,53 +910,53 @@ private struct LiveActivityLockScreenView: View {
         let phase = display.current
         let then = display.then
         ZStack {
-            AdaptiveSurfaceBackground()
+            ColoredSurfaceBackground(palette: palette)
             VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
                         Image(systemName: "moon.stars.fill")
-                            .foregroundStyle(Theme.adaptiveGold)
+                            .foregroundStyle(palette.accent)
                         Text(MosqueInfo.name)
                             .font(.caption.weight(.bold))
                             .tracking(0.6)
-                            .foregroundStyle(Theme.onSurfaceSecondary)
+                            .foregroundStyle(palette.textSecondary)
                         Spacer()
                         Text("\(PrayerFormat.shortDate(phase.adhan)) · \(hijri(for: phase))")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.onSurfaceMuted)
+                            .foregroundStyle(palette.textMuted)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Image(systemName: phase.symbolName)
                             .font(.title2.weight(.semibold))
-                            .foregroundStyle(Theme.adaptiveGold)
+                            .foregroundStyle(palette.accent)
                         Text(phase.isTomorrow ? L10n.f("nameTomorrow", phase.name) : phase.name)
                             .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(Theme.onSurface)
+                            .foregroundStyle(palette.text)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                         Spacer(minLength: 8)
                         Text(PrayerFormat.time(phase.adhan))
                             .font(.title3.weight(.semibold).monospacedDigit())
-                            .foregroundStyle(Theme.onSurface)
+                            .foregroundStyle(palette.text)
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(timerInterval: display.countdown, countsDown: true)
                             .font(.system(size: 36, weight: .bold, design: .rounded).monospacedDigit())
-                            .foregroundStyle(Theme.adaptiveGold)
+                            .foregroundStyle(palette.accent)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                         Spacer(minLength: 8)
                         if let iqamah = phase.iqamah {
                             Text("\(phase.iqamahLabel) \(PrayerFormat.time(iqamah))")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.onSurfaceSecondary)
+                                .foregroundStyle(palette.textSecondary)
                         }
                     }
                     if let then {
                         Text(L10n.f("thenPattern", then.name, PrayerFormat.time(then.adhan)))
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Theme.onSurfaceMuted)
+                            .foregroundStyle(palette.textMuted)
                             .lineLimit(1)
                     }
                 }

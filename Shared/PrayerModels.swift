@@ -246,6 +246,230 @@ struct PrayerSnapshot: Sendable, Hashable {
     func isNext(_ slot: PrayerSlot) -> Bool { slot.id == next.id }
 }
 
+// MARK: - Ramadan mode (v2.0.0, feature 1)
+
+/// Ramadan mode activates automatically whenever the (Umm al-Qura)
+/// Hijri month is 9: Maghrib becomes "Iftar" and Fajr "Suhoor" in
+/// hero positions, and a Taraweeh row joins the schedule. The mosque
+/// publishes no fixed Taraweeh time, so Taraweeh is an ESTIMATE —
+/// a settable number of minutes after the Isha Iqamah (default 15),
+/// always labelled as an estimate wherever it appears.
+enum RamadanMode {
+    static let taraweehOffsetKey = "ramadan.taraweehAfterIshaMinutes"
+    static let taraweehOptions = [0, 15, 30, 45, 60]
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    /// Hijri (year, month, day) for a Gregorian date in the mosque's
+    /// timezone, including the user's Hijri offset adjustment.
+    static func hijriComponents(for date: Date, timeZone: TimeZone) -> (year: Int, month: Int, day: Int)? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let adjusted = date.addingTimeInterval(Double(HijriOffset.current) * 86_400)
+        let parts = calendar.dateComponents([.year, .month, .day], from: adjusted)
+        guard let year = parts.year, let month = parts.month, let day = parts.day
+        else { return nil }
+        return UmmAlQuraCalendar.hijri(year: year, month: month, day: day)
+    }
+
+    static func isRamadan(on date: Date, timeZone: TimeZone) -> Bool {
+        hijriComponents(for: date, timeZone: timeZone)?.month == 9
+    }
+
+    static var taraweehOffsetMinutes: Int {
+        get {
+            if sharedDefaults.object(forKey: taraweehOffsetKey) == nil { return 15 }
+            let stored = sharedDefaults.integer(forKey: taraweehOffsetKey)
+            return taraweehOptions.contains(stored) ? stored : 15
+        }
+        set { sharedDefaults.set(newValue, forKey: taraweehOffsetKey) }
+    }
+
+    /// Estimated Taraweeh start for a day: Isha Iqamah + the offset.
+    static func taraweehTime(for day: PrayerDay) -> Date {
+        day.ishaIqamah.addingTimeInterval(Double(taraweehOffsetMinutes) * 60)
+    }
+
+    static func reset() {
+        sharedDefaults.removeObject(forKey: taraweehOffsetKey)
+    }
+}
+
+// MARK: - Iqamah-first countdown (v2.0.0)
+
+/// After a prayer's Adhan passes, hero countdowns (app card, widgets,
+/// Live Activity) flip to counting down to that prayer's Iqamah —
+/// that's the time people actually move by. The "time to leave"
+/// nudge is separate: a lead in minutes before the Iqamah, default
+/// off (0). Both stored in the App Group so every surface agrees.
+enum IqamahCountdownSettings {
+    static let enabledKey = "countdown.iqamahFirst"
+    static let leaveLeadKey = "countdown.leaveLeadMinutes"
+    static let leaveLeadOptions = [0, 5, 10, 15, 20]
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static var enabled: Bool {
+        get {
+            if let value = sharedDefaults.object(forKey: enabledKey) as? Bool { return value }
+            return true
+        }
+        set { sharedDefaults.set(newValue, forKey: enabledKey) }
+    }
+
+    static var leaveLeadMinutes: Int {
+        get {
+            let stored = sharedDefaults.integer(forKey: leaveLeadKey)
+            return leaveLeadOptions.contains(stored) ? stored : 0
+        }
+        set { sharedDefaults.set(newValue, forKey: leaveLeadKey) }
+    }
+
+    static func reset() {
+        sharedDefaults.removeObject(forKey: enabledKey)
+        sharedDefaults.removeObject(forKey: leaveLeadKey)
+    }
+}
+
+extension PrayerProvider {
+    /// The prayer whose Adhan has passed but whose Iqamah is still
+    /// ahead at `date` — the iqamah phase — or nil outside it.
+    /// Sunrise has no Iqamah and never has a phase; Jumu'ah's phase
+    /// runs to the Khutbah time.
+    func iqamahPhase(at date: Date) -> PrayerSlot? {
+        guard IqamahCountdownSettings.enabled else { return nil }
+        let start = calendar.startOfDay(for: date)
+        for offset in [-1, 0] {
+            guard let dayStart = calendar.date(byAdding: .day, value: offset, to: start)
+            else { continue }
+            for slot in day(for: dayStart).prayerSlots {
+                if let iqamah = slot.iqamah, slot.adhan <= date, date < iqamah {
+                    return slot
+                }
+            }
+        }
+        return nil
+    }
+}
+
+
+// MARK: - Silence next alert (v2.0.0, feature 7)
+
+/// One-shot silence for the next Adhan alert, set by the Siri intent,
+/// the iOS 18 Control Center control, the Android Quick Settings tile
+/// or the in-app button. Stores the epoch seconds of the Adhan to
+/// skip; the schedulers on both platforms drop exactly that one
+/// alert and clear the flag. App Group so every process agrees.
+enum SilenceNextAlert {
+    static let epochKey = "alerts.silenceNextEpoch"
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    /// Epoch seconds of the silenced Adhan, or nil when nothing is
+    /// silenced (or the moment has passed).
+    static var pendingEpoch: Int? {
+        let stored = sharedDefaults.integer(forKey: epochKey)
+        guard stored > 0 else { return nil }
+        if Double(stored) < Date.now.timeIntervalSince1970 - 3600 {
+            return nil // stale — the alert it named is long past
+        }
+        return stored
+    }
+
+    static func silence(adhan: Date) {
+        sharedDefaults.set(Int(adhan.timeIntervalSince1970), forKey: epochKey)
+    }
+
+    static func clear() {
+        sharedDefaults.removeObject(forKey: epochKey)
+    }
+}
+
+// MARK: - Sunnah fasting reminders (v2.0.0, workstream 9)
+
+/// Optional reminders for the Sunnah fasts: Mondays & Thursdays and
+/// the white days (13th, 14th, 15th of each Hijri month). Both off by
+/// default; each type toggles separately in Settings. During Ramadan
+/// every day is a fast and the regular Fajr/Maghrib alerts already
+/// carry Suhoor/Iftar, so these reminders stay quiet that month.
+enum FastingSettings {
+    static let mondayThursdayKey = "fasting.mondayThursday"
+    static let whiteDaysKey = "fasting.whiteDays"
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static var mondayThursday: Bool {
+        get { sharedDefaults.bool(forKey: mondayThursdayKey) }
+        set { sharedDefaults.set(newValue, forKey: mondayThursdayKey) }
+    }
+
+    static var whiteDays: Bool {
+        get { sharedDefaults.bool(forKey: whiteDaysKey) }
+        set { sharedDefaults.set(newValue, forKey: whiteDaysKey) }
+    }
+
+    static var anyEnabled: Bool { mondayThursday || whiteDays }
+
+    /// Is `date` a selected Sunnah fasting day (in the mosque's
+    /// timezone, Hijri offset applied)? Ramadan days return false —
+    /// see the note above.
+    static func isFastingDay(_ date: Date, timeZone: TimeZone) -> Bool {
+        guard anyEnabled else { return false }
+        guard let hijri = RamadanMode.hijriComponents(for: date, timeZone: timeZone),
+              hijri.month != 9 else { return false }
+        if whiteDays, (13...15).contains(hijri.day) { return true }
+        if mondayThursday {
+            var gregorian = Calendar(identifier: .gregorian)
+            gregorian.timeZone = timeZone
+            let weekday = gregorian.component(.weekday, from: date)
+            if weekday == 2 || weekday == 5 { return true } // Mon / Thu
+        }
+        return false
+    }
+
+    static func reset() {
+        sharedDefaults.removeObject(forKey: mondayThursdayKey)
+        sharedDefaults.removeObject(forKey: whiteDaysKey)
+    }
+}
+
+// MARK: - Minimal Mode (v2.0.0, workstream 10)
+
+/// Minimal Mode (named by Youssef, 2026-11-06: "Lite" sounds like a
+/// downgraded edition; "Minimal" says exactly what it is — the
+/// essentials only). A pure view/mode layer over the stored settings:
+/// turning it on hides the verse card, Qibla, calendar, tomorrow
+/// strip, What's New and extra reminders, collapses widgets to a
+/// plain times-only variant and the Live Activity to the basic
+/// countdown — and turning it off restores everything exactly,
+/// because no underlying setting is ever changed by the mode itself.
+/// Stored in the App Group, carried by iCloud sync and included in
+/// the settings backup file.
+enum MinimalMode {
+    static let key = "appearance.minimalMode"
+
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static var enabled: Bool {
+        get { sharedDefaults.bool(forKey: key) }
+        set { sharedDefaults.set(newValue, forKey: key) }
+    }
+
+    static func reset() {
+        sharedDefaults.removeObject(forKey: key)
+    }
+}
+
 struct PrayerTimelinePlan: Sendable {
     let snapshots: [PrayerSnapshot]
     let reloadDate: Date
@@ -413,6 +637,11 @@ struct PrayerProvider: Sendable {
         for schedule in [todaySchedule, tomorrowSchedule] {
             for slot in schedule.prayerSlots where slot.adhan > now {
                 boundaries.insert(slot.adhan)
+                // v2.0.0: also wake at each Iqamah, so widget
+                // countdowns flip out of the iqamah phase on time.
+                if let iqamah = slot.iqamah, iqamah > now {
+                    boundaries.insert(iqamah)
+                }
             }
         }
         if tomorrowStart > now { boundaries.insert(tomorrowStart) }
@@ -1255,9 +1484,130 @@ enum AppAppearance {
     /// Appearance back to the shipped defaults (mode System, signature
     /// green + gold, white text, default icon). Saved themes are kept.
     static func resetToDefaults() {
-        for key in [modeKey, accentKey, primaryKey, textKey, iconKey] {
+        for key in [modeKey, accentKey, primaryKey, textKey, iconKey,
+                    widgetColorModeKey]
+            + WidgetPart.allCases.map { partThemeKey($0) } {
             sharedDefaults.removeObject(forKey: key)
         }
+    }
+
+    // MARK: Widget colors (v2.0.0)
+
+    /// How widget surfaces get their colors: one theme everywhere, or
+    /// a separate theme per part (approved design, 2026-11-05).
+    enum WidgetColorMode: String, CaseIterable {
+        case match, separate
+    }
+
+    /// The independently colorable surfaces. On iOS all three exist;
+    /// Android has home-screen widgets only, so its "Separate colors"
+    /// mode stores just the Home choice (see the Flutter AppSettings).
+    enum WidgetPart: String, CaseIterable {
+        case home, lock, liveActivity
+    }
+
+    static let widgetColorModeKey = "appearance.widgetColorMode"
+
+    static func partThemeKey(_ part: WidgetPart) -> String {
+        "appearance.partTheme.\(part.rawValue)"
+    }
+
+    static var widgetColorMode: WidgetColorMode {
+        get {
+            WidgetColorMode(
+                rawValue: sharedDefaults.string(forKey: widgetColorModeKey) ?? ""
+            ) ?? .match
+        }
+        set { sharedDefaults.set(newValue.rawValue, forKey: widgetColorModeKey) }
+    }
+
+    /// The theme explicitly stored for a part in Separate mode, if any.
+    static func storedPartTheme(for part: WidgetPart) -> ThemeChoice? {
+        guard let data = sharedDefaults.data(forKey: partThemeKey(part)),
+              let theme = try? JSONDecoder().decode(ThemeChoice.self, from: data)
+        else { return nil }
+        return theme
+    }
+
+    static func setPartTheme(_ theme: ThemeChoice?, for part: WidgetPart) {
+        if let theme, let data = try? JSONEncoder().encode(theme) {
+            sharedDefaults.set(data, forKey: partThemeKey(part))
+        } else {
+            sharedDefaults.removeObject(forKey: partThemeKey(part))
+        }
+    }
+
+    /// The app's own current look as a theme (stable id, for palette
+    /// building and Settings comparisons).
+    static var appTheme: ThemeChoice {
+        ThemeChoice(
+            id: "app-current", name: "App theme",
+            primaryHex: primaryHex, accentHex: accentHex, textHex: textHex,
+            modeRaw: mode.rawValue
+        )
+    }
+
+    /// The theme a surface should actually wear: in Match mode (the
+    /// default) every part follows the app theme; in Separate mode a
+    /// part wears its stored theme, falling back to the app theme
+    /// until the user picks one — so switching modes never recolors
+    /// anything until the user makes a choice.
+    static func effectiveTheme(for part: WidgetPart) -> ThemeChoice {
+        switch widgetColorMode {
+        case .match: return appTheme
+        case .separate: return storedPartTheme(for: part) ?? appTheme
+        }
+    }
+}
+
+/// A resolved color set for one colored surface (Home widget, Lock
+/// Screen widget tint, or Live Activity), built from a ThemeChoice.
+/// Colored surfaces are always deep, so text is resolved against the
+/// part's own primary with the same ~4.5:1 contrast guard the app
+/// theme uses — a part can never become unreadable.
+struct PartPalette: Equatable {
+    let primaryHex: UInt32
+    let accentHex: UInt32
+    let textHex: UInt32
+
+    init(theme: AppAppearance.ThemeChoice) {
+        primaryHex = theme.primaryHex
+        accentHex = theme.accentHex
+        textHex = theme.textHex
+    }
+
+    var primaryUIColor: UIColor { AppAppearance.uiColor(forHex: primaryHex) }
+    var accentUIColor: UIColor { AppAppearance.uiColor(forHex: accentHex) }
+    var textUIColor: UIColor {
+        AppAppearance.uiColor(forHex: textHex)
+            .ensuringContrast(against: primaryUIColor, minimum: 4.5, blendToward: .white)
+    }
+
+    var primary: Color { Color(uiColor: primaryUIColor) }
+    var primaryBright: Color { Color(uiColor: primaryUIColor.lightened(by: 0.16)) }
+    var primaryDeep: Color { Color(uiColor: primaryUIColor.darkened(by: 0.30)) }
+    /// The accent brightened for deep surfaces (countdowns, highlights).
+    var accent: Color { Color(uiColor: accentUIColor.adjustedForDarkSurface()) }
+    var text: Color { Color(uiColor: textUIColor) }
+    var textSecondary: Color { text.opacity(0.85) }
+    var textMuted: Color { text.opacity(0.72) }
+    var panelFill: Color { Color.white.opacity(0.10) }
+    var hairline: Color { Color.white.opacity(0.18) }
+}
+
+private struct PartPaletteKey: EnvironmentKey {
+    static var defaultValue: PartPalette {
+        PartPalette(theme: AppAppearance.effectiveTheme(for: .home))
+    }
+}
+
+extension EnvironmentValues {
+    /// The palette of the surface being rendered. The widget extension
+    /// injects the palette for the part each family belongs to; views
+    /// inside the app keep the default (the Home palette).
+    var partPalette: PartPalette {
+        get { self[PartPaletteKey.self] }
+        set { self[PartPaletteKey.self] = newValue }
     }
 }
 
@@ -1480,14 +1830,48 @@ struct AdaptiveSurfaceBackground: View {
     }
 }
 
+/// Colored surface for a widget part (v2.0.0): the part palette's
+/// primary as a deep gradient with an accent glow and optional
+/// watermark — the full-color look of the approved colored-widgets
+/// design, replacing the black/white adaptive surface on Home Screen
+/// widgets and the Live Activity.
+struct ColoredSurfaceBackground: View {
+    let palette: PartPalette
+    var showsWatermark: Bool = false
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [palette.primaryBright, palette.primary, palette.primaryDeep],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+            RadialGradient(
+                colors: [palette.accent.opacity(0.16), Color.clear],
+                center: .bottomTrailing, startRadius: 0, endRadius: 260
+            )
+            if showsWatermark {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 120, weight: .regular))
+                    .foregroundStyle(palette.accent.opacity(0.07))
+                    .rotationEffect(.degrees(-12))
+                    .offset(x: 30, y: -20)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
+        }
+    }
+}
+
 /// Live, self-updating gold progress bar between two prayer boundaries.
 struct GoldProgressBar: View {
     let range: ClosedRange<Date>
+    /// Tint override (v2.0.0): widget surfaces pass their part palette's
+    /// accent; the app leaves it nil and keeps the app theme's gold.
+    var tint: Color? = nil
 
     var body: some View {
         ProgressView(timerInterval: range, countsDown: false, label: { EmptyView() }, currentValueLabel: { EmptyView() })
             .progressViewStyle(.linear)
-            .tint(Theme.adaptiveGold)
+            .tint(tint ?? Theme.adaptiveGold)
     }
 }
 
@@ -1664,6 +2048,55 @@ enum L10n {
         "textColorCaption": [.en: "Text on the colored cards", .ar: "النص على البطاقات الملوّنة", .fr: "Texte sur les cartes colorées"],
         "colorsFooter": [.en: "Tap a circle for a preset, or use the color wheel on the right for any color. Text is automatically adjusted when needed so it always stays easy to read. The widgets use the same colors.", .ar: "انقر دائرة لاختيار لون جاهز، أو استخدم عجلة الألوان لأي لون. يُعدَّل النص تلقائيًا عند الحاجة ليبقى سهل القراءة دائمًا. تستخدم الأدوات الألوان نفسها.", .fr: "Touchez un cercle pour un préréglage, ou la roue chromatique pour n'importe quelle couleur. Le texte est ajusté automatiquement au besoin pour rester toujours lisible. Les widgets utilisent les mêmes couleurs."],
         "themes": [.en: "Themes", .ar: "السمات", .fr: "Thèmes"],
+        "widgetColors": [.en: "Widget Colors", .ar: "ألوان الأدوات", .fr: "Couleurs des widgets"],
+        "widgetColorMode.match": [.en: "Match my theme", .ar: "مطابقة سمتي", .fr: "Suivre mon thème"],
+        "widgetColorMode.separate": [.en: "Separate colors", .ar: "ألوان منفصلة", .fr: "Couleurs séparées"],
+        "widgetColorsFooterMatch": [.en: "Every surface wears your app theme: Home Screen widgets get the full color, the Live Activity too, and Lock Screen widgets carry the theme's tint (iOS renders those as tinted glass).", .ar: "كل الأسطح ترتدي سمة التطبيق: أدوات الشاشة الرئيسية بالألوان الكاملة، والنشاط المباشر كذلك، وأدوات شاشة القفل تحمل درجة لون السمة (يعرضها iOS كزجاج ملوّن).", .fr: "Toutes les surfaces portent votre thème : les widgets de l'écran d'accueil en couleur pleine, l'activité en direct aussi, et les widgets de l'écran de verrouillage portent la teinte du thème (iOS les affiche en verre teinté)."],
+        "widgetColorsFooterSeparate": [.en: "Pick a theme for each part — they change independently. Until you pick one, a part uses your app theme. Lock Screen widgets show their color as a tint, because iOS renders them as tinted glass.", .ar: "اختر سمة لكل جزء — تتغيّر بشكل مستقل. حتى تختار، يستخدم الجزء سمة التطبيق. تظهر أدوات شاشة القفل لونها كدرجة لونية لأن iOS يعرضها كزجاج ملوّن.", .fr: "Choisissez un thème par partie — elles changent indépendamment. Sans choix, une partie utilise le thème de l'app. Les widgets de l'écran de verrouillage affichent leur couleur en teinte, car iOS les rend en verre teinté."],
+        "widgetPart.home": [.en: "Home Screen widgets", .ar: "أدوات الشاشة الرئيسية", .fr: "Widgets d'écran d'accueil"],
+        "widgetPart.lock": [.en: "Lock Screen widgets", .ar: "أدوات شاشة القفل", .fr: "Widgets d'écran de verrouillage"],
+        "widgetPart.liveActivity": [.en: "Live Activity", .ar: "النشاط المباشر", .fr: "Activité en direct"],
+        "appTheme": [.en: "App theme", .ar: "سمة التطبيق", .fr: "Thème de l'app"],
+        "monthlyCalendar": [.en: "Monthly Calendar", .ar: "التقويم الشهري", .fr: "Calendrier mensuel"],
+        "ramadan": [.en: "Ramadan", .ar: "رمضان", .fr: "Ramadan"],
+        "iftar": [.en: "Iftar", .ar: "الإفطار", .fr: "Iftar"],
+        "suhoor": [.en: "Suhoor", .ar: "السحور", .fr: "Suhoor"],
+        "taraweeh": [.en: "Taraweeh", .ar: "التراويح", .fr: "Tarawih"],
+        "estimate": [.en: "estimate", .ar: "تقديري", .fr: "estimation"],
+        "taraweehAfterIsha": [.en: "Taraweeh starts", .ar: "تبدأ التراويح", .fr: "Début de Tarawih"],
+        "taraweehOffset": [.en: "%lld min after Isha Iqamah", .ar: "بعد إقامة العشاء بـ %lld دقيقة", .fr: "%lld min après l'Iqamah d'Isha"],
+        "ramadanFooter": [.en: "Ramadan mode turns on by itself during Ramadan (Hijri month 9): Maghrib is labelled Iftar, Fajr is Suhoor, and a Taraweeh row joins the schedule. The mosque publishes no fixed Taraweeh time, so it is shown as an estimate after the Isha Iqamah.", .ar: "يعمل وضع رمضان تلقائيًا خلال رمضان (الشهر التاسع الهجري): يُسمّى المغرب إفطارًا والفجر سحورًا، وتنضم التراويح إلى الجدول. لا ينشر المسجد وقتًا ثابتًا للتراويح، لذا يُعرض كتقدير بعد إقامة العشاء.", .fr: "Le mode Ramadan s'active tout seul pendant le Ramadan (9e mois de l'Hégire) : Maghrib devient Iftar, Fajr devient Suhoor, et un rang Tarawih rejoint l'horaire. La mosquée ne publie pas d'heure fixe pour Tarawih, elle est donc affichée comme estimation après l'Iqamah d'Isha."],
+        "shareMonth": [.en: "Share / Print Month", .ar: "مشاركة / طباعة الشهر", .fr: "Partager / Imprimer le mois"],
+        "wnWidgets200": [.en: "Colored widgets: match your theme everywhere, or give the Home widgets, Lock Screen and Live Activity separate colors", .ar: "أدوات ملوّنة: طابِق سمتك في كل مكان، أو امنح أدوات الشاشة الرئيسية وشاشة القفل والنشاط المباشر ألوانًا منفصلة", .fr: "Widgets en couleur : suivez votre thème partout, ou donnez des couleurs séparées aux widgets d'accueil, à l'écran de verrouillage et à l'activité en direct"],
+        "wnDuo200": [.en: "iPhone Duo: turn a big iPhone sideways for the two-pane Now + full-day view", .ar: "ثنائي iPhone: أدر هاتفًا كبيرًا أفقيًا لعرض الجزأين: الآن + اليوم كاملًا", .fr: "iPhone Duo : tournez un grand iPhone à l'horizontale pour la vue en deux volets Maintenant + journée complète"],
+        "wnPad200": [.en: "A proper iPad layout with room to breathe — no more stretched iPhone screen", .ar: "تخطيط iPad حقيقي بمساحة مريحة — لا مزيد من شاشة iPhone ممدودة", .fr: "Une vraie disposition iPad avec de l'espace — fini l'écran iPhone étiré"],
+        "wnRamadan200": [.en: "Ramadan mode: Iftar and Suhoor countdowns and a Taraweeh time join the schedule automatically", .ar: "وضع رمضان: عدّادا الإفطار والسحور ووقت التراويح ينضم إلى الجدول تلقائيًا", .fr: "Mode Ramadan : compte à rebours pour l'Iftar et le Suhoor, et l'heure de Tarawih rejoint l'horaire automatiquement"],
+        "wnCalendar200": [.en: "Monthly calendar: the whole month's times, tap a day to preview it, share or print it", .ar: "التقويم الشهري: مواقيت الشهر كاملة، انقر أي يوم لمعاينته، وشاركه أو اطبعه", .fr: "Calendrier mensuel : les horaires de tout le mois, touchez un jour pour l'apercevoir, partagez ou imprimez"],
+        "wnIqamah200": [.en: "Iqamah-first countdown: after the Adhan, the countdown flips to the Iqamah — with an optional time-to-leave nudge", .ar: "العدّ التنازلي للإقامة أولًا: بعد الأذان يتحوّل العدّ إلى الإقامة — مع تنبيه اختياري لوقت المغادرة", .fr: "Compte à rebours vers l'Iqamah : après l'Adhan, le compte vise l'Iqamah — avec un rappel optionnel de départ"],
+        "wnMinimal200": [.en: "Minimal Mode: strip the app to just the times, the countdown and your alerts", .ar: "الوضع الأدنى: اختصر التطبيق إلى المواقيت والعدّ التنازلي وتنبيهاتك فقط", .fr: "Mode minimal : l'app réduite aux horaires, au compte à rebours et à vos alertes"],
+        "minimalMode": [.en: "Minimal Mode", .ar: "الوضع الأدنى", .fr: "Mode minimal"],
+        "minimalModeFooter": [.en: "Just the essentials: today's times, the next-prayer countdown and your Adhan alerts. The verse, Qibla, calendar and extras hide until you turn this off — nothing is deleted and every setting comes back exactly as it was.", .ar: "الأساسيات فقط: مواقيت اليوم والعدّ التنازلي للصلاة التالية وتنبيهات الأذان. يختفي الذكر والقبلة والتقويم والإضافات حتى توقف هذا الوضع — لا يُحذف شيء وتعود كل الإعدادات كما كانت تمامًا.", .fr: "L'essentiel seulement : les horaires du jour, le compte à rebours et vos alertes d'Adhan. Le verset, la Qibla, le calendrier et les extras se cachent jusqu'à la désactivation — rien n'est supprimé et chaque réglage revient exactement comme avant."],
+        "fasting": [.en: "Sunnah Fasting", .ar: "صيام السنة", .fr: "Jeûne surérogatoire"],
+        "fastingMonThu": [.en: "Mondays & Thursdays", .ar: "الإثنين والخميس", .fr: "Lundis et jeudis"],
+        "fastingWhiteDays": [.en: "White days (13, 14, 15)", .ar: "الأيام البيض (١٣، ١٤، ١٥)", .fr: "Jours blancs (13, 14, 15)"],
+        "fastingFooter": [.en: "A reminder at 8 PM the evening before each fasting day, with that day's Suhoor and Iftar times. Quiet during Ramadan, when every day is a fast.", .ar: "تذكير في الثامنة مساءً في الليلة السابقة لكل يوم صيام، مع وقتي السحور والإفطار لذلك اليوم. يتوقف في رمضان، حين يكون كل يوم صيامًا.", .fr: "Un rappel à 20 h la veille de chaque jour de jeûne, avec les heures de Suhoor et d'Iftar du jour. Silencieux pendant le Ramadan, où chaque jour est un jeûne."],
+        "fastingDay": [.en: "Fasting tomorrow", .ar: "صيام غدًا", .fr: "Jeûne demain"],
+        "fastingReminderBody": [.en: "Suhoor ends at Fajr %@ · Iftar at Maghrib %@", .ar: "ينتهي السحور عند الفجر %@ · الإفطار عند المغرب %@", .fr: "Le Suhoor se termine à Fajr %@ · Iftar à Maghrib %@"],
+        "siri": [.en: "Siri & Controls", .ar: "سيري وعناصر التحكم", .fr: "Siri et contrôles"],
+        "siriFooter": [.en: "Ask Siri “When is Maghrib?” or add the Silence Next Alert control to Control Center or the Lock Screen (iOS 18).", .ar: "اسأل سيري «متى المغرب؟» أو أضف عنصر تحكم إسكات التنبيه التالي إلى مركز التحكم أو شاشة القفل (iOS 18).", .fr: "Demandez à Siri « Quand est Maghrib ? » ou ajoutez le contrôle Silence à l'alerte suivante au centre de contrôle ou à l'écran de verrouillage (iOS 18)."],
+        "standBy": [.en: "StandBy", .ar: "الاستعداد", .fr: "StandBy"],
+        "backup": [.en: "Settings Backup", .ar: "نسخة الإعدادات الاحتياطية", .fr: "Sauvegarde des réglages"],
+        "backupToICloud": [.en: "Back up to iCloud", .ar: "النسخ الاحتياطي إلى iCloud", .fr: "Sauvegarder vers iCloud"],
+        "restoreFromICloud": [.en: "Restore from iCloud", .ar: "الاستعادة من iCloud", .fr: "Restaurer depuis iCloud"],
+        "exportSettings": [.en: "Export settings file", .ar: "تصدير ملف الإعدادات", .fr: "Exporter le fichier de réglages"],
+        "importSettings": [.en: "Import settings file", .ar: "استيراد ملف الإعدادات", .fr: "Importer le fichier de réglages"],
+        "lastBackup": [.en: "Last backup: %@", .ar: "آخر نسخة احتياطية: %@", .fr: "Dernière sauvegarde : %@"],
+        "noBackupYet": [.en: "No cloud backup yet", .ar: "لا نسخة سحابية بعد", .fr: "Aucune sauvegarde cloud pour le moment"],
+        "backupDone": [.en: "Backup saved.", .ar: "تم حفظ النسخة الاحتياطية.", .fr: "Sauvegarde enregistrée."],
+        "restoreDone": [.en: "Settings restored.", .ar: "تمت استعادة الإعدادات.", .fr: "Réglages restaurés."],
+        "actionFailed": [.en: "That didn't work — please try again.", .ar: "لم ينجح ذلك — حاول مرة أخرى.", .fr: "Cela n'a pas fonctionné — réessayez."],
+        "iCloudUnavailable": [.en: "iCloud is not available on this device — use the settings file instead.", .ar: "iCloud غير متاح على هذا الجهاز — استخدم ملف الإعدادات بدلًا من ذلك.", .fr: "iCloud n'est pas disponible sur cet appareil — utilisez plutôt le fichier de réglages."],
+        "backupFooter": [.en: "One file with your themes, widget colors, sounds, reminders and preferences — the same file works on iPhone and Android. It contains no passwords or tokens.", .ar: "ملف واحد بسماتك وألوان أدواتك وأصواتك وتذكيراتك وتفضيلاتك — الملف نفسه يعمل على iPhone وAndroid. لا يحتوي على كلمات مرور أو رموز.", .fr: "Un seul fichier avec vos thèmes, couleurs de widgets, sons, rappels et préférences — le même fichier fonctionne sur iPhone et Android. Il ne contient ni mot de passe ni jeton."],
         "themesFooter": [.en: "Themes are ready-made color sets designed to look good together — main color, accent and text in one tap. Tapping a theme applies it right away: watch the preview card above change.", .ar: "السمات مجموعات ألوان جاهزة مصممة لتبدو متناسقة معًا — اللون الرئيسي والتمييز والنص بنقرة واحدة. نقر أي سمة يطبّقها فورًا: شاهد بطاقة المعاينة أعلاه تتغيّر.", .fr: "Les thèmes sont des ensembles de couleurs prêts à l'emploi, conçus pour bien aller ensemble — couleur principale, accent et texte en un toucher. Toucher un thème l'applique aussitôt : regardez la carte d'aperçu ci-dessus changer."],
         "designedTheme": [.en: "Designed theme", .ar: "سمة مصممة", .fr: "Thème conçu"],
         "savedTheme": [.en: "Your saved theme", .ar: "سمتك المحفوظة", .fr: "Votre thème enregistré"],
@@ -1743,6 +2176,15 @@ extension L10n {
     private static let formatTable: [String: [AppLanguage: String]] = [
         "at": [.en: "at", .ar: "في", .fr: "à"],
         "untilAdhan": [.en: "until %@ Adhan", .ar: "حتى أذان %@", .fr: "jusqu'à l'Adhan de %@"],
+        "untilIqamah": [.en: "until %@ Iqamah", .ar: "حتى إقامة %@", .fr: "jusqu'à l'Iqamah de %@"],
+        "iqamahNow": [.en: "Iqamah", .ar: "الإقامة", .fr: "Iqamah"],
+        "adhanWasAt": [.en: "Adhan was at %@", .ar: "كان الأذان في %@", .fr: "L'Adhan était à %@"],
+        "timeToLeave": [.en: "Time to leave for the mosque", .ar: "حان وقت الذهاب إلى المسجد", .fr: "Il est temps de partir pour la mosquée"],
+        "iqamahFirst": [.en: "Iqamah countdown", .ar: "العدّ التنازلي للإقامة", .fr: "Compte à rebours de l'Iqamah"],
+        "iqamahFirstFooter": [.en: "After each Adhan, the big countdown switches to that prayer's Iqamah — in the app, the widgets and the Live Activity.", .ar: "بعد كل أذان، يتحوّل العدّ التنازلي الكبير إلى إقامة تلك الصلاة — في التطبيق والأدوات والنشاط المباشر.", .fr: "Après chaque Adhan, le grand compte à rebours passe à l'Iqamah de cette prière — dans l'app, les widgets et l'activité en direct."],
+        "leaveNudge": [.en: "Time-to-leave nudge", .ar: "تنبيه وقت المغادرة", .fr: "Rappel de départ"],
+        "leaveOff": [.en: "Off", .ar: "إيقاف", .fr: "Non"],
+        "leaveMinutes": [.en: "%lld min before Iqamah", .ar: "قبل الإقامة بـ %lld دقيقة", .fr: "%lld min avant l'Iqamah"],
         "inMinutes": [.en: "%@ in %lld minutes", .ar: "%@ بعد %lld دقيقة", .fr: "%@ dans %lld minutes"],
         "jumuahReplaces": [.en: "Jumu'ah replaces Dhuhr · Khutbah at %@", .ar: "تحلّ الجمعة محلّ الظهر · الخطبة في %@", .fr: "Jumu'ah remplace Dhuhr · Khutbah à %@"],
         "jumuahWeeklyAt": [.en: "Jumu'ah Khutbah every Friday at %@", .ar: "خطبة الجمعة كل يوم جمعة في %@", .fr: "Khutbah de Jumu'ah chaque vendredi à %@"],
