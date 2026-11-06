@@ -1,57 +1,135 @@
-# Al Rashid Prayer Widget
+<p align="center">
+  <img src="AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" width="120" alt="Al Rashid Prayer app icon">
+</p>
 
-Prayer time widgets for **AlRashid Mosque, Edmonton, Canada** (13070 113 St NW) — a small companion app whose main purpose is its Home Screen and Lock Screen widgets: today's Adhan and Iqamah times, the next prayer, and a live countdown, in a deep-green and gold design.
+<h1 align="center">Al Rashid Prayer</h1>
 
-## Screenshots
+<p align="center">Prayer times for <b>AlRashid Mosque, Edmonton</b> — Home & Lock Screen widgets, a Live Activity, Apple Watch and Android, all calibrated to the mosque's own timetable.</p>
 
-**2.0.0 — our biggest update yet.**
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-iOS%2017%2B%20%C2%B7%20Android%208.0%2B-0B3D2E" alt="Platform: iOS 17+ · Android 8.0+">
+  <a href="https://github.com/c12n/alrashid-widget/releases/latest"><img src="https://img.shields.io/github/v/release/c12n/alrashid-widget?label=Latest%20release&color=0E5A40" alt="Latest release"></a>
+  <a href="https://github.com/c12n/alrashid-widget/releases"><img src="https://img.shields.io/github/downloads/c12n/alrashid-widget/total?label=Downloads&color=0E5A40" alt="Downloads"></a>
+  <img src="https://img.shields.io/github/license/c12n/alrashid-widget?color=0E5A40" alt="License: MIT">
+</p>
+
+<p align="center">
+  🕌 <a href="https://prayer.07051969.xyz"><b>Join the TestFlight beta</b></a> · 📥 <a href="https://github.com/c12n/alrashid-widget/releases/latest"><b>Download v2.0.0</b></a> · 🪶 <a href="https://c12nfeather.07051969.xyz/source.json"><b>Feather source</b></a> · 🐛 <a href="https://github.com/c12n/alrashid-widget/issues"><b>Report an issue</b></a>
+</p>
+
+`v2.0.0` · Our biggest update yet — colored widgets, Ramadan mode, a monthly calendar, Minimal Mode, and more.
+
+> [!NOTE]
+> **Unofficial.** Al Rashid Prayer is an independent companion app. It is not affiliated with or endorsed by AlRashid Mosque — it simply follows the mosque's published timetable (13070 113 St NW, Edmonton, Canada · [alrashidmosque.ca](https://alrashidmosque.ca)).
+
+---
+
+## 📱 Screenshots
 
 ![Al Rashid Prayer 2.0.0 — feature overview](screenshots/00-feature-graphic.png)
 
-| <img src="screenshots/01-home.png" width="300" alt="Today screen"> | <img src="screenshots/02-widgets.png" width="300" alt="Colored widgets"> |
-| :---: | :---: |
-| **Today** — next prayer, live countdown, Adhan + Iqamah | **Colored widgets** — Match your theme, or Separate colors |
-| <img src="screenshots/03-ramadan.png" width="300" alt="Ramadan mode"> | <img src="screenshots/04-calendar.png" width="300" alt="Monthly calendar"> |
-| **Ramadan mode** — Iftar & Suhoor countdowns, Taraweeh | **Monthly calendar** — tap a day to preview it |
-| <img src="screenshots/05-minimal.png" width="300" alt="Minimal Mode"> | |
-| **Minimal Mode** — just the essentials, alerts always on | |
+| ![Today](screenshots/01-home.png) | ![Colored widgets](screenshots/02-widgets.png) | ![Ramadan mode](screenshots/03-ramadan.png) | ![Monthly calendar](screenshots/04-calendar.png) | ![Minimal Mode](screenshots/05-minimal.png) |
+| :---: | :---: | :---: | :---: | :---: |
+| **Today** | **Colored widgets** | **Ramadan mode** | **Monthly calendar** | **Minimal Mode** |
 
-| <img src="screenshots/06-standby.png" width="460" alt="StandBy"> | <img src="screenshots/07-duo.png" width="460" alt="iPhone Duo"> |
+| ![StandBy](screenshots/06-standby.png) | ![iPhone Duo](screenshots/07-duo.png) |
 | :---: | :---: |
-| **StandBy** — a nightstand view of the next prayer | **iPhone Duo** — turn a big iPhone sideways |
+| **StandBy** | **iPhone Duo** |
 
 *Screenshots are design-faithful renders of the shipped 2.0.0 interface.*
 
-## Features
+---
 
-- **Medium widget** — the full day at a glance: Fajr, Sunrise, Dhuhr, Asr, Maghrib and Isha with **Adhan and Iqamah columns**, the next prayer highlighted, plus the Hijri date and a live countdown to the next prayer.
-- **Small widget** — next prayer, its Adhan and Iqamah times, and a live countdown.
-- **Large widget** — the full day plus the mosque address footer; on Fridays the Dhuhr row becomes **Jumu'ah** with the 1:30 PM khutbah time.
-- **Lock Screen widgets** — accessory rectangular (next prayer + time + countdown) and accessory circular (next prayer + time).
-- **On-device prayer calculation** — times are computed on the phone for the mosque's coordinates (53.591189, -113.515598, America/Edmonton) and **calibrated to AlRashid Mosque's published timetable** (Fajr 18.25°, Maghrib at sunset + 5 min, Asr Shafi / shadow factor 1 with a +2 min adjustment, Isha as a calibrated interval after Maghrib, plus the mosque's summer schedule conventions). Validated against the mosque's published May–December 2026 tables: every prayer lands within about a minute on average. No network connection is needed for the core times.
-- **Hijri date** — computed from an embedded Umm al-Qura month table, matching the mosque's official app.
-- **Iqamah times** — shown alongside Adhan using Al Rashid's usual offsets (Fajr +20 min, Dhuhr +10, Asr +10, Maghrib +5, Isha +10). Note: the mosque occasionally publishes fixed iqamah times (for example a fixed Fajr iqamah in some seasons), which can differ from the offset pattern.
-- **Widget timeline** — entries are planned at every prayer boundary (plus midnight rollovers), so the "next prayer" and countdown roll over on time without opening the app.
-- **Adhan notifications & Live Activity** — a notification with sound at every prayer time (7 days scheduled ahead), and a Lock Screen / Dynamic Island Live Activity counting down to the next prayer. The Live Activity switches to the following prayer at the Adhan itself: the next prayer is pre-staged in the activity, the Lock Screen and Dynamic Island promote it the moment the time arrives, and a background refresh chained to just after every Adhan re-stages the content. Since v1.3 a small self-hosted push server also rolls the activity over server-side: the app registers the activity's APNs push token with the server together with a rolling 14-day schedule of upcoming prayer states, and the server sends an ActivityKit update push at each Adhan — the on-device flip stays as the fallback. It also shows the prayer after next as a "Then: …" line. (v1.0.6 fixed the automatic rollover: the `fetch` background mode was missing from Info.plist in v1.0.4–v1.0.5, so the chained background refresh could never run.)
-- **Companion app** — one screen with today's times, the next-prayer countdown, and buttons for directions to the mosque and the mosque website (alrashidmosque.ca).
-- Deep green (#0B3D2E / #0E5A40) and gold (#D4AF37) theme, with Dark and Tinted app-icon variants.
-- **Native Light & Dark Mode (v1.0.4)** — the app, widgets and Live Activity follow the system appearance: warm white surfaces with deep-green text in Light Mode, green glass in Dark Mode, and the app icon switches to its Dark variant automatically (set the Home Screen icon appearance to Auto). Colors are kept high-contrast in both modes (deep green on white ≈ 10.9:1, white on green ≈ 7.5:1+) and text sizes were bumped up, for readers with low vision.
-- **Settings & themes (v1.0.5)** — a dedicated Settings page (gear on the main screen): Light/Dark/System appearance that the app and widgets actually follow; color pickers for the main color (the green), the accent (the gold) and the text color, each with presets and a full color wheel — picked text passes an automatic contrast guard so it can never become unreadable; ready-made designed themes plus save-your-own themes; an in-app app-icon picker (Classic, Midnight, Desert, Rose, Royal); per-prayer alert toggles including an optional Sunrise alert; and Reset to Defaults. Backgrounds stay pure black in Dark Mode and pure white in Light Mode, in the app and the widgets alike.
-- **Privacy** — no accounts, no tracking, no ads, no analytics; prayer times are calculated and stored on the device (see the bundled privacy manifest). The one network exception, since v1.3: while a Live Activity is running, the app sends that activity's push token and its upcoming prayer names/times to the project's own push server solely so the server can update the activity at each prayer time — nothing is linked to an identity or used for tracking. Since v1.0.7 the main app itself is the privacy build: there are no Directions/Website buttons, so nothing ever opens outside the app (v1.0.5–v1.0.6 shipped that as a separate `AlRashidWidget-Private.ipa`).
+## 🌟 Features
 
-## Requirements
+- **Widgets everywhere:** Home Screen (small, medium, large), Lock Screen, StandBy, Apple Watch with a complication, and Android home-screen widgets. On Fridays the Dhuhr row becomes **Jumu'ah** with the 1:30 PM khutbah time.
+- **Colored widgets** *(Settings → Appearance → Widget Colors)*: **Match my theme**, or give the Home Screen, Lock Screen and Live Activity separate colors — 8 designed palettes.
+- **Live countdowns:** the next prayer and a live countdown everywhere, and once the Adhan passes the hero and Live Activity flip to the **Iqamah countdown**.
+- **Ramadan mode:** automatic in Ramadan — Iftar and Suhoor hero countdowns, a Taraweeh slot after Isha, and widgets that follow.
+- **Monthly calendar:** the full month with Fajr and Maghrib on every day; tap a day to preview it, share it, or print it.
+- **Minimal Mode** *(Settings → Appearance)*: just the essentials — today's times, the next prayer, fasting times — with Adhan alerts always on. Turn it off and everything comes back exactly as it was.
+- **Alerts your way:** an Adhan notification with sound at every prayer, per-prayer sounds and mutes, Sunnah fasting reminders (Mondays, Thursdays and the white days), and a **Jumu'ah Live Activity** on Fridays.
+- **Silence the next alert in one tap:** ask Siri, use the iOS 18 Control Center control, or the Android Quick Settings tile.
+- **Made for big and small screens:** a proper iPad split view and **iPhone Duo** — turn a big iPhone sideways for the two-pane layout.
+- **In the car:** an Android Auto prayer screen. (CarPlay code is ready but stays off — Apple limits which app categories may use CarPlay.)
+- **Your settings travel:** back up to a file, iCloud (iOS) or Google Drive (Android), and sync between your devices.
+- **Private by design:** no accounts, no ads, no analytics, no tracking — and prayer times are calculated on the device, so it works fully offline.
 
-- iOS 17.0 or later, iPhone or iPad.
+---
 
-## Install (sideload)
+## 🚀 Installation
 
-1. Download `AlRashidWidget.ipa` from the latest GitHub Release.
-2. Install it with your preferred sideloading tool (for example AltStore, SideStore, Sideloadly, or Xcode).
-3. On the Home Screen, long-press → **+** → search **AlRashid** → add the small, medium or large widget. For the Lock Screen, long-press the Lock Screen → **Customize** → add the AlRashid widget under the clock.
+### TestFlight (easiest on iPhone/iPad)
 
-The app and the widget share data through an App Group (`group.com.c12n.alrashidwidget`); with a free developer certificate the bundle IDs may be re-signed by your sideloading tool, which is fine — the App Group is declared in both targets' entitlements.
+Open **[prayer.07051969.xyz](https://prayer.07051969.xyz)** on your device and join the public beta.
 
-## Build from source
+### GitHub release (sideload)
+
+1. Download `AlRashidWidget-2.0.0.ipa` (iOS) or the APK (Android) from the [latest release](https://github.com/c12n/alrashid-widget/releases/latest).
+2. Install it with your preferred tool — AltStore, SideStore, Sideloadly, Feather, or Xcode.
+
+### Feather
+
+Add the source `https://c12nfeather.07051969.xyz/source.json` in Feather and install **Al Rashid Prayer** from it.
+
+> [!TIP]
+> The app and its widgets share data through an App Group, so re-signing with a free developer certificate is fine.
+
+---
+
+## 📖 How to Use
+
+1. **Open the app once** so the widgets load today's times.
+2. **Add a widget:** long-press the Home Screen → **+** → search **Al Rashid**. For the Lock Screen, long-press it → **Customize**.
+3. **Make it yours:** Settings → Appearance for themes, widget colors, per-prayer sounds — or flip on **Minimal Mode** for the essentials only.
+
+---
+
+## 🗺️ Roadmap
+
+- **App Store release** — waiting on written permission from the mosque to use its name and timetable.
+- **Google Drive backup sign-in** on Android (file backup already works).
+- **CarPlay** — ready in code, waiting on Apple to allow the category.
+
+---
+
+## ⚠️ Known Issues
+
+- On **Apple Watch**, the app keeps its own settings container, so the watch shows English/standard defaults — the prayer times themselves are correct.
+- **Android Auto** may need the "Unknown sources" toggle in Android Auto's developer settings when the APK is sideloaded.
+- The mosque publishes its timetable for **May–December**. January–April times come from the same calibrated calculation and may differ by a minute.
+
+---
+
+## ❓ FAQ
+
+**Is it free?**
+Yes — free, no ads, no in-app purchases.
+
+**Where do the times come from?**
+They're calculated on your device for the mosque's coordinates (53.591189, -113.515598, America/Edmonton) and calibrated against the mosque's published timetable, including its Iqamah offsets (Fajr +20, Dhuhr +10, Asr +10, Maghrib +5, Isha +10). The Hijri date uses the same Umm al-Qura calendar as the mosque's official app.
+
+**Does it need the internet?**
+No. Times, widgets and alerts all work offline. The only network use: while a Live Activity is running, the app sends that activity's push token and upcoming prayer times to the project's own small server so the activity can roll over at each Adhan — nothing is linked to an identity.
+
+**Does it collect my data?**
+No accounts, no analytics, no tracking, no ads. See the Privacy section below.
+
+---
+
+## 🔒 Privacy
+
+Al Rashid Prayer does not collect analytics or usage data and shows no ads. Prayer times are calculated and stored on the device. The single exception above (Live Activity push token + prayer schedule to the project's own server) is covered by the app's bundled privacy manifest.
+
+---
+
+## 🏗️ Built With
+
+- **iOS:** SwiftUI · WidgetKit · ActivityKit · App Intents — native Xcode project
+- **Android:** Flutter port with the identical calculator and mosque calibration, validated to the minute against the iOS implementation
+
+<details>
+<summary><b>Build from source & technical notes</b></summary>
 
 Requires Xcode 15+ (the GitHub Actions workflow uses the Xcode on `macos-26` runners).
 
@@ -66,26 +144,29 @@ xcodebuild \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM=""
 ```
 
-Every push to `main` runs the **Build IPA** workflow, which archives the app unsigned (with the widget extension embedded in `PlugIns/`) and uploads `AlRashidWidget-IPA` as a build artifact.
+Every push to `main` runs the **Build IPA** workflow, which archives the app unsigned (widget extension embedded in `PlugIns/`) and uploads `AlRashidWidget-IPA` as a build artifact.
 
-## Project layout
+**Project layout**
 
-- `AlRashidWidget/` — the app target (`AlRashidWidgetApp.swift`, `ContentView.swift`, assets, Info.plist, entitlements)
-- `Shared/` — `PrayerCalculator.swift` (prayer-time calculator with the mosque timetable calibration) and `PrayerModels.swift` (day model, iqamah config, App Group cache, timeline planning, Umm al-Qura Hijri conversion), compiled into **both** targets
-- `PrayerWidgetExtension/` — the WidgetKit extension (`PrayerWidget.swift`)
+- `AlRashidWidget/` — the app target (app, assets, Info.plist, entitlements)
+- `Shared/` — `PrayerCalculator.swift` (calculator with the mosque timetable calibration) and `PrayerModels.swift` (day model, Iqamah config, App Group cache, timeline planning, Umm al-Qura Hijri conversion), compiled into both targets
+- `PrayerWidgetExtension/` — the WidgetKit extension
+- `AlRashidWatch/` + `AlRashidWatchWidgets/` — the watchOS app and its complication
+- `flutter/` — the Flutter edition (Android), with `android_overlay/` + `patch_android.py` applied by CI
 - `make_icon.py` — regenerates the app icon set (Pillow)
 
-## Flutter edition (Android + cross-platform)
+**Calibration notes**
 
-The `flutter/` directory holds a Flutter port of the same app — identical prayer calculator and mosque calibration (ported from `Shared/PrayerCalculator.swift` and validated to the minute against the iOS implementation), the same deep-green/gold design, Iqamah offsets, Umm al-Qura Hijri date, and Friday Jumu'ah handling, all computed on-device and offline.
+The calculator is fitted to the mosque's published May–December 2026 tables (Fajr 18.25°, Maghrib at sunset + 5 min, Asr Shafi with a +2 min adjustment, Isha as a calibrated interval after Maghrib, plus the mosque's summer schedule conventions): every prayer lands within about a minute on average. Widget timelines are planned at every prayer boundary plus midnight rollovers, and the Live Activity re-stages itself by a background refresh chained to just after each Adhan, with the push server as a second rollover path.
 
-- **Android app + home-screen widgets** — three Android widgets (next prayer with countdown; schedule; full schedule with Hijri header) powered by a Kotlin port of the same calculator (`flutter/android_overlay/`), so they stay correct without the app running. Download `AlRashidWidget.apk` from the Releases page and sideload it.
-- **Responsive layouts** — phone single-column; **duo** two-pane layout at 600–1100dp (landscape phones, foldables, small tablets); wide tablet layout at 1100dp+ with today's and tomorrow's schedules side by side (iPad / Android tablets). The same Dart UI runs on iOS.
+</details>
 
-The `android/` and `ios/` platform folders are generated, not committed: run `flutter/tool/setup_platforms.sh` (Flutter 3.47.8) to assemble them from `lib/` + `android_overlay/` — the **Build APK** GitHub Actions workflow does the same, runs the calculator validation tests (`flutter/test/calculator_test.dart`), and uploads `AlRashidWidget-APK` as a build artifact.
+---
 
-## License
+## Disclaimer
 
-MIT — see [LICENSE](LICENSE).
+This is an unofficial open-source project and is not affiliated with, authorized, or endorsed by AlRashid Mosque or Apple Inc. Provided "as is", without warranty of any kind. Prayer times are calculated in good faith against the mosque's published timetable; when in doubt, follow the mosque's own announcements.
 
-Copyright (c) 2026 c12n Apps
+## 📄 License
+
+MIT — Copyright (c) 2026 c12n Apps. See [LICENSE](LICENSE).
