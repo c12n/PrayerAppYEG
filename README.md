@@ -53,28 +53,25 @@
 
 ## 🚀 Installation
 
-### iOS (iPhone and iPad)
+### iOS
 
-**Option 1 | TestFlight (easiest)**
+**TestFlight**
 
 1. Open **[prayer.07051969.xyz](https://prayer.07051969.xyz)** on your iPhone or iPad.
 2. Join the public beta and install **Al Rashid Prayer** from the TestFlight app.
 3. Updates arrive through TestFlight automatically.
 
-**Option 2 | AltStore, SideStore or Feather**
+**Sideload**
 
-1. Add this source in AltStore, SideStore or Feather: `https://raw.githubusercontent.com/c12n/alrashid-widget/main/altstore/source.json`
-2. Install **Al Rashid Prayer** from the source. It is a dedicated source with only this app in it.
-
-**Option 3 | Manual sideload**
-
-1. Download `AlRashidWidget-2.0.0.ipa` from the [latest release](https://github.com/c12n/alrashid-widget/releases/latest).
-2. Install it with Sideloadly, AltServer, Xcode, or your preferred sideloading tool.
+1. Easiest: add the dedicated AltStore source (only this app) in AltStore, SideStore or Feather: `https://raw.githubusercontent.com/c12n/alrashid-widget/main/altstore/source.json`, then install **Al Rashid Prayer** from it.
+2. Or download `AlRashidWidget-2.0.0.ipa` from the [latest release](https://github.com/c12n/alrashid-widget/releases/latest) and install it with Sideloadly, AltServer, Xcode, or your preferred sideloading tool.
 
 > [!TIP]
 > The app and its widgets share data through an App Group, so re-signing with a free developer certificate is fine.
 
 ### Android
+
+**Sideload**
 
 1. Download `AlRashidWidget-2.0.0.apk` from the [latest release](https://github.com/c12n/alrashid-widget/releases/latest) on your phone.
 2. Open the APK. If Android asks, allow **installing from unknown sources** for your browser or Files app, then tap **Install**.
