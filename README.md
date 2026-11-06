@@ -42,18 +42,12 @@
 
 ## 🌟 Features
 
-- **Widgets everywhere:** Home Screen (small, medium, large), Lock Screen, StandBy, Apple Watch with a complication, and Android home-screen widgets. On Fridays the Dhuhr row becomes **Jumu'ah** with the 1:30 PM khutbah time.
-- **Colored widgets** *(Settings → Appearance → Widget Colors)*: **Match my theme**, or give the Home Screen, Lock Screen and Live Activity separate colors — 8 designed palettes.
-- **Live countdowns:** the next prayer and a live countdown everywhere, and once the Adhan passes the hero and Live Activity flip to the **Iqamah countdown**.
-- **Ramadan mode:** automatic in Ramadan — Iftar and Suhoor hero countdowns, a Taraweeh slot after Isha, and widgets that follow.
-- **Monthly calendar:** the full month with Fajr and Maghrib on every day; tap a day to preview it, share it, or print it.
-- **Minimal Mode** *(Settings → Appearance)*: just the essentials — today's times, the next prayer, fasting times — with Adhan alerts always on. Turn it off and everything comes back exactly as it was.
-- **Alerts your way:** an Adhan notification with sound at every prayer, per-prayer sounds and mutes, Sunnah fasting reminders (Mondays, Thursdays and the white days), and a **Jumu'ah Live Activity** on Fridays.
-- **Silence the next alert in one tap:** ask Siri, use the iOS 18 Control Center control, or the Android Quick Settings tile.
-- **Made for big and small screens:** a proper iPad split view and **iPhone Duo** — turn a big iPhone sideways for the two-pane layout.
-- **In the car:** an Android Auto prayer screen. (CarPlay code is ready but stays off — Apple limits which app categories may use CarPlay.)
-- **Your settings travel:** back up to a file, iCloud (iOS) or Google Drive (Android), and sync between your devices.
-- **Private by design:** no accounts, no ads, no analytics, no tracking — and prayer times are calculated on the device, so it works fully offline.
+| **Widgets everywhere**<br>Home Screen (small, medium, large), Lock Screen, StandBy, Apple Watch with a complication, and Android home-screen widgets. On Fridays the Dhuhr row becomes **Jumu'ah** with the 1:30 PM khutbah time.<br> | **Colored widgets**<br>Match your app theme, or give the Home Screen, Lock Screen and Live Activity their own colors — 8 designed palettes. Find it in *Settings → Appearance → Widget Colors*.<br> |
+| :--- | :--- |
+| **Live countdowns**<br>The next prayer with a live countdown everywhere you look. Once the Adhan passes, the hero and the Live Activity flip to the **Iqamah countdown**, with an optional "time to leave" nudge.<br> | **Ramadan mode**<br>Automatic in Ramadan: Iftar and Suhoor hero countdowns, a Taraweeh slot after Isha, and widgets and the Live Activity that follow the month.<br> |
+| **Monthly calendar**<br>The full month with Fajr and Maghrib on every day. Tap any day to preview its times, then share the month or print it.<br> | **Alerts your way**<br>An Adhan notification with sound at every prayer, per-prayer sounds and mutes, Sunnah fasting reminders (Mondays, Thursdays, the white days), and a **Jumu'ah Live Activity** on Fridays.<br> |
+| **Silence in one tap**<br>Ask Siri, use the iOS 18 Control Center control, or tap the Android Quick Settings tile to silence just the next alert.<br> | **Minimal Mode**<br>Just the essentials — today's times, the next prayer, fasting times — with Adhan alerts always on. Turn it off and everything comes back exactly as it was. *Settings → Appearance*.<br> |
+| **Big screens & the car**<br>A proper iPad split view, **iPhone Duo** (turn a big iPhone sideways for two panes), and an Android Auto prayer screen. CarPlay is ready in code but stays off — Apple limits which app categories may use it.<br> | **Yours to keep**<br>Back up your settings to a file, iCloud (iOS) or Google Drive (Android) and sync them between devices. No accounts, no ads, no analytics, no tracking — times are calculated on the device, so it works fully offline.<br> |
 
 ---
 
@@ -163,10 +157,20 @@ The calculator is fitted to the mosque's published May–December 2026 tables (F
 
 ---
 
+## Credits
+
+Timetable and Iqamah schedule: **AlRashid Mosque** (published tables) · Hijri calendar: Umm al-Qura · Built and maintained by **c12n Apps**
+
 ## Disclaimer
 
 This is an unofficial open-source project and is not affiliated with, authorized, or endorsed by AlRashid Mosque or Apple Inc. Provided "as is", without warranty of any kind. Prayer times are calculated in good faith against the mosque's published timetable; when in doubt, follow the mosque's own announcements.
 
+- This app is **free**. If a third party charged you for it, you may have been misled.
+- No user data is collected, stored, or distributed by this repository.
+
 ## 📄 License
 
 MIT — Copyright (c) 2026 c12n Apps. See [LICENSE](LICENSE).
+
+> [!TIP]
+> **Star the repo** to get notified about new releases directly from GitHub.
