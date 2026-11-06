@@ -56,6 +56,10 @@ struct ContentView: View {
     @State private var showCalendar = false
     /// StandBy nightstand (v2.0.0, feature 4).
     @State private var showStandBy = false
+    /// Quran player (v2.1.0-private): the library cover, opened from
+    /// the phone chip, the Duo rail, or the mini player overlay.
+    @State private var showQuran = false
+    @EnvironmentObject private var quranPlayer: QuranPlayer
     /// What's New sheet (v1.8.0): shown once after an update, never
     /// on a fresh install.
     @State private var showWhatsNew = false
@@ -153,6 +157,19 @@ struct ContentView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showQuran) {
+            QuranLibraryView()
+        }
+        // Quran mini player (v2.1.0-private): rides above every
+        // layout while a surah is loaded, hidden while the Quran
+        // cover itself is open (the library shows its own).
+        .overlay(alignment: .bottom) {
+            if quranPlayer.currentSurah != nil, !showQuran {
+                MiniPlayerView { showQuran = true }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 10)
+            }
+        }
     }
 
     // MARK: Layouts (v2.0.0)
@@ -180,6 +197,9 @@ struct ContentView: View {
                     DuoChip(title: L10n.t("standBy"), detail: "") {
                         showStandBy = true
                     }
+                }
+                DuoChip(title: "Quran", detail: "Listen") {
+                    showQuran = true
                 }
                 DailyVerseCard()
                 QiblaCard()
@@ -304,6 +324,10 @@ struct ContentView: View {
 DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),
                           isActive: false) {
                 showCalendar = true
+            }
+            DuoRailButton(systemImage: "book.fill", label: "Quran",
+                          isActive: false) {
+                showQuran = true
             }
             Spacer()
             DuoRailButton(systemImage: "gearshape.fill", label: L10n.t("settings"),
