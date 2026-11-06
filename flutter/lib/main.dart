@@ -17,6 +17,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
@@ -137,7 +138,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AlertScheduler.refresh(SettingsScope.of(context), askPermission: true);
       // Show the What's New dialog once after an update (v1.8.0).
-      WhatsNew.maybeShow(context);
+      if (!SettingsScope.of(context).minimalMode) {
+        WhatsNew.maybeShow(context);
+      }
+      _checkAssistantQuery();
     });
   }
 
@@ -164,12 +168,58 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
+  /// Assistant / Bixby deep links (v2.0.0, feature 7): MainActivity
+  /// stores a pending query ('next' or a prayer name) in
+  /// shared_preferences; when the app next surfaces, answer it in a
+  /// dialog and clear it. Stale queries (> 2 minutes) are dropped.
+  Future<void> _checkAssistantQuery() async {
+    final prefs = await SharedPreferences.getInstance();
+    final query = prefs.getString('assistant.queryPrayer');
+    final at = prefs.getInt('assistant.queryAt') ?? 0;
+    if (query == null) return;
+    await prefs.remove('assistant.queryPrayer');
+    await prefs.remove('assistant.queryAt');
+    if (DateTime.now().millisecondsSinceEpoch - at > 120000) return;
+    if (!mounted) return;
+    final settings = SettingsScope.of(context);
+    final today = PrayerProvider.dayFor(tz.TZDateTime.now(_edmonton));
+    final String answer;
+    if (query == 'next') {
+      final next = PrayerProvider.snapshot(tz.TZDateTime.now(_edmonton),
+              enabled: settings.enabledPrayers)
+          .next;
+      answer =
+          '${next.name} — ${PrayerFormat.time(next.adhan)}';
+    } else {
+      final prayer = Prayer.values.asNameMap()[query];
+      if (prayer == null) return;
+      answer =
+          '${prayer.displayName} — ${PrayerFormat.time(today.adhan(prayer))}';
+    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(S.t('assistant')),
+        content: Text(answer,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(S.t('done')),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Keep the 7-day alert plan fresh, like iOS rescheduling on
     // every activation.
     if (state == AppLifecycleState.resumed) {
       AlertScheduler.refresh(SettingsScope.of(context));
+      _checkAssistantQuery();
     }
   }
 
@@ -216,6 +266,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
+              if (settings.minimalMode) {
+                return _minimalLayout(context, snapshot, today);
+              }
               if (width >= 1100) {
                 return _tabletLayout(context, snapshot, today, tomorrow);
               }
@@ -226,6 +279,37 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  // Minimal Mode (v2.0.0): essentials only at every width —
+  // next prayer + plain countdown, today's list, and the fasting
+  // row on fasting days and throughout Ramadan.
+  Widget _minimalLayout(
+      BuildContext context, PrayerSnapshot snapshot, PrayerDay today) {
+    final settings = SettingsScope.of(context);
+    final showFasting = RamadanMode.isRamadanDay(today) ||
+        FastingDays.isFastingDay(
+            today, settings.fastingMonThu, settings.fastingWhiteDays);
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          HeaderSection(today: today, now: _now),
+          const SizedBox(height: 20),
+          NextPrayerCard(snapshot: snapshot),
+          if (showFasting) ...[
+            const SizedBox(height: 20),
+            _FastingTimesRow(day: today),
+          ],
+          const SizedBox(height: 20),
+          ScheduleCard(snapshot: snapshot),
+          const SizedBox(height: 20),
+          const FooterSection(),
+        ],
       ),
     );
   }
@@ -357,6 +441,208 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 }
 
+
+// MARK: - Monthly calendar (v2.0.0, feature 2)
+
+/// Full month grid: each cell shows Fajr + Maghrib; tapping a day
+/// previews its full schedule; the month can be shared as a text
+/// table (the share sheet offers print on most devices). On wide
+/// screens the preview sits beside the grid.
+class MonthlyCalendarPage extends StatefulWidget {
+  const MonthlyCalendarPage({super.key});
+
+  @override
+  State<MonthlyCalendarPage> createState() => _MonthlyCalendarPageState();
+}
+
+class _MonthlyCalendarPageState extends State<MonthlyCalendarPage> {
+  static const _shareChannel = MethodChannel('alrashid/share');
+  static final _edmonton = PrayerProviderDayAccess.edmonton;
+
+  late tz.TZDateTime _anchor;
+  late tz.TZDateTime _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = tz.TZDateTime.now(_edmonton);
+    _anchor = tz.TZDateTime(_edmonton, now.year, now.month, 1);
+    _selected = tz.TZDateTime(_edmonton, now.year, now.month, now.day);
+  }
+
+  List<tz.TZDateTime> get _monthDates {
+    final daysInMonth =
+        DateTime(_anchor.year, _anchor.month + 1, 0).day;
+    return [
+      for (var d = 1; d <= daysInMonth; d++)
+        tz.TZDateTime(_edmonton, _anchor.year, _anchor.month, d),
+    ];
+  }
+
+  PrayerDay _day(tz.TZDateTime date) => PrayerProvider.computeDay(date);
+
+  void _shift(int delta) => setState(() {
+        _anchor = tz.TZDateTime(_edmonton, _anchor.year, _anchor.month + delta, 1);
+      });
+
+  String get _monthTableText {
+    final buffer = StringBuffer()
+      ..writeln(
+          '${MosqueInfo.name} — ${_anchor.year}-${_anchor.month.toString().padLeft(2, '0')}')
+      ..writeln()
+      ..writeln('Date\tFajr\tSunrise\tDhuhr\tAsr\tMaghrib\tIsha');
+    for (final date in _monthDates) {
+      final day = _day(date);
+      final row = [
+        for (final p in Prayer.values)
+          PrayerFormat.time(day.adhan(p)),
+      ];
+      buffer.writeln(
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}\t${row.join('\t')}');
+    }
+    buffer.writeln();
+    buffer.writeln(
+        'Iqamah: Fajr +20m · Dhuhr +10m · Asr +10m · Maghrib +5m · Isha +10m');
+    return buffer.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final selectedDay = _day(_selected);
+    final grid = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: () => _shift(-1),
+            ),
+            Expanded(
+              child: Text(
+                '${_anchor.year}-${_anchor.month.toString().padLeft(2, '0')}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colorFromHex(settings.primaryHex),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: () => _shift(1),
+            ),
+          ],
+        ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            crossAxisSpacing: 4,
+            mainAxisSpacing: 4,
+            childAspectRatio: 0.85,
+          ),
+          itemCount: _monthDates.length +
+              ((_monthDates.first.weekday - DateTime.monday) % 7),
+          itemBuilder: (context, index) {
+            final blanks = (_monthDates.first.weekday - DateTime.monday) % 7;
+            if (index < blanks) return const SizedBox.shrink();
+            final date = _monthDates[index - blanks];
+            final day = _day(date);
+            final isSelected = date.day == _selected.day &&
+                date.month == _selected.month &&
+                date.year == _selected.year;
+            return InkWell(
+              onTap: () => setState(() => _selected = date),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colorFromHex(settings.accentHex).withValues(alpha: 0.25)
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${date.day}',
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text(
+                      '${Prayer.fajr.displayName} ${PrayerFormat.time(day.adhan(Prayer.fajr))}',
+                      style: const TextStyle(fontSize: 8),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                    ),
+                    Text(
+                      '${Prayer.maghrib.displayName} ${PrayerFormat.time(day.adhan(Prayer.maghrib))}',
+                      style: const TextStyle(fontSize: 8),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+    final preview = ScheduleCard.forDay(
+      day: selectedDay,
+      title: PrayerFormat.longDate(_selected),
+    );
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(S.t('monthlyCalendar')),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: S.t('shareMonth'),
+            onPressed: () =>
+                _shareChannel.invokeMethod('share', {'text': _monthTableText}),
+          ),
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 900) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: SingleChildScrollView(child: grid)),
+                  const SizedBox(width: 20),
+                  SizedBox(
+                    width: 380,
+                    child: SingleChildScrollView(child: preview),
+                  ),
+                ],
+              ),
+            );
+          }
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [grid, const SizedBox(height: 16), preview],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Small accessor so the calendar page can build Edmonton dates
+/// without duplicating the timezone lookup.
+class PrayerProviderDayAccess {
+  static tz.Location get edmonton => edmontonLocation();
+}
+
 // MARK: - Header
 
 class HeaderSection extends StatelessWidget {
@@ -384,6 +670,16 @@ class HeaderSection extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            if (!SettingsScope.of(context).minimalMode)
+              IconButton(
+              icon: const Icon(Icons.calendar_month),
+              tooltip: S.t('monthlyCalendar'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const MonthlyCalendarPage(),
+                ),
+              ),
+              ),
             IconButton(
               icon: const Icon(Icons.settings),
               tooltip: S.t('settings'),
@@ -530,10 +826,30 @@ class NextPrayerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final next = snapshot.next;
-    final caption = snapshot.isShowingTomorrow
-        ? S.t('nextPrayerTomorrow')
-        : S.t('nextPrayer');
-    final remaining = next.adhan.difference(snapshot.date);
+    // Iqamah-first (v2.0.0): between a prayer's Adhan and its
+    // Iqamah, the hero flips to that prayer and counts down to the
+    // Iqamah; the optional time-to-leave nudge shows near the end.
+    final settings = SettingsScope.of(context);
+    final phase =
+        settings.iqamahFirst ? PrayerProvider.iqamahPhase(snapshot.date) : null;
+    final hero = phase ?? next;
+    final caption = phase != null
+        ? S.t('iqamahNow')
+        : (snapshot.isShowingTomorrow
+            ? S.t('nextPrayerTomorrow')
+            : S.t('nextPrayer'));
+    final target = phase?.iqamah ?? next.adhan;
+    final remaining = target.difference(snapshot.date);
+    final progress = phase != null
+        ? (snapshot.date.difference(phase.adhan).inSeconds /
+                phase.iqamah!.difference(phase.adhan).inSeconds)
+            .clamp(0.0, 1.0)
+            .toDouble()
+        : snapshot.progress;
+    final showLeave = phase != null &&
+        settings.leaveLeadMinutes > 0 &&
+        !snapshot.date.isBefore(
+            phase.iqamah!.subtract(Duration(minutes: settings.leaveLeadMinutes)));
     final c = SurfaceColors.of(context);
     return AdaptiveCard(
       child: Column(
@@ -541,7 +857,7 @@ class NextPrayerCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(prayerIcon(next.prayer), size: 18, color: c.accent),
+              Icon(prayerIcon(hero.prayer), size: 18, color: c.accent),
               const SizedBox(width: 6),
               Text(
                 caption,
@@ -552,6 +868,25 @@ class NextPrayerCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (RamadanMode.isRamadanDay(snapshot.day) &&
+                  (hero.prayer == Prayer.maghrib || hero.prayer == Prayer.fajr))
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: c.accent.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    S.t(hero.prayer == Prayer.maghrib ? 'iftar' : 'suhoor'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: c.accent,
+                    ),
+                  ),
+                ),
               if (next.isJumuah)
                 Container(
                   padding:
@@ -579,7 +914,7 @@ class NextPrayerCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  next.name,
+                  hero.name,
                   style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
@@ -588,7 +923,7 @@ class NextPrayerCard extends StatelessWidget {
                 ),
               ),
               Text(
-                PrayerFormat.time(next.adhan),
+                PrayerFormat.time(target),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
@@ -597,23 +932,27 @@ class NextPrayerCard extends StatelessWidget {
               ),
             ],
           ),
-          if (next.iqamah != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.groups, size: 16, color: c.secondary),
-                const SizedBox(width: 6),
-                Text(
-                  '${next.iqamahLabel} ${S.t('at')} ${PrayerFormat.time(next.iqamah!)}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: c.secondary,
-                  ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(phase != null ? Icons.campaign : Icons.groups,
+                  size: 16, color: c.secondary),
+              const SizedBox(width: 6),
+              Text(
+                phase != null
+                    ? S.f('adhanWasAt',
+                        {'time': PrayerFormat.time(phase.adhan)})
+                    : (next.iqamah != null
+                        ? '${next.iqamahLabel} ${S.t('at')} ${PrayerFormat.time(next.iqamah!)}'
+                        : ''),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: c.secondary,
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
           const SizedBox(height: 14),
           Text(
             PrayerFormat.countdown(remaining),
@@ -628,7 +967,7 @@ class NextPrayerCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: snapshot.progress,
+              value: progress,
               minHeight: 6,
               backgroundColor: c.panelTrack,
               valueColor: AlwaysStoppedAnimation<Color>(c.accent),
@@ -636,18 +975,38 @@ class NextPrayerCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            S.f('untilAdhan', {'name': next.name}),
+            phase != null
+                ? S.f('untilIqamah', {'name': phase.name})
+                : S.f('untilAdhan', {'name': next.name}),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: c.muted,
             ),
           ),
+          if (showLeave) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.directions_walk, size: 16, color: c.accent),
+                const SizedBox(width: 6),
+                Text(
+                  S.t('timeToLeave'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: c.accent,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 }
+
 
 // MARK: - Schedule card
 
@@ -788,6 +1147,38 @@ class _ScheduleCardState extends State<ScheduleCard> {
               timeSize: timeSize,
               timeWidth: large ? 104 : 86,
             ),
+          if (RamadanMode.isRamadanDay(day)) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.nightlight, size: 16, color: c.accent),
+                const SizedBox(width: 6),
+                Text(
+                  S.t('taraweeh'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: c.primary,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  S.t('estimate'),
+                  style: TextStyle(fontSize: 11, color: c.muted),
+                ),
+                const Spacer(),
+                Text(
+                  PrayerFormat.time(RamadanMode.taraweehTime(
+                      day, SettingsScope.of(context).taraweehOffsetMinutes)),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: c.primary,
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (day.isFriday) ...[
             const SizedBox(height: 10),
             Row(
@@ -1509,6 +1900,39 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Suhoor / Iftar row for Minimal Mode (v2.0.0): shown on fasting
+/// days and every day in Ramadan.
+class _FastingTimesRow extends StatelessWidget {
+  final PrayerDay day;
+  const _FastingTimesRow({required this.day});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = SurfaceColors.of(context).accent;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.nightlight_round, size: 18, color: accent),
+          const SizedBox(width: 6),
+          Text('${S.t('suhoor')} · ${PrayerFormat.time(day.adhan(Prayer.fajr))}',
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          const Spacer(),
+          Icon(Icons.wb_twilight, size: 18, color: accent),
+          const SizedBox(width: 6),
+          Text(
+              '${S.t('iftar')} · ${PrayerFormat.time(day.adhan(Prayer.maghrib))}',
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

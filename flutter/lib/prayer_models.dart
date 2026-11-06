@@ -201,6 +201,49 @@ class PrayerSnapshot {
   }
 }
 
+/// Ramadan mode (v2.0.0): automatic in Hijri month 9. Taraweeh is
+/// an estimate — minutes after the Isha Iqamah (default 15) — since
+/// the mosque publishes no fixed Taraweeh time.
+class RamadanMode {
+  static bool isRamadanOn(int year, int month, int day) =>
+      UmmAlQuraCalendar.hijri(year, month, day)?.month == 9;
+
+  static bool isRamadanDay(PrayerDay day) {
+    // Respect the user's Hijri offset adjustment (HijriState).
+    final adjusted = day.date.add(Duration(days: HijriState.offsetDays));
+    return isRamadanOn(adjusted.year, adjusted.month, adjusted.day);
+  }
+
+  static tz.TZDateTime taraweehTime(PrayerDay day, int offsetMinutes) =>
+      day.iqamah(Prayer.isha)!.add(Duration(minutes: offsetMinutes));
+}
+
+
+/// Sunnah fasting days (v2.0.0, workstream 9) — mirrors iOS
+/// FastingSettings: Mondays & Thursdays and/or the white days
+/// (13/14/15 Hijri), never during Ramadan (every day is a fast and
+/// the regular alerts already carry Suhoor/Iftar).
+class FastingDays {
+  static bool isFastingDay(
+      PrayerDay day, bool mondayThursday, bool whiteDays) {
+    if (!mondayThursday && !whiteDays) return false;
+    if (RamadanMode.isRamadanDay(day)) return false;
+    final adjusted =
+        day.date.add(Duration(days: HijriState.offsetDays));
+    if (whiteDays) {
+      final h = UmmAlQuraCalendar.hijri(
+          adjusted.year, adjusted.month, adjusted.day);
+      if (h != null && h.day >= 13 && h.day <= 15) return true;
+    }
+    if (mondayThursday &&
+        (day.date.weekday == DateTime.monday ||
+            day.date.weekday == DateTime.thursday)) {
+      return true;
+    }
+    return false;
+  }
+}
+
 class PrayerProvider {
   static tz.Location get _edmonton => edmontonLocation();
 
@@ -253,6 +296,22 @@ class PrayerProvider {
   }
 
   static PrayerDay dayFor(tz.TZDateTime date) => computeDay(date);
+
+  /// Iqamah phase (v2.0.0): the prayer whose Adhan has passed but
+  /// whose Iqamah is still ahead at [now], or null outside it.
+  static PrayerSlot? iqamahPhase(tz.TZDateTime now) {
+    final start = _startOfDay(now);
+    for (final offset in [-1, 0]) {
+      final day = computeDay(_plusDays(start, offset));
+      for (final slot in day.prayerSlots) {
+        final iqamah = slot.iqamah;
+        if (iqamah != null && !slot.adhan.isAfter(now) && now.isBefore(iqamah)) {
+          return slot;
+        }
+      }
+    }
+    return null;
+  }
 
   /// State at an arbitrary instant: the next upcoming prayer and the day
   /// whose schedule should be displayed (switches to tomorrow after Isha).

@@ -15,6 +15,13 @@ class WhatsNew {
 
   /// One feature row of the dialog: an icon and a strings.dart key.
   static const Map<String, List<(IconData, String)>> _entries = {
+    '2.0.0': [
+      (Icons.palette, 'wnWidgets200'),
+      (Icons.nightlight_round, 'wnRamadan200'),
+      (Icons.calendar_month, 'wnCalendar200'),
+      (Icons.timer, 'wnIqamah200'),
+      (Icons.view_agenda, 'wnMinimal200'),
+    ],
     '1.8.0': [
       (Icons.volume_up, 'wnSounds'),
       (Icons.backup, 'wnSync'),

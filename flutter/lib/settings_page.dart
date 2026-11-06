@@ -5,11 +5,14 @@
 // (shared_preferences) and the home-screen widgets read the same values.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import 'alerts.dart';
 import 'app_settings.dart';
 import 'prayer_models.dart';
+import 'settings_backup.dart';
 import 'strings.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -54,6 +57,15 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _sectionNote(context, S.t('appearanceNote')),
+              _sectionHeader(context, S.t('minimalMode')),
+              SwitchListTile(
+                secondary: const Icon(Icons.view_agenda_outlined),
+                title: Text(S.t('minimalMode')),
+                value: settings.minimalMode,
+                onChanged: (v) =>
+                    settings.update(() => settings.minimalMode = v),
+              ),
+              _sectionNote(context, S.t('minimalModeFooter')),
               _sectionHeader(context, S.t('themeColors')),
               _ColorRow(
                 title: S.t('mainColor'),
@@ -105,6 +117,126 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _saveTheme(context),
               ),
               _sectionNote(context, S.t('themesNote')),
+              _sectionHeader(context, S.t('widgetColors')),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(
+                        value: 'match',
+                        label: Text(S.t('widgetColorMatch')),
+                        icon: const Icon(Icons.link)),
+                    ButtonSegment(
+                        value: 'separate',
+                        label: Text(S.t('widgetColorSeparate')),
+                        icon: const Icon(Icons.tune)),
+                  ],
+                  selected: {settings.widgetColorMode},
+                  onSelectionChanged: (sel) => settings
+                      .update(() => settings.widgetColorMode = sel.first),
+                ),
+              ),
+              if (settings.widgetColorMode == 'separate') ...[
+                ListTile(
+                  title: Text(S.t('widgetPartHome')),
+                  subtitle: Text(settings.homeWidgetTheme?.name ?? S.t('appTheme')),
+                ),
+                for (final theme in presetThemes)
+                  _ThemeRow(
+                    theme: theme,
+                    subtitle: S.t('designedTheme'),
+                    isActive: settings.homeWidgetTheme?.primaryHex == theme.primaryHex &&
+                        settings.homeWidgetTheme?.accentHex == theme.accentHex &&
+                        settings.homeWidgetTheme?.textHex == theme.textHex,
+                    onTap: () =>
+                        settings.update(() => settings.homeWidgetTheme = theme),
+                  ),
+                for (final theme in settings.savedThemes)
+                  _ThemeRow(
+                    theme: theme,
+                    subtitle: S.t('savedTheme'),
+                    isActive: settings.homeWidgetTheme?.primaryHex == theme.primaryHex &&
+                        settings.homeWidgetTheme?.accentHex == theme.accentHex &&
+                        settings.homeWidgetTheme?.textHex == theme.textHex,
+                    onTap: () =>
+                        settings.update(() => settings.homeWidgetTheme = theme),
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.restart_alt),
+                  title: Text(S.t('appTheme')),
+                  onTap: () =>
+                      settings.update(() => settings.homeWidgetTheme = null),
+                ),
+              ],
+              _sectionNote(
+                  context,
+                  S.t(settings.widgetColorMode == 'separate'
+                      ? 'widgetColorsNoteSeparate'
+                      : 'widgetColorsNoteMatch')),
+              _sectionHeader(context, S.t('iqamahFirst')),
+              SwitchListTile(
+                title: Text(S.t('iqamahFirst')),
+                value: settings.iqamahFirst,
+                onChanged: (v) =>
+                    settings.update(() => settings.iqamahFirst = v),
+              ),
+              if (settings.iqamahFirst)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final lead in [0, 5, 10, 15, 20])
+                        ChoiceChip(
+                          label: Text(lead == 0
+                              ? S.t('leaveOff')
+                              : S.f('leaveMinutes',
+                                  {'minutes': '$lead'})),
+                          selected: settings.leaveLeadMinutes == lead,
+                          onSelected: (_) => settings.update(
+                              () => settings.leaveLeadMinutes = lead),
+                        ),
+                    ],
+                  ),
+                ),
+              _sectionNote(context, S.t('iqamahFirstFooter')),
+              _sectionHeader(context, S.t('ramadan')),
+              ListTile(
+                title: Text(S.t('taraweehAfterIsha')),
+                subtitle: Text(S.t('taraweeh')),
+                trailing: DropdownButton<int>(
+                  value: settings.taraweehOffsetMinutes,
+                  items: [
+                    for (final m in [0, 15, 30, 45, 60])
+                      DropdownMenuItem(
+                        value: m,
+                        child: Text(
+                            S.f('taraweehOffset', {'minutes': '$m'})),
+                      ),
+                  ],
+                  onChanged: (v) => settings
+                      .update(() => settings.taraweehOffsetMinutes = v ?? 15),
+                ),
+              ),
+              _sectionNote(context, S.t('ramadanFooter')),
+              _sectionHeader(context, S.t('fasting')),
+              SwitchListTile(
+                title: Text(S.t('fastingMonThu')),
+                value: settings.fastingMonThu,
+                onChanged: (v) {
+                  settings.update(() => settings.fastingMonThu = v);
+                  AlertScheduler.refresh(settings);
+                },
+              ),
+              SwitchListTile(
+                title: Text(S.t('fastingWhiteDays')),
+                value: settings.fastingWhiteDays,
+                onChanged: (v) {
+                  settings.update(() => settings.fastingWhiteDays = v);
+                  AlertScheduler.refresh(settings);
+                },
+              ),
+              _sectionNote(context, S.t('fastingFooter')),
               _sectionHeader(context, S.t('textSize')),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -229,6 +361,14 @@ class SettingsPage extends StatelessWidget {
                   },
                 ),
               _sectionNote(context, S.t('widgetCountdownNote')),
+              _sectionHeader(context, S.t('assistant')),
+              ListTile(
+                leading: const Icon(Icons.notifications_off_outlined),
+                title: Text(S.t('silenceNext')),
+                onTap: () => _silenceNext(context, settings),
+              ),
+              _sectionNote(context, S.t('assistantFooter')),
+              _BackupSection(settings: settings),
               _sectionHeader(context, S.t('privacy')),
               ListTile(
                 leading: const Icon(Icons.pan_tool),
@@ -748,6 +888,126 @@ class _ThemeRow extends StatelessWidget {
               ? Icon(Icons.check_circle, color: colorFromHex(theme.accentHex))
               : const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+}
+
+/// Silence-next (v2.0.0): names the next upcoming Adhan in the
+/// one-shot flag the alert plan honors, then rebuilds the plan.
+Future<void> _silenceNext(BuildContext context, AppSettings settings) async {
+    final now = tz.TZDateTime.now(edmontonLocation());
+    final snapshot = PrayerProvider.snapshot(now);
+    settings.update(() => settings.silenceNextEpochSeconds =
+        snapshot.next.adhan.millisecondsSinceEpoch ~/ 1000);
+    await AlertScheduler.refresh(settings);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(S.f('silenceNextDone', {
+        'name': snapshot.next.name,
+        'time': PrayerFormat.time(snapshot.next.adhan),
+      })),
+    ));
+}
+
+/// Settings Backup section (v2.0.0, workstream 9): Google Drive
+/// (appDataFolder) back up / restore with the last-backup date,
+/// plus the export / import file rows — the same JSON as iOS.
+class _BackupSection extends StatefulWidget {
+  final AppSettings settings;
+  const _BackupSection({required this.settings});
+
+  @override
+  State<_BackupSection> createState() => _BackupSectionState();
+}
+
+class _BackupSectionState extends State<_BackupSection> {
+  int? _lastBackupMillis;
+  String? _message;
+
+  @override
+  void initState() {
+    super.initState();
+    SettingsBackup.driveLastBackupMillis()
+        .then((v) => mounted ? setState(() => _lastBackupMillis = v) : null);
+  }
+
+  Future<void> _run(Future<bool> Function() action,
+      {String okKey = 'backupDone'}) async {
+    final ok = await action();
+    if (!mounted) return;
+    setState(() => _message = ok ? S.t(okKey) : S.t('actionFailed'));
+    if (ok) {
+      final v = await SettingsBackup.driveLastBackupMillis();
+      if (mounted) setState(() => _lastBackupMillis = v);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = widget.settings;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+          child: Text(S.t('backup'),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w700)),
+        ),
+        ListTile(
+          leading: const Icon(Icons.cloud_upload_outlined),
+          title: Text(S.t('backupToDrive')),
+          subtitle: Text(_lastBackupMillis == null
+              ? S.t('noBackupYet')
+              : S.f('lastBackup', {
+                  'when': DateFormat.yMMMd()
+                      .add_jm()
+                      .format(DateTime.fromMillisecondsSinceEpoch(
+                          _lastBackupMillis!)),
+                })),
+          onTap: () => _run(SettingsBackup.driveBackup),
+        ),
+        ListTile(
+          leading: const Icon(Icons.cloud_download_outlined),
+          title: Text(S.t('restoreFromDrive')),
+          onTap: () => _run(() async {
+            final ok = await SettingsBackup.driveRestore(settings);
+            if (ok) await AlertScheduler.refresh(settings);
+            return ok;
+          }, okKey: 'restoreDone'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.ios_share),
+          title: Text(S.t('exportSettings')),
+          onTap: () async {
+            final json = await SettingsBackup.exportJson();
+            await const MethodChannel('alrashid/share')
+                .invokeMethod('share', {'text': json});
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.file_download_outlined),
+          title: Text(S.t('importSettings')),
+          onTap: () => _run(() async {
+            final ok = await SettingsBackup.pickAndImport(settings);
+            if (ok) await AlertScheduler.refresh(settings);
+            return ok;
+          }, okKey: 'restoreDone'),
+        ),
+        if (_message != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(_message!,
+                style: Theme.of(context).textTheme.bodySmall),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Text(S.t('backupFooter'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ),
+      ],
     );
   }
 }

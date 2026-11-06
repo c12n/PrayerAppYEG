@@ -55,6 +55,7 @@ class AlertScheduler {
 
   static const _reminderIdOffset = 100000000;
   static const _jumuahIdOffset = 200000000;
+  static const _fastingIdOffset = 300000000;
 
   static int _epochSeconds(tz.TZDateTime t) =>
       t.millisecondsSinceEpoch ~/ 1000;
@@ -106,7 +107,11 @@ class AlertScheduler {
                 })
               : S.f('adhanAtTime', {'time': PrayerFormat.time(slot.adhan)});
         }
-        items.add(PlannedNotification(
+        // Silence-next (v2.0.0): drop exactly this one Adhan alert
+        // when the one-shot flag names it (Quick Settings tile /
+        // in-app button). Its reminder and later alerts stay.
+        if (_epochSeconds(slot.adhan) != settings.silenceNextEpochSeconds) {
+          items.add(PlannedNotification(
           id: _epochSeconds(slot.adhan),
           epochMillis: slot.adhan.millisecondsSinceEpoch,
           title: title,
@@ -114,11 +119,13 @@ class AlertScheduler {
           // Per-prayer sound override wins, else the app sound (v1.8.0).
           // Jumu'ah slots carry prayer == dhuhr, like iOS.
           sound: settings.effectiveSound(slot.prayer),
-        ));
+          ));
+        }
 
         // Pre-prayer reminder: the five prayers only — Sunrise has
         // none, and the Jumu'ah slot has its own reminder below.
         if (settings.reminderEnabled &&
+            !settings.minimalMode &&
             slot.prayer.isPrayer &&
             !slot.isJumuah) {
           final fire = slot.adhan.subtract(Duration(minutes: lead));
@@ -135,9 +142,32 @@ class AlertScheduler {
         }
       }
 
+      // Sunnah fasting reminder (v2.0.0): 20:00 the evening before
+      // each selected fasting day, with that day's Suhoor/Iftar.
+      if (FastingDays.isFastingDay(
+          day, settings.fastingMonThu, settings.fastingWhiteDays)) {
+        final fire = tz.TZDateTime(
+            loc, dayStart.year, dayStart.month, dayStart.day - 1, 20);
+        if (fire.isAfter(now)) {
+          items.add(PlannedNotification(
+            id: _epochSeconds(dayStart) + _fastingIdOffset,
+            epochMillis: fire.millisecondsSinceEpoch,
+            title: S.f('mosqueTitle',
+                {'name': S.t('fastingDay'), 'mosque': MosqueInfo.name}),
+            body: S.f('fastingReminderBody', {
+              'time1': PrayerFormat.time(day.adhan(Prayer.fajr)),
+              'time2': PrayerFormat.time(day.adhan(Prayer.maghrib)),
+            }),
+          ));
+        }
+      }
+
       // Jumu'ah reminder: one hour before the Friday Khutbah.
       final khutbah = day.jumuahKhutbah;
-      if (day.isFriday && settings.jumuahReminderEnabled && khutbah != null) {
+      if (day.isFriday &&
+          settings.jumuahReminderEnabled &&
+          !settings.minimalMode &&
+          khutbah != null) {
         final fire = khutbah.subtract(const Duration(minutes: 60));
         if (fire.isAfter(now)) {
           items.add(PlannedNotification(
@@ -183,6 +213,14 @@ class AlertScheduler {
       await _channel.invokeMethod('schedule', {
         'items': plan.map((n) => n.toChannelMap()).toList(),
       });
+      // The silence flag is one-shot: once its moment is inside the
+      // scheduled window (or past), it has done its job.
+      final silenced = settings.silenceNextEpochSeconds;
+      if (silenced != 0 &&
+          silenced <
+              DateTime.now().millisecondsSinceEpoch ~/ 1000 + 7 * 86400) {
+        settings.update(() => settings.silenceNextEpochSeconds = 0);
+      }
     } on PlatformException {
       // Native side unavailable — alerts simply don't arm.
     } on MissingPluginException {

@@ -16,11 +16,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'hijri_calendar.dart';
 import 'prayer_models.dart';
 
-/// App version identity (v1.8.0) — keep in step with pubspec.yaml's
-/// version (1.8.0+15). Shown in the Settings footer and used by the
+/// App version identity (v2.0.0) — keep in step with pubspec.yaml's
+/// version (2.0.0+16). Shown in the Settings footer and used by the
 /// What's New sheet to decide whether to appear.
-const kAppVersion = '1.8.0';
-const kAppBuildNumber = '15';
+const kAppVersion = '2.0.0';
+const kAppBuildNumber = '16';
 
 /// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
 /// what travel over the alerts MethodChannel and name the Android
@@ -81,6 +81,20 @@ class AppSettings extends ChangeNotifier {
   // optional per-prayer overrides (absent = follow the app sound).
   static const alertSoundKey = 'alerts.sound';
   static String prayerSoundKey(Prayer p) => 'alerts.sound.prayer.${p.name}';
+  // Iqamah-first countdown (v2.0.0, same keys as iOS).
+  static const iqamahFirstKey = 'countdown.iqamahFirst';
+  static const leaveLeadKey = 'countdown.leaveLeadMinutes';
+  static const taraweehOffsetKey = 'ramadan.taraweehAfterIshaMinutes';
+  // Widget colors (v2.0.0, same keys as iOS): 'match' (widgets follow
+  // the app theme) or 'separate' (home widgets get their own theme).
+  // Android has no Lock Screen widgets or Live Activities, so Home is
+  // the only part stored here. The flat hex keys mirror the chosen
+  // widget theme for the Kotlin widgets, which read raw prefs values.
+  static const widgetColorModeKey = 'appearance.widgetColorMode';
+  static const homeWidgetThemeKey = 'appearance.partTheme.home';
+  static const widgetHomePrimaryKey = 'appearance.widgetTheme.home.primaryHex';
+  static const widgetHomeAccentKey = 'appearance.widgetTheme.home.accentHex';
+  static const widgetHomeTextKey = 'appearance.widgetTheme.home.textHex';
   static const hijriOffsetKey = 'hijri.offsetDays';
   static const hapticsEnabledKey = 'compass.hapticsEnabled';
   static const reminderLeadOptions = [5, 10, 15, 20, 30];
@@ -93,6 +107,20 @@ class AppSettings extends ChangeNotifier {
   int primaryHex = defaultPrimary;
   int accentHex = defaultAccent;
   int textHex = defaultText;
+
+  /// Widget colors (v2.0.0): 'match' or 'separate' (see keys above).
+  String widgetColorMode = 'match';
+
+  /// The home widgets' own theme in Separate mode; null = app theme.
+  SavedTheme? homeWidgetTheme;
+
+  /// The colors the home widgets should actually wear.
+  int get effectiveWidgetPrimary =>
+      (widgetColorMode == 'separate' ? homeWidgetTheme?.primaryHex : null) ?? primaryHex;
+  int get effectiveWidgetAccent =>
+      (widgetColorMode == 'separate' ? homeWidgetTheme?.accentHex : null) ?? accentHex;
+  int get effectiveWidgetText =>
+      (widgetColorMode == 'separate' ? homeWidgetTheme?.textHex : null) ?? textHex;
 
   /// False until the user actually picks a text color; while false the
   /// text color follows the defaults (white on colored surfaces, the
@@ -125,6 +153,27 @@ class AppSettings extends ChangeNotifier {
 
   /// Hijri date adjustment (v1.5): −1..+1 days on the displayed date.
   int hijriOffsetDays = 0;
+
+  /// Iqamah-first countdown (v2.0.0): hero counts down to the
+  /// Iqamah after the Adhan; time-to-leave lead (0 = off).
+  bool iqamahFirst = true;
+  int leaveLeadMinutes = 0;
+
+  /// Ramadan Taraweeh estimate offset (v2.0.0): minutes after the
+  /// Isha Iqamah.
+  int taraweehOffsetMinutes = 15;
+
+  /// Minimal Mode (v2.0.0): essentials-only view layer; never
+  /// changes any other setting.
+  bool minimalMode = false;
+
+  /// Sunnah fasting reminders (v2.0.0): Mondays & Thursdays, and
+  /// the white days (13/14/15 Hijri). Both off by default.
+  bool fastingMonThu = false;
+  bool fastingWhiteDays = false;
+
+  /// Epoch seconds of the one Adhan alert to skip (0 = none).
+  int silenceNextEpochSeconds = 0;
 
   /// Facing-Qibla vibration in the full-screen compass only (v1.5).
   /// The home-screen Qibla card never buzzes.
@@ -172,8 +221,18 @@ class AppSettings extends ChangeNotifier {
     }
     s.hijriOffsetDays =
         (prefs.getInt(hijriOffsetKey) ?? 0).clamp(-1, 1);
+    s.iqamahFirst = prefs.getBool(iqamahFirstKey) ?? true;
+    final lead = prefs.getInt(leaveLeadKey) ?? 0;
+    s.leaveLeadMinutes = [0, 5, 10, 15, 20].contains(lead) ? lead : 0;
+    final taraweeh = prefs.getInt(taraweehOffsetKey);
+    s.taraweehOffsetMinutes =
+        [0, 15, 30, 45, 60].contains(taraweeh) ? taraweeh! : 15;
     HijriState.offsetDays = s.hijriOffsetDays;
     s.hapticsEnabled = prefs.getBool(hapticsEnabledKey) ?? true;
+    s.minimalMode = prefs.getBool(minimalModeKey) ?? false;
+    s.fastingMonThu = prefs.getBool(fastingMonThuKey) ?? false;
+    s.fastingWhiteDays = prefs.getBool(fastingWhiteDaysKey) ?? false;
+    s.silenceNextEpochSeconds = prefs.getInt(silenceNextEpochKey) ?? 0;
     s.language = AppLanguage.values.asNameMap()[prefs.getString(languageKey)] ??
         AppLanguage.en;
     LanguageState.current = s.language;
@@ -187,6 +246,17 @@ class AppSettings extends ChangeNotifier {
             .toList();
       } catch (_) {
         s.savedThemes = [];
+      }
+    }
+    s.widgetColorMode =
+        prefs.getString(widgetColorModeKey) == 'separate' ? 'separate' : 'match';
+    final rawWidgetTheme = prefs.getString(homeWidgetThemeKey);
+    if (rawWidgetTheme != null) {
+      try {
+        s.homeWidgetTheme =
+            SavedTheme.fromJson(jsonDecode(rawWidgetTheme) as Map<String, dynamic>);
+      } catch (_) {
+        s.homeWidgetTheme = null;
       }
     }
     return s;
@@ -220,13 +290,71 @@ class AppSettings extends ChangeNotifier {
       }
     }
     await prefs.setInt(hijriOffsetKey, hijriOffsetDays);
+    await prefs.setBool(iqamahFirstKey, iqamahFirst);
+    await prefs.setInt(leaveLeadKey, leaveLeadMinutes);
+    await prefs.setInt(taraweehOffsetKey, taraweehOffsetMinutes);
     HijriState.offsetDays = hijriOffsetDays;
     await prefs.setBool(hapticsEnabledKey, hapticsEnabled);
+    await prefs.setBool(minimalModeKey, minimalMode);
+    await prefs.setBool(fastingMonThuKey, fastingMonThu);
+    await prefs.setBool(fastingWhiteDaysKey, fastingWhiteDays);
+    await prefs.setInt(silenceNextEpochKey, silenceNextEpochSeconds);
     await prefs.setString(
         savedThemesKey, jsonEncode(savedThemes.map((t) => t.toJson()).toList()));
     await prefs.setString(languageKey, language.name);
     await prefs.setString(textSizeKey, textSize.name);
     LanguageState.current = language;
+    // Widget colors (v2.0.0): the JSON theme drives the Settings UI;
+    // the flat hex keys are what the Kotlin widgets read.
+    await prefs.setString(widgetColorModeKey, widgetColorMode);
+    final widgetTheme = homeWidgetTheme;
+    if (widgetTheme != null) {
+      await prefs.setString(homeWidgetThemeKey, jsonEncode(widgetTheme.toJson()));
+    } else {
+      await prefs.remove(homeWidgetThemeKey);
+    }
+    await prefs.setInt(widgetHomePrimaryKey, effectiveWidgetPrimary);
+    await prefs.setInt(widgetHomeAccentKey, effectiveWidgetAccent);
+    await prefs.setInt(widgetHomeTextKey, effectiveWidgetText);
+  }
+
+
+  /// Re-reads every field from preferences (v2.0.0): used after a
+  /// settings-backup import so the whole app picks the restored
+  /// values up without a restart.
+  Future<void> reload() async {
+    final fresh = await AppSettings.load();
+    mode = fresh.mode;
+    primaryHex = fresh.primaryHex;
+    accentHex = fresh.accentHex;
+    textHex = fresh.textHex;
+    textIsCustom = fresh.textIsCustom;
+    widgetColorMode = fresh.widgetColorMode;
+    homeWidgetTheme = fresh.homeWidgetTheme;
+    language = fresh.language;
+    textSize = fresh.textSize;
+    savedThemes = fresh.savedThemes;
+    alerts
+      ..clear()
+      ..addAll(fresh.alerts);
+    notificationsEnabled = fresh.notificationsEnabled;
+    reminderEnabled = fresh.reminderEnabled;
+    reminderLeadMinutes = fresh.reminderLeadMinutes;
+    jumuahReminderEnabled = fresh.jumuahReminderEnabled;
+    alertSound = fresh.alertSound;
+    prayerSoundOverrides
+      ..clear()
+      ..addAll(fresh.prayerSoundOverrides);
+    hijriOffsetDays = fresh.hijriOffsetDays;
+    iqamahFirst = fresh.iqamahFirst;
+    leaveLeadMinutes = fresh.leaveLeadMinutes;
+    taraweehOffsetMinutes = fresh.taraweehOffsetMinutes;
+    hapticsEnabled = fresh.hapticsEnabled;
+    minimalMode = fresh.minimalMode;
+    fastingMonThu = fresh.fastingMonThu;
+    fastingWhiteDays = fresh.fastingWhiteDays;
+    silenceNextEpochSeconds = fresh.silenceNextEpochSeconds;
+    notifyListeners();
   }
 
   /// Applies a change, notifies the UI and persists everything.
@@ -274,6 +402,15 @@ class AppSettings extends ChangeNotifier {
         prayerSoundOverrides.clear();
         hijriOffsetDays = 0;
         hapticsEnabled = true;
+        widgetColorMode = 'match';
+        homeWidgetTheme = null;
+        iqamahFirst = true;
+        leaveLeadMinutes = 0;
+        taraweehOffsetMinutes = 15;
+        minimalMode = false;
+        fastingMonThu = false;
+        fastingWhiteDays = false;
+        silenceNextEpochSeconds = 0;
       });
 }
 
