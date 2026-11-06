@@ -2,6 +2,7 @@ package com.c12n.alrashidwidget
 
 import android.content.Intent
 import androidx.car.app.CarAppService
+import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.Session
 import androidx.car.app.model.ItemList
@@ -28,10 +29,10 @@ class PrayerCarService : CarAppService() {
 }
 
 class PrayerCarSession : Session() {
-    override fun onCreateScreen(intent: Intent): Screen = PrayerCarScreen(this)
+    override fun onCreateScreen(intent: Intent): Screen = PrayerCarScreen(carContext)
 }
 
-class PrayerCarScreen(session: Session) : Screen(session) {
+class PrayerCarScreen(carContext: CarContext) : Screen(carContext) {
     override fun onGetTemplate(): Template {
         val model = WidgetData.current(carContext)
         val list = ItemList.Builder()

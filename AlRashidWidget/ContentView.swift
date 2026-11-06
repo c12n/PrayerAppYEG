@@ -298,7 +298,7 @@ struct ContentView: View {
                 showDuoCompass = true
             }
                         DuoRailButton(systemImage: "moon.zzz.fill", label: L10n.t("standBy"),
-                          isSelected: false) {
+                          isActive: false) {
                 showStandBy = true
             }
 DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),

@@ -512,12 +512,12 @@ enum LiveActivityPushSync {
     // so a broken handoff is diagnosable on the phone itself.
     private static let activityIdKey = "pushsync.activityId"
     private static let activitySinceKey = "pushsync.activitySince"
-    private static let pushCapableKey = "pushsync.pushCapable"
-    private static let requestErrorKey = "pushsync.requestError"
+    nonisolated private static let pushCapableKey = "pushsync.pushCapable"
+    nonisolated private static let requestErrorKey = "pushsync.requestError"
     private static let lastAttemptKey = "pushsync.lastAttemptAt"
     private static let lastHTTPKey = "pushsync.lastHTTPStatus"
-    private static let lastErrorKey = "pushsync.lastError"
-    private static let registeredAtKey = "pushsync.registeredAt"
+    nonisolated private static let lastErrorKey = "pushsync.lastError"
+    nonisolated private static let registeredAtKey = "pushsync.registeredAt"
     private static let syncedHashKey = "pushsync.syncedHash"
     private static let buildKey = "pushsync.appBuild"
     // v1.6.0: push-to-start token state (see syncPushToStartToken).
