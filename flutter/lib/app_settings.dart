@@ -84,6 +84,11 @@ class AppSettings extends ChangeNotifier {
   // Iqamah-first countdown (v2.0.0, same keys as iOS).
   static const iqamahFirstKey = 'countdown.iqamahFirst';
   static const leaveLeadKey = 'countdown.leaveLeadMinutes';
+  // Minimal Mode, Sunnah fasting, one-shot silence (v2.0.0, same keys as iOS).
+  static const minimalModeKey = 'appearance.minimalMode';
+  static const fastingMonThuKey = 'fasting.mondayThursday';
+  static const fastingWhiteDaysKey = 'fasting.whiteDays';
+  static const silenceNextEpochKey = 'alerts.silenceNextEpoch';
   static const taraweehOffsetKey = 'ramadan.taraweehAfterIshaMinutes';
   // Widget colors (v2.0.0, same keys as iOS): 'match' (widgets follow
   // the app theme) or 'separate' (home widgets get their own theme).
@@ -222,8 +227,9 @@ class AppSettings extends ChangeNotifier {
     s.hijriOffsetDays =
         (prefs.getInt(hijriOffsetKey) ?? 0).clamp(-1, 1);
     s.iqamahFirst = prefs.getBool(iqamahFirstKey) ?? true;
-    final lead = prefs.getInt(leaveLeadKey) ?? 0;
-    s.leaveLeadMinutes = [0, 5, 10, 15, 20].contains(lead) ? lead : 0;
+    final leaveLead = prefs.getInt(leaveLeadKey) ?? 0;
+    s.leaveLeadMinutes =
+        [0, 5, 10, 15, 20].contains(leaveLead) ? leaveLead : 0;
     final taraweeh = prefs.getInt(taraweehOffsetKey);
     s.taraweehOffsetMinutes =
         [0, 15, 30, 45, 60].contains(taraweeh) ? taraweeh! : 15;

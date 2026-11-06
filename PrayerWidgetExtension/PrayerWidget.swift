@@ -685,7 +685,7 @@ struct PrayerWidgetBundle: WidgetBundle {
 struct SilenceNextAlertControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "com.c12n.alrashidwidget.silenceNextAlert") {
-            ControlButton(action: SilenceNextAlertIntent()) {
+            ControlWidgetButton(action: SilenceNextAlertIntent()) {
                 Label("Silence Next Alert", systemImage: "bell.slash.fill")
             }
         }
