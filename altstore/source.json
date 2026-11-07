@@ -31,6 +31,15 @@
       ],
       "versions": [
         {
+          "version": "2.0.1",
+          "buildVersion": "26",
+          "date": "2026-11-07T22:04:00Z",
+          "localizedDescription": "2.0.1 | Widget refresh fix: the Home Screen widgets could stay in the Iqamah phase at 0:00 after the Iqamah had passed. The widget timeline now adds a settle update one minute after every Adhan and Iqamah.",
+          "downloadURL": "https://github.com/c12n/alrashid-widget/releases/download/v2.0.1/AlRashidWidget-2.0.1.ipa",
+          "size": 3425087,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "2.0.0",
           "buildVersion": "24",
           "date": "2026-11-06T17:59:00Z",
@@ -40,11 +49,11 @@
           "minOSVersion": "17.0"
         }
       ],
-      "version": "2.0.0",
-      "versionDate": "2026-11-06T17:59:00Z",
-      "versionDescription": "2.0.0 | Our biggest update yet: colored widgets, Ramadan mode, a monthly calendar, Minimal Mode, iPad and iPhone Duo layouts, StandBy, Siri and Control Center controls, Sunnah fasting reminders, and settings backup.",
-      "downloadURL": "https://github.com/c12n/alrashid-widget/releases/download/v2.0.0/AlRashidWidget-2.0.0.ipa",
-      "size": 3424994,
+      "version": "2.0.1",
+      "versionDate": "2026-11-07T22:04:00Z",
+      "versionDescription": "2.0.1 | Widget refresh fix: the Home Screen widgets could stay in the Iqamah phase at 0:00 after the Iqamah had passed. The widget timeline now adds a settle update one minute after every Adhan and Iqamah.",
+      "downloadURL": "https://github.com/c12n/alrashid-widget/releases/download/v2.0.1/AlRashidWidget-2.0.1.ipa",
+      "size": 3425087,
       "minOSVersion": "17.0",
       "beta": false,
       "appPermissions": {
