@@ -19,7 +19,7 @@ import 'prayer_models.dart';
 /// App version identity (v2.0.0) — keep in step with pubspec.yaml's
 /// version (2.0.0+16). Shown in the Settings footer and used by the
 /// What's New sheet to decide whether to appear.
-const kAppVersion = '2.0.0';
+const kAppVersion = '2.0.1';
 const kAppBuildNumber = '16';
 
 /// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
