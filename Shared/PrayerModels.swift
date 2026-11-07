@@ -642,6 +642,18 @@ struct PrayerProvider: Sendable {
                 if let iqamah = slot.iqamah, iqamah > now {
                     boundaries.insert(iqamah)
                 }
+                // v2.0.1: settle entries one minute after each Adhan
+                // and each Iqamah. WidgetKit occasionally skips or
+                // delays a single entry swap (seen on device 2026-11-07:
+                // the large widget sat in the Dhuhr iqamah phase at
+                // 0:00 for almost two hours until a tap forced a
+                // reload). A skipped boundary now self-corrects at the
+                // settle entry a minute later instead of freezing the
+                // hero until the next prayer.
+                boundaries.insert(slot.adhan.addingTimeInterval(60))
+                if let iqamah = slot.iqamah, iqamah > now {
+                    boundaries.insert(iqamah.addingTimeInterval(60))
+                }
             }
         }
         if tomorrowStart > now { boundaries.insert(tomorrowStart) }
