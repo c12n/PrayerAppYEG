@@ -76,9 +76,9 @@ struct SurahArtworkView: View {
 }
 
 /// Style + speed menu, shared by both player styles.
-struct PlayerOptionsMenu<Label: View>: View {
+struct PlayerOptionsMenu<MenuLabel: View>: View {
     @EnvironmentObject private var player: QuranPlayer
-    @ViewBuilder let label: () -> Label
+    @ViewBuilder let label: () -> MenuLabel
 
     var body: some View {
         Menu {
@@ -130,9 +130,9 @@ func quranRateLabel(_ rate: Float) -> String {
 
 /// Sleep timer menu (off / minutes / end of surah), tinted by the
 /// caller so both styles can share it.
-struct SleepMenu<Label: View>: View {
+struct SleepMenu<MenuLabel: View>: View {
     @EnvironmentObject private var player: QuranPlayer
-    @ViewBuilder let label: () -> Label
+    @ViewBuilder let label: () -> MenuLabel
 
     var body: some View {
         Menu {
