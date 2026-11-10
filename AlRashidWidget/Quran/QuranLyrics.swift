@@ -61,6 +61,24 @@ final class QuranTextStore: ObservableObject {
 
 // MARK: - Lyrics view
 
+/// Estimated current ayah index: playback fraction applied across
+/// the ayahs weighted by Arabic character count (longer ayahs take
+/// proportionally longer to recite). Shared by the full lyrics view
+/// and the Now Playing preview strip.
+func quranCurrentAyahIndex(_ ayahs: [QuranAyahText],
+                           time: Double, duration: Double) -> Int {
+    guard !ayahs.isEmpty, duration > 0 else { return 0 }
+    let weights = ayahs.map { Double(max($0.ar.count, 1)) }
+    let total = weights.reduce(0, +)
+    guard total > 0 else { return 0 }
+    var target = (time / duration) * total
+    for (index, weight) in weights.enumerated() {
+        if target < weight { return index }
+        target -= weight
+    }
+    return ayahs.count - 1
+}
+
 struct QuranLyricsView: View {
     @EnvironmentObject private var player: QuranPlayer
     @Environment(\.dismiss) private var dismiss
@@ -76,21 +94,9 @@ struct QuranLyricsView: View {
         return store.ayahsBySurah[surah.number] ?? []
     }
 
-    /// Estimated current ayah index: playback fraction applied
-    /// across the ayahs weighted by Arabic character count (longer
-    /// ayahs take proportionally longer to recite).
     private var currentAyahIndex: Int {
-        let list = ayahs
-        guard !list.isEmpty, player.duration > 0 else { return 0 }
-        let weights = list.map { Double(max($0.ar.count, 1)) }
-        let total = weights.reduce(0, +)
-        guard total > 0 else { return 0 }
-        var target = (player.currentTime / player.duration) * total
-        for (index, weight) in weights.enumerated() {
-            if target < weight { return index }
-            target -= weight
-        }
-        return list.count - 1
+        quranCurrentAyahIndex(ayahs, time: player.currentTime,
+                              duration: player.duration)
     }
 
     var body: some View {

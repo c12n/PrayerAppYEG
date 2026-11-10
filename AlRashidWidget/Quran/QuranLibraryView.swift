@@ -380,6 +380,15 @@ struct QuranLibraryView: View {
 
     private var optionsMenu: some View {
         Menu {
+            Section("Player style") {
+                Picker("Player style", selection: Binding(
+                    get: { player.playerStyle },
+                    set: { player.playerStyle = $0 }
+                )) {
+                    Text("Spotify").tag(QuranPlayer.PlayerStyle.spotify)
+                    Text("Apple Music").tag(QuranPlayer.PlayerStyle.appleMusic)
+                }
+            }
             Section("Audio language") {
                 Button {
                     player.setAudioLanguage(.arabic)
@@ -413,26 +422,6 @@ struct QuranLibraryView: View {
                         } else {
                             Text(reciter.name)
                         }
-                    }
-                }
-            }
-            Section("Player style") {
-                Button {
-                    player.playerStyle = .spotify
-                } label: {
-                    if player.playerStyle == .spotify {
-                        Label("Spotify", systemImage: "checkmark")
-                    } else {
-                        Text("Spotify")
-                    }
-                }
-                Button {
-                    player.playerStyle = .appleMusic
-                } label: {
-                    if player.playerStyle == .appleMusic {
-                        Label("Apple Music", systemImage: "checkmark")
-                    } else {
-                        Text("Apple Music")
                     }
                 }
             }

@@ -81,6 +81,8 @@ struct SurahArtworkView: View {
 /// skips to the next / previous surah in the queue.
 private struct TrackSwipeModifier: ViewModifier {
     @EnvironmentObject private var player: QuranPlayer
+    @Environment(\.dismiss) private var dismiss
+    @Binding var dismissDragY: CGFloat
     @State private var dragX: CGFloat = 0
 
     func body(content: Content) -> some View {
@@ -89,25 +91,70 @@ private struct TrackSwipeModifier: ViewModifier {
             .gesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { value in
-                        if abs(value.translation.width) > abs(value.translation.height) * 1.5 {
-                            dragX = value.translation.width * 0.32
+                        let w = value.translation.width
+                        let h = value.translation.height
+                        if abs(w) > abs(h) * 1.5 {
+                            dragX = w * 0.32
+                            dismissDragY = 0
+                        } else if h > 0, abs(h) > abs(w) * 1.2 {
+                            dismissDragY = h * 0.92
+                            dragX = 0
                         }
                     }
                     .onEnded { value in
                         let dx = value.translation.width
+                        let dy = value.translation.height
+                        if dismissDragY > 110 {
+                            dismiss()
+                        }
                         withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
                             dragX = 0
+                            dismissDragY = 0
                         }
-                        if dx < -70 {
-                            player.next()
-                        } else if dx > 70 {
-                            player.previous()
+                        if abs(dx) > abs(dy) * 1.5 {
+                            if dx < -70 {
+                                player.next()
+                            } else if dx > 70 {
+                                player.previous()
+                            }
                         }
                     })
     }
 }
 
-/// Style + speed menu, shared by both player styles.
+/// Vertical-only drag-to-dismiss for the player headers: a downward
+/// swipe on the header drags the whole player (via `dismissDragY`)
+/// and dismisses past the threshold. Needed because the player is
+/// often a full-screen cover, which has no system swipe-to-dismiss.
+private struct DismissDragModifier: ViewModifier {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var dismissDragY: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onChanged { value in
+                        let h = value.translation.height
+                        if h > 0,
+                           abs(h) > abs(value.translation.width) * 1.2 {
+                            dismissDragY = h * 0.92
+                        }
+                    }
+                    .onEnded { _ in
+                        if dismissDragY > 110 {
+                            dismiss()
+                        }
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                            dismissDragY = 0
+                        }
+                    })
+    }
+}
+
+/// Player style menu, shared by both player styles. A Picker (not
+/// checkmark Buttons) so the menu renders natively and the selection
+/// always applies.
 struct PlayerOptionsMenu<MenuLabel: View>: View {
     @EnvironmentObject private var player: QuranPlayer
     @ViewBuilder let label: () -> MenuLabel
@@ -115,49 +162,18 @@ struct PlayerOptionsMenu<MenuLabel: View>: View {
     var body: some View {
         Menu {
             Section("Player style") {
-                Button {
-                    player.playerStyle = .spotify
-                } label: {
-                    if player.playerStyle == .spotify {
-                        Label("Spotify", systemImage: "checkmark")
-                    } else {
-                        Text("Spotify")
-                    }
-                }
-                Button {
-                    player.playerStyle = .appleMusic
-                } label: {
-                    if player.playerStyle == .appleMusic {
-                        Label("Apple Music", systemImage: "checkmark")
-                    } else {
-                        Text("Apple Music")
-                    }
-                }
-            }
-            Section("Speed") {
-                ForEach(QuranPlayer.allowedRates, id: \.self) { rateOption in
-                    Button {
-                        player.setRate(rateOption)
-                    } label: {
-                        if rateOption == player.rate {
-                            Label(quranRateLabel(rateOption), systemImage: "checkmark")
-                        } else {
-                            Text(quranRateLabel(rateOption))
-                        }
-                    }
+                Picker("Player style", selection: Binding(
+                    get: { player.playerStyle },
+                    set: { player.playerStyle = $0 }
+                )) {
+                    Text("Spotify").tag(QuranPlayer.PlayerStyle.spotify)
+                    Text("Apple Music").tag(QuranPlayer.PlayerStyle.appleMusic)
                 }
             }
         } label: {
             label()
         }
     }
-}
-
-/// "1×", "1.25×", "0.5×" — the player's speed labels.
-func quranRateLabel(_ rate: Float) -> String {
-    rate == rate.rounded()
-        ? "\(Int(rate))×"
-        : String(format: "%g×", Double(rate))
 }
 
 /// Sleep timer menu (off / minutes / end of surah), tinted by the
@@ -284,6 +300,8 @@ private struct SpotifyNowPlayingView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showQueue = false
     @State private var showLyrics = false
+    @State private var dismissDragY: CGFloat = 0
+    @StateObject private var lyricsStore = QuranTextStore()
 
     private var isDark: Bool { colorScheme == .dark }
 
@@ -310,12 +328,17 @@ private struct SpotifyNowPlayingView: View {
                     .ignoresSafeArea()
                 VStack(spacing: 0) {
                     header
-                    SurahArtworkView(surah: surah, cornerRadius: 12)
-                        .id(surah.number)
-                        .transition(.opacity)
-                        .shadow(color: .black.opacity(0.35), radius: 22, y: 12)
-                        .padding(.top, 14)
-                        .modifier(TrackSwipeModifier())
+                        .modifier(DismissDragModifier(dismissDragY: $dismissDragY))
+                    ZStack(alignment: .bottom) {
+                        SurahArtworkView(surah: surah, cornerRadius: 12)
+                        lyricsStrip(surah)
+                            .padding(12)
+                    }
+                    .id(surah.number)
+                    .transition(.opacity)
+                    .shadow(color: .black.opacity(0.35), radius: 22, y: 12)
+                    .padding(.top, 14)
+                    .modifier(TrackSwipeModifier(dismissDragY: $dismissDragY))
                     titleRow(surah)
                     ThinScrubber(foreground: .white, timeColor: onGradientMuted)
                         .padding(.top, 18)
@@ -332,6 +355,8 @@ private struct SpotifyNowPlayingView: View {
                 Text("Nothing playing").foregroundStyle(.secondary)
             }
         }
+        .offset(y: dismissDragY)
+        .onAppear { lyricsStore.loadIfNeeded() }
         .sheet(isPresented: $showQueue) { QueueView() }
         .sheet(isPresented: $showLyrics) { QuranLyricsView() }
     }
@@ -358,6 +383,40 @@ private struct SpotifyNowPlayingView: View {
                     .foregroundStyle(onGradient)
                     .frame(width: 40, height: 40)
             }
+        }
+    }
+
+    /// Current-ayah preview strip overlaid on the artwork's bottom
+    /// edge (the spot Spotify puts its lyrics card): Arabic line +
+    /// English line for the ayah playing now; tap opens full lyrics.
+    @ViewBuilder
+    private func lyricsStrip(_ surah: QuranSurah) -> some View {
+        let ayahs = lyricsStore.ayahsBySurah[surah.number] ?? []
+        if !ayahs.isEmpty {
+            let index = quranCurrentAyahIndex(
+                ayahs, time: player.currentTime, duration: player.duration)
+            let ayah = ayahs[min(index, ayahs.count - 1)]
+            Button {
+                showLyrics = true
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(ayah.ar)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .lineLimit(1)
+                    Text(ayah.en)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(.black.opacity(0.38),
+                            in: RoundedRectangle(cornerRadius: 12,
+                                                 style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -505,6 +564,7 @@ private struct AppleMusicNowPlayingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showQueue = false
     @State private var showLyrics = false
+    @State private var dismissDragY: CGFloat = 0
 
     var body: some View {
         ZStack {
@@ -512,13 +572,14 @@ private struct AppleMusicNowPlayingView: View {
             if let surah = player.currentSurah {
                 VStack(spacing: 0) {
                     header
+                        .modifier(DismissDragModifier(dismissDragY: $dismissDragY))
                     SurahArtworkView(surah: surah, cornerRadius: 16)
                         .id(surah.number)
                         .transition(.opacity)
                         .frame(maxWidth: 320)
                         .shadow(color: .black.opacity(0.28), radius: 24, y: 14)
                         .padding(.top, 10)
-                        .modifier(TrackSwipeModifier())
+                        .modifier(TrackSwipeModifier(dismissDragY: $dismissDragY))
                     titleBlock(surah)
                     PlayerScrubber(tint: Theme.adaptiveGold, timeColor: .secondary)
                         .padding(.top, 16)
@@ -534,6 +595,7 @@ private struct AppleMusicNowPlayingView: View {
                 Text("Nothing playing").foregroundStyle(.secondary)
             }
         }
+        .offset(y: dismissDragY)
         .sheet(isPresented: $showQueue) { QueueView() }
         .sheet(isPresented: $showLyrics) { QuranLyricsView() }
     }
