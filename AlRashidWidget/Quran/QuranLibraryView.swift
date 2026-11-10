@@ -21,11 +21,14 @@ struct QuranLibraryView: View {
 
     @EnvironmentObject private var player: QuranPlayer
     @EnvironmentObject private var downloads: QuranDownloads
+    @EnvironmentObject private var bookmarks: QuranBookmarks
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
     @State private var favoritesOnly = false
     @State private var downloadedOnly = false
+    @State private var bookmarksOnly = false
     @State private var showNowPlaying = false
+    @State private var showDownloadsManager = false
 
     private var displayedSurahs: [QuranSurah] {
         var list = QuranLibrary.surahs
@@ -60,13 +63,17 @@ struct QuranLibraryView: View {
             List {
                 headerSection
                 chipsSection
-                if searchText.isEmpty, !favoritesOnly, !downloadedOnly {
-                    collectionsSection
+                if bookmarksOnly {
+                    bookmarksSection
+                } else {
+                    if searchText.isEmpty, !favoritesOnly, !downloadedOnly {
+                        collectionsSection
+                    }
+                    if favoritesOnly, !displayedSurahs.isEmpty {
+                        playAllSection
+                    }
+                    surahSection
                 }
-                if favoritesOnly, !displayedSurahs.isEmpty {
-                    playAllSection
-                }
-                surahSection
             }
             .listStyle(.plain)
             .background(Color(uiColor: .systemBackground))
@@ -116,6 +123,9 @@ struct QuranLibraryView: View {
         .sheet(isPresented: $showNowPlaying) {
             NowPlayingView()
         }
+        .sheet(isPresented: $showDownloadsManager) {
+            QuranDownloadsManagerView()
+        }
     }
 
     // MARK: Header & chips
@@ -156,6 +166,7 @@ struct QuranLibraryView: View {
                          count: player.favorites.count,
                          isOn: favoritesOnly) {
                         favoritesOnly.toggle()
+                        if favoritesOnly { bookmarksOnly = false }
                     }
                     chip(title: "Downloaded",
                          systemImage: "arrow.down.circle.fill",
@@ -163,6 +174,18 @@ struct QuranLibraryView: View {
                          count: downloads.downloadedCount,
                          isOn: downloadedOnly) {
                         downloadedOnly.toggle()
+                        if downloadedOnly { bookmarksOnly = false }
+                    }
+                    chip(title: "Bookmarks",
+                         systemImage: "bookmark.fill",
+                         iconColor: Theme.adaptiveGold,
+                         count: bookmarks.bookmarks.count,
+                         isOn: bookmarksOnly) {
+                        bookmarksOnly.toggle()
+                        if bookmarksOnly {
+                            favoritesOnly = false
+                            downloadedOnly = false
+                        }
                     }
                     if player.currentSurah != nil {
                         chip(title: "Continue",
@@ -236,6 +259,84 @@ struct QuranLibraryView: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 2, trailing: 16))
         }
+    }
+
+    // MARK: Bookmarks (build 31)
+
+    private var bookmarksSection: some View {
+        Section {
+            if bookmarks.bookmarks.isEmpty {
+                Text("No bookmarks yet. In the lyrics, long-press any ayah to bookmark it.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            ForEach(bookmarks.bookmarks) { bookmark in
+                Button {
+                    playBookmark(bookmark)
+                } label: {
+                    bookmarkRow(bookmark)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Color.clear)
+                .listRowSeparatorTint(Color.gray.opacity(0.18))
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        bookmarks.remove(bookmark)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        } header: {
+            Text("Bookmarks")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func bookmarkRow(_ bookmark: QuranBookmark) -> some View {
+        let surah = QuranLibrary.surah(bookmark.surah)
+        let ayahText = QuranTextData.ayahsBySurah[bookmark.surah]?
+            .first { $0.n == bookmark.ayah }
+        return HStack(spacing: 12) {
+            Image(systemName: "bookmark.fill")
+                .font(.subheadline)
+                .foregroundStyle(Theme.adaptiveGold)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(surah?.english ?? "Surah \(bookmark.surah)") · Ayah \(bookmark.ayah)")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                if let ayahText {
+                    Text(ayahText.en)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            Spacer()
+            Image(systemName: "play.circle.fill")
+                .font(.title3)
+                .foregroundStyle(Theme.green)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+
+    /// Plays the bookmarked surah and seeks to the ayah's
+    /// estimated start, then opens the player.
+    private func playBookmark(_ bookmark: QuranBookmark) {
+        guard QuranLibrary.surah(bookmark.surah) != nil else { return }
+        player.play(surahNumber: bookmark.surah,
+                    queue: QuranLibrary.surahs.map(\.number),
+                    contextLabel: "Bookmarks")
+        let ayahs = QuranTextData.ayahsBySurah[bookmark.surah] ?? []
+        if let index = ayahs.firstIndex(where: { $0.n == bookmark.ayah }) {
+            player.seek(to: quranAyahStartTime(ayahs, index: index,
+                                               duration: player.duration))
+        }
+        showNowPlaying = true
     }
 
     // MARK: Collections
@@ -423,6 +524,13 @@ struct QuranLibraryView: View {
                             Text(reciter.name)
                         }
                     }
+                }
+            }
+            Section {
+                Button {
+                    showDownloadsManager = true
+                } label: {
+                    Label("Manage downloads", systemImage: "arrow.down.circle")
                 }
             }
         } label: {
@@ -697,5 +805,74 @@ private struct SurahRow: View {
             }
             .buttonStyle(.plain)
         }
+    }
+}
+
+// MARK: - Downloads manager (build 31)
+
+/// Bulk downloads + storage per voice: download all 114 surahs,
+/// cancel in-flight downloads, delete a voice's files, and see how
+/// much space each voice uses.
+private struct QuranDownloadsManagerView: View {
+    @EnvironmentObject private var downloads: QuranDownloads
+    @Environment(\.dismiss) private var dismiss
+
+    private var voices: [(id: String, name: String)] {
+        QuranLibrary.reciters.map { (id: $0.id, name: $0.name) }
+            + [(id: QuranLibrary.englishReciterId,
+                name: QuranLibrary.englishReciter.name)]
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    LabeledContent("Downloaded surahs",
+                                   value: "\(downloads.downloadedCount)")
+                    LabeledContent("Storage used",
+                                   value: byteLabel(downloads.totalBytes))
+                }
+                ForEach(voices, id: \.id) { voice in
+                    Section {
+                        let count = downloads.downloadedCount(reciterId: voice.id)
+                        let active = downloads.activeDownloadCount(reciterId: voice.id)
+                        LabeledContent("On device", value: "\(count) of 114")
+                        if active > 0 {
+                            LabeledContent("Downloading now",
+                                           value: "\(active) in progress")
+                        }
+                        LabeledContent("Storage",
+                                       value: byteLabel(downloads.bytes(reciterId: voice.id)))
+                        if active > 0 {
+                            Button("Cancel downloads", role: .destructive) {
+                                downloads.cancelAll(reciterId: voice.id)
+                            }
+                        } else if count < 114 {
+                            Button("Download all 114 surahs") {
+                                downloads.downloadAll(reciterId: voice.id)
+                            }
+                        }
+                        if count > 0 {
+                            Button("Delete all downloads", role: .destructive) {
+                                downloads.deleteAll(reciterId: voice.id)
+                            }
+                        }
+                    } header: {
+                        Text(voice.name)
+                    }
+                }
+            }
+            .navigationTitle("Downloads")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func byteLabel(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 }

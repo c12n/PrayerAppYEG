@@ -234,6 +234,10 @@ struct ContentView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // The Qibla tab is a compass: portrait only (build 31).
+            .onChange(of: phoneTab) { _, tab in
+                OrientationLock.setPortraitOnly(tab == .qibla)
+            }
 
             VStack(spacing: 8) {
                 if quranPlayer.currentSurah != nil {
@@ -2808,8 +2812,16 @@ private struct QiblaCompassView: View {
                 }
             }
         }
-        .onAppear { manager.start() }
-        .onDisappear { manager.stop() }
+        .onAppear {
+            manager.start()
+            // The compass is read holding the phone upright: lock
+            // the scene to portrait while it is up (build 31).
+            OrientationLock.setPortraitOnly(true)
+        }
+        .onDisappear {
+            manager.stop()
+            OrientationLock.setPortraitOnly(false)
+        }
         // The facing haptic lives ONLY here (v1.5.1): on the card it
         // fired whenever the phone drifted past the Qibla bearing,
         // even with the card scrolled off-screen. In the full-screen

@@ -199,3 +199,55 @@ enum QuranTheme {
     /// #F6F7F4 — the library's page tint.
     static let pageTint = Color(red: 0.965, green: 0.969, blue: 0.957)
 }
+
+// MARK: - Ayah bookmarks (build 31)
+
+/// One saved ayah: a surah number + ayah number within it.
+struct QuranBookmark: Codable, Identifiable, Equatable {
+    var surah: Int
+    var ayah: Int
+    var createdAt: Date
+
+    var id: String { "\(surah):\(ayah)" }
+}
+
+/// Persisted ayah bookmarks (`quran.bookmarks.v1`, JSON in
+/// UserDefaults.standard, like the listening stats).
+final class QuranBookmarks: ObservableObject {
+    @Published private(set) var bookmarks: [QuranBookmark] = []
+
+    private let key = "quran.bookmarks.v1"
+    private var defaults: UserDefaults { .standard }
+
+    init() {
+        if let data = defaults.data(forKey: key),
+           let decoded = try? JSONDecoder().decode([QuranBookmark].self, from: data) {
+            bookmarks = decoded.sorted { $0.createdAt > $1.createdAt }
+        }
+    }
+
+    func isBookmarked(surah: Int, ayah: Int) -> Bool {
+        bookmarks.contains { $0.surah == surah && $0.ayah == ayah }
+    }
+
+    func toggle(surah: Int, ayah: Int) {
+        if isBookmarked(surah: surah, ayah: ayah) {
+            bookmarks.removeAll { $0.surah == surah && $0.ayah == ayah }
+        } else {
+            bookmarks.insert(QuranBookmark(surah: surah, ayah: ayah,
+                                           createdAt: Date()), at: 0)
+        }
+        save()
+    }
+
+    func remove(_ bookmark: QuranBookmark) {
+        bookmarks.removeAll { $0.id == bookmark.id }
+        save()
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(bookmarks) {
+            defaults.set(data, forKey: key)
+        }
+    }
+}

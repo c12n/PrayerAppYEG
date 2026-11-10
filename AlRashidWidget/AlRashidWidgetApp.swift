@@ -38,8 +38,44 @@ final class AppearanceModeObserver: ObservableObject {
     }
 }
 
+/// Supplies the app's supported orientations, which the Qibla
+/// screens narrow to portrait only (build 31).
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     supportedInterfaceOrientationsFor window: UIWindow?)
+        -> UIInterfaceOrientationMask {
+        OrientationLock.mask
+    }
+}
+
+/// Runtime orientation lock: the app normally allows every
+/// orientation its Info.plist declares; while a Qibla screen is
+/// showing, the mask narrows to portrait and the scene is rotated
+/// back if it was in landscape.
+enum OrientationLock {
+    static var mask: UIInterfaceOrientationMask = defaultMask
+
+    static var defaultMask: UIInterfaceOrientationMask {
+        UIDevice.current.userInterfaceIdiom == .pad ? .all : .allButUpsideDown
+    }
+
+    static func setPortraitOnly(_ locked: Bool) {
+        mask = locked ? .portrait : defaultMask
+        guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene }).first,
+              let root = scene.windows.first?.rootViewController
+        else { return }
+        root.setNeedsUpdateOfSupportedInterfaceOrientations()
+        if locked {
+            scene.requestGeometryUpdate(
+                .iOS(interfaceOrientations: .portrait)) { _ in }
+        }
+    }
+}
+
 @main
 struct AlRashidWidgetApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appearanceObserver = AppearanceModeObserver()
     /// Quran player (v2.1.0-private): one engine + one download
     /// store for the whole app, injected for ContentView's mini
@@ -47,6 +83,7 @@ struct AlRashidWidgetApp: App {
     /// restores the last session (paused — never autoplays).
     @StateObject private var quranPlayer = QuranPlayer()
     @StateObject private var quranDownloads = QuranDownloads()
+    @StateObject private var quranBookmarks = QuranBookmarks()
 
     init() {
         BackgroundRefresh.register()
@@ -63,6 +100,7 @@ struct AlRashidWidgetApp: App {
             ContentView()
                 .environmentObject(quranPlayer)
                 .environmentObject(quranDownloads)
+                .environmentObject(quranBookmarks)
                 .preferredColorScheme(appearanceObserver.mode.colorScheme)
                 .tint(Theme.adaptiveGold)
         }

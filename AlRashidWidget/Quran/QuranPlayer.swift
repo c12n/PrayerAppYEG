@@ -159,6 +159,8 @@ final class QuranPlayer: ObservableObject {
     private var endObserver: NSObjectProtocol?
     private var interruptionWasPlaying = false
     private var sleepTimer: Timer?
+    /// When a minute-based sleep timer fires (build 31 fade-out).
+    private var sleepDeadline: Date?
     /// Seek to apply once the current item is ready (restore, or a
     /// seek requested while the stream is still loading).
     private var pendingSeek: TimeInterval?
@@ -278,6 +280,7 @@ final class QuranPlayer: ObservableObject {
 
     func pause() {
         player.pause()
+        player.volume = 1
         isPlaying = false
         flushListenStats()
         persistPosition()
@@ -306,6 +309,11 @@ final class QuranPlayer: ObservableObject {
 
     func seek(to seconds: TimeInterval) {
         let target = max(0, seconds)
+        // A manual seek out of an armed ayah loop disarms it (the
+        // loop's own jump back targets its start, which is inside).
+        if let loop = ayahLoop, target < loop.start || target >= loop.end {
+            clearAyahLoop()
+        }
         currentTime = target
         lastObservedPlaybackTime = target
         if player.currentItem?.status == .readyToPlay {
@@ -399,14 +407,119 @@ final class QuranPlayer: ObservableObject {
         sleepTimer?.invalidate()
         sleepTimer = nil
         sleepOption = option
+        sleepDeadline = nil
+        player.volume = 1
         if case .minutes(let minutes) = option {
+            sleepDeadline = Date().addingTimeInterval(TimeInterval(minutes) * 60)
             sleepTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(minutes) * 60,
                                               repeats: false) { [weak self] _ in
                 guard let self else { return }
                 self.pause()
                 self.sleepOption = .off
+                self.sleepDeadline = nil
             }
         }
+    }
+
+    /// Sleep fade-out (build 31): during the last 30 seconds before
+    /// a sleep stop (timer deadline, or the end of the surah for the
+    /// end-of-surah option) the volume ramps down to zero instead of
+    /// cutting off mid-ayah. Called from the time observer.
+    private func updateSleepFade() {
+        var remaining: TimeInterval?
+        switch sleepOption {
+        case .off:
+            remaining = nil
+        case .minutes:
+            remaining = sleepDeadline.map { $0.timeIntervalSinceNow }
+        case .endOfSurah:
+            remaining = duration > 0 ? duration - currentTime : nil
+        }
+        if let remaining, remaining <= 30, isPlaying {
+            player.volume = Float(max(0, min(1, remaining / 30)))
+        } else if player.volume != 1 {
+            player.volume = 1
+        }
+    }
+
+    // MARK: Ayah loop (memorization, build 31)
+
+    /// A time range of the current surah that repeats: one ayah a
+    /// set number of times, or an ayah range until stopped. Times
+    /// come from the same character-weighted ayah estimate the
+    /// lyrics view uses.
+    private struct AyahLoop {
+        var start: TimeInterval
+        var end: TimeInterval
+        /// Plays left including the current pass; nil loops forever.
+        var remainingPlays: Int?
+        var label: String
+    }
+
+    private var ayahLoop: AyahLoop?
+    /// "Ayah 5" / "Ayahs 3 to 7" while a loop is armed, for the UI.
+    @Published private(set) var ayahLoopLabel: String?
+
+    func repeatCurrentAyah(plays: Int?) {
+        guard let surah = currentSurah, duration > 0,
+              let ayahs = QuranTextData.ayahsBySurah[surah.number]
+        else { return }
+        let index = quranCurrentAyahIndex(ayahs, time: currentTime,
+                                          duration: duration)
+        repeatAyah(index: index, plays: plays)
+    }
+
+    func repeatAyah(index: Int, plays: Int?) {
+        guard let surah = currentSurah, duration > 0,
+              let ayahs = QuranTextData.ayahsBySurah[surah.number],
+              ayahs.indices.contains(index) else { return }
+        ayahLoop = AyahLoop(
+            start: quranAyahStartTime(ayahs, index: index, duration: duration),
+            end: quranAyahEndTime(ayahs, index: index, duration: duration),
+            remainingPlays: plays,
+            label: "Ayah \(ayahs[index].n)")
+        ayahLoopLabel = ayahLoop?.label
+        if currentTime < ayahLoop!.start || currentTime >= ayahLoop!.end {
+            seek(to: ayahLoop!.start)
+        }
+    }
+
+    func loopAyahs(fromIndex: Int, toIndex: Int) {
+        guard let surah = currentSurah, duration > 0,
+              let ayahs = QuranTextData.ayahsBySurah[surah.number],
+              ayahs.indices.contains(fromIndex),
+              ayahs.indices.contains(toIndex),
+              fromIndex <= toIndex else { return }
+        ayahLoop = AyahLoop(
+            start: quranAyahStartTime(ayahs, index: fromIndex, duration: duration),
+            end: quranAyahEndTime(ayahs, index: toIndex, duration: duration),
+            remainingPlays: nil,
+            label: "Ayahs \(ayahs[fromIndex].n) to \(ayahs[toIndex].n)")
+        ayahLoopLabel = ayahLoop?.label
+        if currentTime < ayahLoop!.start || currentTime >= ayahLoop!.end {
+            seek(to: ayahLoop!.start)
+        }
+    }
+
+    func clearAyahLoop() {
+        ayahLoop = nil
+        ayahLoopLabel = nil
+    }
+
+    /// Called from the time observer: when playback reaches the
+    /// loop's end, jump back to its start (or disarm on the last
+    /// counted pass and let playback continue).
+    private func checkAyahLoop() {
+        guard let loop = ayahLoop, isPlaying,
+              currentTime >= loop.end - 0.15 else { return }
+        if loop.remainingPlays == 1 {
+            clearAyahLoop()
+            return
+        }
+        if let remaining = loop.remainingPlays {
+            ayahLoop?.remainingPlays = remaining - 1
+        }
+        seek(to: loop.start)
     }
 
     // MARK: Favorites
@@ -480,6 +593,8 @@ final class QuranPlayer: ObservableObject {
     // MARK: - Item loading
 
     private func load(_ surah: QuranSurah, startAt: TimeInterval, autoplay: Bool) {
+        clearAyahLoop()
+        player.volume = 1
         let url = QuranDownloads.localFileURL(reciterId: activeReciterId, surahNumber: surah.number)
             ?? QuranLibrary.audioURL(surahNumber: surah.number, reciterId: activeReciterId)
         guard let url else { return }
@@ -602,6 +717,8 @@ final class QuranPlayer: ObservableObject {
                         toleranceAfter: CMTime(seconds: 0.5, preferredTimescale: 600))
                 }
             }
+            self.updateSleepFade()
+            self.checkAyahLoop()
             let whole = Int(self.currentTime)
             if whole != self.lastInfoSecond {
                 self.lastInfoSecond = whole

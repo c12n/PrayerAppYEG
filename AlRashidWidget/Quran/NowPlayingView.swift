@@ -170,6 +170,21 @@ struct PlayerOptionsMenu<MenuLabel: View>: View {
                     Text("Apple Music").tag(QuranPlayer.PlayerStyle.appleMusic)
                 }
             }
+            Section {
+                Menu {
+                    Button("2 times") { player.repeatCurrentAyah(plays: 2) }
+                    Button("3 times") { player.repeatCurrentAyah(plays: 3) }
+                    Button("5 times") { player.repeatCurrentAyah(plays: 5) }
+                    Button("Keep repeating") { player.repeatCurrentAyah(plays: nil) }
+                } label: {
+                    Label("Repeat ayah", systemImage: "repeat")
+                }
+                if let loopLabel = player.ayahLoopLabel {
+                    Button("Stop repeating (\(loopLabel))", role: .destructive) {
+                        player.clearAyahLoop()
+                    }
+                }
+            }
         } label: {
             label()
         }
@@ -496,10 +511,26 @@ private struct SpotifyNowPlayingView: View {
                            value: quranSleepLabel(player.sleepOption))
             }
             Spacer()
+            extraAirPlay
+            Spacer()
             extraButton(icon: "list.bullet", label: "Queue",
                         value: "\(player.queue.count)") { showQueue = true }
         }
         .padding(.top, 16)
+    }
+
+    /// AirPlay in the extras row, sized to match the other extras
+    /// (build 31; the Apple Music style already had it).
+    private var extraAirPlay: some View {
+        VStack(spacing: 4) {
+            AirPlayButton(tint: .white)
+                .frame(width: 24, height: 24)
+            Text("AirPlay")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(onGradientMuted)
+                .lineLimit(1)
+        }
+        .frame(width: 58)
     }
 
     private func extraButton(icon: String, label: String, value: String? = nil,
@@ -714,11 +745,13 @@ private struct AppleMusicNowPlayingView: View {
     }
 }
 
-/// AirPlay route picker for the Apple Music style toolbar.
+/// AirPlay route picker, shared by both player styles.
 private struct AirPlayButton: UIViewRepresentable {
+    var tint: UIColor = .secondaryLabel
+
     func makeUIView(context: Context) -> AVRoutePickerView {
         let view = AVRoutePickerView()
-        view.tintColor = .secondaryLabel
+        view.tintColor = tint
         view.activeTintColor = .systemYellow
         view.backgroundColor = .clear
         return view

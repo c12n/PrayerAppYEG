@@ -15,6 +15,7 @@ import SwiftUI
 struct MiniPlayerView: View {
     @EnvironmentObject private var player: QuranPlayer
     let onOpen: () -> Void
+    @State private var dragX: CGFloat = 0
 
     var body: some View {
         if let surah = player.currentSurah {
@@ -71,7 +72,37 @@ struct MiniPlayerView: View {
             .background(QuranTheme.deepGreen,
                         in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
+            // The full player's gestures, on the pill (build 31):
+            // swipe left/right to skip surahs (the pill follows the
+            // finger and springs back), swipe up to expand back
+            // into Now Playing. High priority so the paged TabView
+            // underneath does not also turn its page.
+            .offset(x: dragX)
+            .highPriorityGesture(pillGesture)
         }
+    }
+
+    private var pillGesture: some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onChanged { value in
+                if abs(value.translation.width)
+                    > abs(value.translation.height) * 1.5 {
+                    dragX = value.translation.width * 0.3
+                }
+            }
+            .onEnded { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                    dragX = 0
+                }
+                if abs(dx) > abs(dy) * 1.5 {
+                    if dx < -60 { player.next() }
+                    else if dx > 60 { player.previous() }
+                } else if dy < -45 {
+                    onOpen()
+                }
+            }
     }
 
     private var progressFraction: CGFloat {

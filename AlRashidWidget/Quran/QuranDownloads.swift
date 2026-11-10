@@ -133,6 +133,51 @@ final class QuranDownloads: NSObject, ObservableObject {
         downloadedKeys.remove(Self.key(reciterId: reciterId, surahNumber: surahNumber))
     }
 
+    // MARK: Bulk operations (build 31)
+
+    /// Downloads every surah not already on disk for this voice.
+    /// One task per surah; existing files and in-flight tasks are
+    /// skipped by download()'s own guards.
+    func downloadAll(reciterId: String) {
+        for number in 1...114 {
+            download(surahNumber: number, reciterId: reciterId)
+        }
+    }
+
+    func cancelAll(reciterId: String) {
+        for number in 1...114 where isDownloading(reciterId: reciterId, surahNumber: number) {
+            cancel(surahNumber: number, reciterId: reciterId)
+        }
+    }
+
+    func deleteAll(reciterId: String) {
+        cancelAll(reciterId: reciterId)
+        let dir = Self.rootDirectory.appendingPathComponent(reciterId, isDirectory: true)
+        try? FileManager.default.removeItem(at: dir)
+        downloadedKeys = downloadedKeys.filter { !$0.hasPrefix("\(reciterId)/") }
+    }
+
+    func downloadedCount(reciterId: String) -> Int {
+        downloadedKeys.filter { $0.hasPrefix("\(reciterId)/") }.count
+    }
+
+    func activeDownloadCount(reciterId: String) -> Int {
+        progressByKey.keys.filter { $0.hasPrefix("\(reciterId)/") }.count
+    }
+
+    func bytes(reciterId: String) -> Int64 {
+        var total: Int64 = 0
+        for key in downloadedKeys where key.hasPrefix("\(reciterId)/") {
+            let parts = key.split(separator: "/")
+            guard parts.count == 2, let number = Int(parts[1]) else { continue }
+            let url = Self.fileURL(reciterId: reciterId, surahNumber: number)
+            if let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? NSNumber {
+                total += size.int64Value
+            }
+        }
+        return total
+    }
+
     // MARK: Delegate bookkeeping (called off the main queue)
 
     private func key(for task: URLSessionTask) -> String? {
