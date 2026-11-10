@@ -88,15 +88,20 @@ struct QuranLibraryView: View {
                 ToolbarItem(placement: .primaryAction) {
                     optionsMenu
                 }
-                if player.currentSurah != nil {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showNowPlaying = true
-                        } label: {
-                            Label("Now Playing", systemImage: "music.note")
-                                .font(.subheadline.weight(.semibold))
-                        }
+                // Always present (build 29): inserting/removing this
+                // item as playback started and stopped made the whole
+                // top-right toolbar pill resize and flicker in and
+                // out. It now stays put and just dims/disables when
+                // nothing is loaded.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showNowPlaying = true
+                    } label: {
+                        Label("Now Playing", systemImage: "music.note")
+                            .font(.subheadline.weight(.semibold))
                     }
+                    .disabled(player.currentSurah == nil)
+                    .opacity(player.currentSurah == nil ? 0.35 : 1)
                 }
             }
             .searchable(text: $searchText, prompt: "Search surahs")

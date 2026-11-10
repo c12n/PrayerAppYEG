@@ -109,7 +109,22 @@ struct QuranLyricsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemBackground))
+            .background {
+                if isSpotifyStyle, let surah {
+                    // Spotify style: the lyrics card floats on a dark
+                    // wash of the surah's own color.
+                    LinearGradient(
+                        colors: [
+                            SurahPalette.color(for: surah.number, saturation: 0.62, brightness: 0.26),
+                            .black,
+                        ],
+                        startPoint: .top, endPoint: .bottom)
+                        .ignoresSafeArea()
+                } else {
+                    Color(uiColor: .systemBackground)
+                        .ignoresSafeArea()
+                }
+            }
             .navigationTitle(surah.map { "Surah \($0.english)" } ?? "Lyrics")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -130,28 +145,69 @@ struct QuranLyricsView: View {
         .onAppear { store.loadIfNeeded() }
     }
 
+    /// The two player styles get their own lyrics look (build 29):
+    /// Spotify = a vivid surah-colored card, big bold lines, the
+    /// current ayah bright white, upcoming ayahs dark on the card;
+    /// Apple Music = plain background, the current ayah sharp and
+    /// every other ayah blurred and dimmed, karaoke style.
+    private var isSpotifyStyle: Bool { player.playerStyle == .spotify }
+
+    private enum RowState {
+        case previous, current, upcoming
+    }
+
+    private func rowState(for index: Int) -> RowState {
+        if index == currentAyahIndex { return .current }
+        return index < currentAyahIndex ? .previous : .upcoming
+    }
+
     private var ayahList: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 10) {
-                    ForEach(Array(ayahs.enumerated()), id: \.element.id) { index, ayah in
-                        ayahRow(ayah, isCurrent: index == currentAyahIndex)
-                            .id(ayah.id)
+            VStack(spacing: 0) {
+                if isSpotifyStyle {
+                    HStack {
+                        Text("Lyrics")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Text(surah?.english ?? "")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.75))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
+                    .padding(.bottom, 6)
+                }
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: isSpotifyStyle ? 4 : 10) {
+                        ForEach(Array(ayahs.enumerated()), id: \.element.id) { index, ayah in
+                            ayahRow(ayah, state: rowState(for: index))
+                                .id(ayah.id)
+                        }
+                    }
+                    .padding(.horizontal, isSpotifyStyle ? 20 : 18)
+                    .padding(.vertical, 14)
+                    .animation(.easeInOut(duration: 0.35), value: currentAyahIndex)
+                }
+                .simultaneousGesture(
+                    DragGesture().onChanged { _ in
+                        if liveScroll { liveScroll = false }
+                    })
+                .onChange(of: currentAyahIndex) { _, newIndex in
+                    guard liveScroll, ayahs.indices.contains(newIndex) else { return }
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        proxy.scrollTo(ayahs[newIndex].id, anchor: .center)
                     }
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 14)
             }
-            .simultaneousGesture(
-                DragGesture().onChanged { _ in
-                    if liveScroll { liveScroll = false }
-                })
-            .onChange(of: currentAyahIndex) { _, newIndex in
-                guard liveScroll, ayahs.indices.contains(newIndex) else { return }
-                withAnimation(.easeInOut(duration: 0.35)) {
-                    proxy.scrollTo(ayahs[newIndex].id, anchor: .center)
+            .background {
+                if isSpotifyStyle, let surah {
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(SurahPalette.color(for: surah.number, saturation: 0.72, brightness: 0.52))
                 }
             }
+            .padding(isSpotifyStyle ? 14 : 0)
             .overlay(alignment: .bottom) {
                 if !liveScroll {
                     Button {
@@ -177,11 +233,45 @@ struct QuranLyricsView: View {
         }
     }
 
-    private func ayahRow(_ ayah: QuranAyahText, isCurrent: Bool) -> some View {
+    @ViewBuilder
+    private func ayahRow(_ ayah: QuranAyahText, state: RowState) -> some View {
         // In English-audio mode the translation is what is being
         // heard, so it takes the primary emphasis.
         let englishPrimary = player.audioLanguage == .english
-        return VStack(alignment: .leading, spacing: 6) {
+        if isSpotifyStyle {
+            // Spotify card: bold lines; the current ayah is bright
+            // white, ayahs still to come are dark on the vivid card,
+            // ayahs already recited fade back.
+            let arabicColor: Color = switch state {
+            case .current: .white
+            case .upcoming: .black.opacity(0.85)
+            case .previous: .white.opacity(0.55)
+            }
+            let englishColor: Color = switch state {
+            case .current: .white
+            case .upcoming: .black.opacity(0.62)
+            case .previous: .white.opacity(0.42)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                if lyricsMode != "english" {
+                    Text(ayah.ar)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(arabicColor)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .multilineTextAlignment(.trailing)
+                }
+                if lyricsMode != "arabic" {
+                    Text(ayah.en)
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(englishColor)
+                }
+            }
+            .padding(.vertical, 8)
+        }
+        // Apple Music karaoke: current ayah sharp; all others
+        // blurred and dimmed.
+        let isCurrent = state == .current
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text("\(ayah.n)")
                     .font(.caption2.weight(.heavy))
@@ -194,7 +284,7 @@ struct QuranLyricsView: View {
             if lyricsMode != "english" {
                 Text(ayah.ar)
                     .font(.title3)
-                    .fontWeight(englishPrimary ? .regular : .semibold)
+                    .fontWeight(englishPrimary ? .regular : .bold)
                     .foregroundStyle(englishPrimary ? .secondary : .primary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .multilineTextAlignment(.trailing)
@@ -202,14 +292,13 @@ struct QuranLyricsView: View {
             if lyricsMode != "arabic" {
                 Text(ayah.en)
                     .font(englishPrimary ? .body : .subheadline)
-                    .fontWeight(englishPrimary ? .semibold : .regular)
+                    .fontWeight(englishPrimary ? .semibold : .bold)
                     .foregroundStyle(englishPrimary ? .primary : .secondary)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(
-            isCurrent ? Theme.adaptiveGold.opacity(0.16) : Color.clear,
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .opacity(isCurrent ? 1 : 0.38)
+        .blur(radius: isCurrent ? 0 : 3)
     }
 }

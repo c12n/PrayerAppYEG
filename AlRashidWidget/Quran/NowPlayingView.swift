@@ -75,6 +75,38 @@ struct SurahArtworkView: View {
     }
 }
 
+/// Swipe left/right on the artwork to change surah (build 29,
+/// matching the reference player apps): the artwork follows the
+/// finger with resistance and springs back; past the threshold it
+/// skips to the next / previous surah in the queue.
+private struct TrackSwipeModifier: ViewModifier {
+    @EnvironmentObject private var player: QuranPlayer
+    @State private var dragX: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: dragX)
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onChanged { value in
+                        if abs(value.translation.width) > abs(value.translation.height) * 1.5 {
+                            dragX = value.translation.width * 0.32
+                        }
+                    }
+                    .onEnded { value in
+                        let dx = value.translation.width
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                            dragX = 0
+                        }
+                        if dx < -70 {
+                            player.next()
+                        } else if dx > 70 {
+                            player.previous()
+                        }
+                    })
+    }
+}
+
 /// Style + speed menu, shared by both player styles.
 struct PlayerOptionsMenu<MenuLabel: View>: View {
     @EnvironmentObject private var player: QuranPlayer
@@ -279,8 +311,11 @@ private struct SpotifyNowPlayingView: View {
                 VStack(spacing: 0) {
                     header
                     SurahArtworkView(surah: surah, cornerRadius: 12)
+                        .id(surah.number)
+                        .transition(.opacity)
                         .shadow(color: .black.opacity(0.35), radius: 22, y: 12)
                         .padding(.top, 14)
+                        .modifier(TrackSwipeModifier())
                     titleRow(surah)
                     ThinScrubber(foreground: .white, timeColor: onGradientMuted)
                         .padding(.top, 18)
@@ -291,6 +326,7 @@ private struct SpotifyNowPlayingView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 8)
                 .padding(.bottom, 18)
+                .animation(.easeInOut(duration: 0.28), value: surah.number)
             } else {
                 Color(uiColor: .systemBackground).ignoresSafeArea()
                 Text("Nothing playing").foregroundStyle(.secondary)
@@ -477,9 +513,12 @@ private struct AppleMusicNowPlayingView: View {
                 VStack(spacing: 0) {
                     header
                     SurahArtworkView(surah: surah, cornerRadius: 16)
+                        .id(surah.number)
+                        .transition(.opacity)
                         .frame(maxWidth: 320)
                         .shadow(color: .black.opacity(0.28), radius: 24, y: 14)
                         .padding(.top, 10)
+                        .modifier(TrackSwipeModifier())
                     titleBlock(surah)
                     PlayerScrubber(tint: Theme.adaptiveGold, timeColor: .secondary)
                         .padding(.top, 16)
@@ -490,6 +529,7 @@ private struct AppleMusicNowPlayingView: View {
                 .padding(.horizontal, 28)
                 .padding(.top, 8)
                 .padding(.bottom, 20)
+                .animation(.easeInOut(duration: 0.28), value: surah.number)
             } else {
                 Text("Nothing playing").foregroundStyle(.secondary)
             }

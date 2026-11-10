@@ -62,11 +62,14 @@ struct ContentView: View {
     @State private var showQuran = false
     @EnvironmentObject private var quranPlayer: QuranPlayer
     /// Phone tab shell (v2.2.0-alpha): the floating pill tab bar's
-    /// selected tab, whether the shell is the active layout (the
-    /// app-wide mini player overlay steps aside for the shell's
-    /// own), the shell's Now Playing cover, and the prayer tracker.
+    /// selected tab, the shell's Now Playing cover, and the prayer
+    /// tracker. (Build 29 removed the old phoneShellActive flag: it
+    /// was driven by onAppear/onDisappear, which also fire when a
+    /// cover presents, so starting the player could strand it false
+    /// and stack the app-wide mini player over the shell's own while
+    /// the shell itself rebuilt. The mini player overlay is now
+    /// attached per layout branch instead — deterministic.)
     @State private var phoneTab: PhoneTab = .prayer
-    @State private var phoneShellActive = false
     @State private var showNowPlayingFull = false
     @StateObject private var trackerStore = TrackerStore()
 
@@ -113,11 +116,14 @@ struct ContentView: View {
                 // Dynamic Type only ever grows the panes' rows.
                 if MinimalMode.enabled {
                     minimalLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
+                        .overlay(alignment: .bottom) { appWideMiniPlayerOverlay }
                 } else if UIDevice.current.userInterfaceIdiom == .pad,
                    proxy.size.width >= 700 {
                     iPadLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
+                        .overlay(alignment: .bottom) { appWideMiniPlayerOverlay }
                 } else if proxy.size.width >= 600 {
                     duoLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
+                        .overlay(alignment: .bottom) { appWideMiniPlayerOverlay }
                 } else {
                     phoneTabShell(snapshot: snapshot, today: todaySchedule, now: context.date)
                 }
@@ -179,13 +185,17 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showNowPlayingFull) {
             NowPlayingView()
         }
-        // Quran mini player (v2.1.0-private): rides above every
-        // layout while a surah is loaded, hidden while the Quran
-        // cover itself is open (the library shows its own) and
-        // while the phone tab shell is active (it floats its own
-        // mini player above the tab bar).
-        .overlay(alignment: .bottom) {
-            if quranPlayer.currentSurah != nil, !showQuran, !phoneShellActive {
+    }
+
+    /// Quran mini player (v2.1.0-private) for the non-shell layouts
+    /// (Minimal, iPad, Duo): rides above the layout while a surah
+    /// is loaded, hidden while the Quran cover itself is open (the
+    /// library shows its own). The phone tab shell floats its own
+    /// mini player above the tab bar and never gets this overlay —
+    /// exactly one mini player exists in every layout (build 29).
+    private var appWideMiniPlayerOverlay: some View {
+        Group {
+            if quranPlayer.currentSurah != nil, !showQuran {
                 MiniPlayerView { showQuran = true }
                     .padding(.horizontal, 12)
                     .padding(.bottom, 10)
@@ -202,22 +212,27 @@ struct ContentView: View {
     /// Playing still covers everything.
     private func phoneTabShell(snapshot: PrayerSnapshot, today: PrayerDay, now: Date) -> some View {
         ZStack(alignment: .bottom) {
-            Group {
-                switch phoneTab {
-                case .prayer:
-                    phoneLayout(snapshot: snapshot, today: today, now: now)
-                case .quran:
-                    QuranLibraryView(embeddedInTab: true)
-                        .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
-                case .qibla:
-                    QiblaTabView()
-                        .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
-                case .settings:
-                    SettingsView { appearanceGeneration += 1 }
-                        .environmentObject(updateChecker)
-                        .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
-                }
+            // Paged TabView (build 29): swiping left/right moves
+            // between tabs with the pages tracking the finger, like
+            // the reference player apps, and the pill in PhoneTabBar
+            // glides to the newly selected tab. Pages stay alive
+            // (no switch-branch destroy/recreate), which also keeps
+            // each tab's scroll position and toolbars stable.
+            TabView(selection: $phoneTab) {
+                phoneLayout(snapshot: snapshot, today: today, now: now)
+                    .tag(PhoneTab.prayer)
+                QuranLibraryView(embeddedInTab: true)
+                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                    .tag(PhoneTab.quran)
+                QiblaTabView()
+                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                    .tag(PhoneTab.qibla)
+                SettingsView { appearanceGeneration += 1 }
+                    .environmentObject(updateChecker)
+                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                    .tag(PhoneTab.settings)
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             VStack(spacing: 8) {
@@ -229,8 +244,6 @@ struct ContentView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
         }
-        .onAppear { phoneShellActive = true }
-        .onDisappear { phoneShellActive = false }
     }
 
     // MARK: Layouts (v2.0.0)
@@ -2880,6 +2893,10 @@ private struct QiblaCard: View {
 /// tabs; the selected tab gets a filled deep-green pill of its own.
 private struct PhoneTabBar: View {
     @Binding var selection: ContentView.PhoneTab
+    /// The selected tab's green capsule is ONE view that glides
+    /// between tabs (matched geometry), so a tap or a page swipe
+    /// slides it instead of jumping (build 29).
+    @Namespace private var pillNamespace
 
     private struct TabItem {
         let tab: ContentView.PhoneTab
@@ -2912,14 +2929,19 @@ private struct PhoneTabBar: View {
                     .foregroundStyle(selection == item.tab ? .white : .secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(
-                        selection == item.tab ? Theme.deepGreen : Color.clear,
-                        in: Capsule())
+                    .background {
+                        if selection == item.tab {
+                            Capsule()
+                                .fill(Theme.deepGreen)
+                                .matchedGeometryEffect(id: "phoneTabPill", in: pillNamespace)
+                        }
+                    }
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
         }
+        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: selection)
         .padding(5)
         .background(.ultraThinMaterial, in: Capsule())
         .overlay {
