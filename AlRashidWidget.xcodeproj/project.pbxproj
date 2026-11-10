@@ -41,6 +41,13 @@
 		C10000000000000000000054 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000054 /* NowPlayingView.swift */; };
 		C10000000000000000000055 /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000055 /* MiniPlayerView.swift */; };
 		C10000000000000000000056 /* surahs.json in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000056 /* surahs.json */; };
+		C10000000000000000000057 /* QuranLyrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000057 /* QuranLyrics.swift */; };
+		C10000000000000000000058 /* quran_text.json in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000058 /* quran_text.json */; };
+		C10000000000000000000059 /* en_durations.json in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000059 /* en_durations.json */; };
+		C10000000000000000000060 /* PrayerTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000060 /* PrayerTracker.swift */; };
+		C10000000000000000000061 /* adhan_makkah.wav in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000061 /* adhan_makkah.wav */; };
+		C10000000000000000000062 /* adhan_fajr.wav in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000062 /* adhan_fajr.wav */; };
+		C10000000000000000000063 /* adhan_classic.wav in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000063 /* adhan_classic.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -137,6 +144,13 @@
 		B10000000000000000000054 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		B10000000000000000000055 /* MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerView.swift; sourceTree = "<group>"; };
 		B10000000000000000000056 /* surahs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = surahs.json; sourceTree = "<group>"; };
+		B10000000000000000000057 /* QuranLyrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranLyrics.swift; sourceTree = "<group>"; };
+		B10000000000000000000058 /* quran_text.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = quran_text.json; sourceTree = "<group>"; };
+		B10000000000000000000059 /* en_durations.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en_durations.json; sourceTree = "<group>"; };
+		B10000000000000000000060 /* PrayerTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTracker.swift; sourceTree = "<group>"; };
+		B10000000000000000000061 /* adhan_makkah.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = adhan_makkah.wav; sourceTree = "<group>"; };
+		B10000000000000000000062 /* adhan_fajr.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = adhan_fajr.wav; sourceTree = "<group>"; };
+		B10000000000000000000063 /* adhan_classic.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = adhan_classic.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,6 +209,10 @@
 				B10000000000000000000009 /* AlRashidWidget.entitlements */,
 				B10000000000000000000014 /* adhan_chime.wav */,
 				B10000000000000000000015 /* adhan_bell.wav */,
+				B10000000000000000000060 /* PrayerTracker.swift */,
+				B10000000000000000000061 /* adhan_makkah.wav */,
+				B10000000000000000000062 /* adhan_fajr.wav */,
+				B10000000000000000000063 /* adhan_classic.wav */,
 			);
 			path = AlRashidWidget;
 			sourceTree = "<group>";
@@ -262,6 +280,9 @@
 				B10000000000000000000054 /* NowPlayingView.swift */,
 				B10000000000000000000055 /* MiniPlayerView.swift */,
 				B10000000000000000000056 /* surahs.json */,
+				B10000000000000000000057 /* QuranLyrics.swift */,
+				B10000000000000000000058 /* quran_text.json */,
+				B10000000000000000000059 /* en_durations.json */,
 			);
 			path = Quran;
 			sourceTree = "<group>";
@@ -403,6 +424,11 @@
 				C10000000000000000000012 /* adhan_chime.wav in Resources */,
 				C10000000000000000000013 /* adhan_bell.wav in Resources */,
 				C10000000000000000000056 /* surahs.json in Resources */,
+				C10000000000000000000058 /* quran_text.json in Resources */,
+				C10000000000000000000059 /* en_durations.json in Resources */,
+				C10000000000000000000061 /* adhan_makkah.wav in Resources */,
+				C10000000000000000000062 /* adhan_fajr.wav in Resources */,
+				C10000000000000000000063 /* adhan_classic.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -450,6 +476,8 @@
 				C10000000000000000000053 /* QuranLibraryView.swift in Sources */,
 				C10000000000000000000054 /* NowPlayingView.swift in Sources */,
 				C10000000000000000000055 /* MiniPlayerView.swift in Sources */,
+				C10000000000000000000057 /* QuranLyrics.swift in Sources */,
+				C10000000000000000000060 /* PrayerTracker.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -533,14 +561,14 @@
 				CODE_SIGN_ENTITLEMENTS = AlRashidWidget/AlRashidWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -564,14 +592,14 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid App Store";
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -590,7 +618,7 @@
 				CODE_SIGN_ENTITLEMENTS = PrayerWidgetExtension/PrayerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -598,7 +626,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -619,7 +647,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Widget App Store";
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -627,7 +655,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -645,7 +673,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatch/Info.plist;
@@ -653,7 +681,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -673,7 +701,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch App Store";
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatch/Info.plist;
@@ -681,7 +709,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -699,7 +727,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;
@@ -708,7 +736,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -728,7 +756,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch Widgets App Store";
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;
@@ -737,7 +765,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.c12n.alrashidwidget.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
