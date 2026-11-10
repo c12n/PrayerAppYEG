@@ -168,7 +168,7 @@ enum AppServices {
 /// stored in the App Group. The two tones are small synthesized files
 /// bundled with the app (no downloads, per the privacy promise).
 enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
-    case `default`, silent, chime, bell
+    case `default`, silent, chime, bell, makkah, fajr, classic
 
     var id: String { rawValue }
     static let storageKey = "alerts.sound"
@@ -187,6 +187,11 @@ enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
         case .silent: nil
         case .chime: UNNotificationSound(named: UNNotificationSoundName("adhan_chime.wav"))
         case .bell: UNNotificationSound(named: UNNotificationSoundName("adhan_bell.wav"))
+        // v2.2.0-alpha: real Adhan recordings (public sources),
+        // trimmed to the 30-second notification limit.
+        case .makkah: UNNotificationSound(named: UNNotificationSoundName("adhan_makkah.wav"))
+        case .fajr: UNNotificationSound(named: UNNotificationSoundName("adhan_fajr.wav"))
+        case .classic: UNNotificationSound(named: UNNotificationSoundName("adhan_classic.wav"))
         }
     }
 }

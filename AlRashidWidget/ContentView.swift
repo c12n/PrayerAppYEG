@@ -6,6 +6,7 @@
 //
 
 import AppIntents
+import AVFoundation
 import CoreMotion
 import SwiftUI
 import UniformTypeIdentifiers
@@ -60,6 +61,18 @@ struct ContentView: View {
     /// the phone chip, the Duo rail, or the mini player overlay.
     @State private var showQuran = false
     @EnvironmentObject private var quranPlayer: QuranPlayer
+    /// Phone tab shell (v2.2.0-alpha): the floating pill tab bar's
+    /// selected tab, whether the shell is the active layout (the
+    /// app-wide mini player overlay steps aside for the shell's
+    /// own), the shell's Now Playing cover, and the prayer tracker.
+    @State private var phoneTab: PhoneTab = .prayer
+    @State private var phoneShellActive = false
+    @State private var showNowPlayingFull = false
+    @StateObject private var trackerStore = TrackerStore()
+
+    enum PhoneTab: CaseIterable {
+        case prayer, quran, qibla, settings
+    }
     /// What's New sheet (v1.8.0): shown once after an update, never
     /// on a fresh install.
     @State private var showWhatsNew = false
@@ -106,7 +119,7 @@ struct ContentView: View {
                 } else if proxy.size.width >= 600 {
                     duoLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
                 } else {
-                    phoneLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
+                    phoneTabShell(snapshot: snapshot, today: todaySchedule, now: context.date)
                 }
             }
             .sheet(isPresented: $showWhatsNew) {
@@ -117,6 +130,7 @@ struct ContentView: View {
             }
         }
         .id("\(appearanceStamp)#\(appearanceGeneration)")
+        .environmentObject(trackerStore)
         .background { AppBackground() }
         .preferredColorScheme(AppAppearance.Mode(rawValue: modeRaw)?.colorScheme)
         .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
@@ -160,16 +174,61 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showQuran) {
             QuranLibraryView()
         }
+        .fullScreenCover(isPresented: $showNowPlayingFull) {
+            NowPlayingView()
+        }
         // Quran mini player (v2.1.0-private): rides above every
         // layout while a surah is loaded, hidden while the Quran
-        // cover itself is open (the library shows its own).
+        // cover itself is open (the library shows its own) and
+        // while the phone tab shell is active (it floats its own
+        // mini player above the tab bar).
         .overlay(alignment: .bottom) {
-            if quranPlayer.currentSurah != nil, !showQuran {
+            if quranPlayer.currentSurah != nil, !showQuran, !phoneShellActive {
                 MiniPlayerView { showQuran = true }
                     .padding(.horizontal, 12)
                     .padding(.bottom, 10)
             }
         }
+    }
+
+    // MARK: Phone tab shell (v2.2.0-alpha)
+
+    /// The portrait phone layout's new root: Prayer (the original
+    /// home column), Quran (the library, in-tab), Qibla (the
+    /// full-screen compass) and Settings behind a floating pill tab
+    /// bar. The mini player floats directly above the bar, and Now
+    /// Playing still covers everything.
+    private func phoneTabShell(snapshot: PrayerSnapshot, today: PrayerDay, now: Date) -> some View {
+        ZStack(alignment: .bottom) {
+            Group {
+                switch phoneTab {
+                case .prayer:
+                    phoneLayout(snapshot: snapshot, today: today, now: now)
+                case .quran:
+                    QuranLibraryView(embeddedInTab: true)
+                        .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                case .qibla:
+                    QiblaTabView()
+                        .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                case .settings:
+                    SettingsView { appearanceGeneration += 1 }
+                        .environmentObject(updateChecker)
+                        .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            VStack(spacing: 8) {
+                if quranPlayer.currentSurah != nil {
+                    MiniPlayerView { showNowPlayingFull = true }
+                }
+                PhoneTabBar(selection: $phoneTab)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+        }
+        .onAppear { phoneShellActive = true }
+        .onDisappear { phoneShellActive = false }
     }
 
     // MARK: Layouts (v2.0.0)
@@ -190,6 +249,7 @@ struct ContentView: View {
                 }
                 NextPrayerCard(snapshot: snapshot)
                 ScheduleCard(snapshot: snapshot)
+                PrayerTrackerCard()
                 HStack(spacing: 12) {
                     DuoChip(title: L10n.t("monthlyCalendar"), detail: "") {
                         showCalendar = true
@@ -199,7 +259,7 @@ struct ContentView: View {
                     }
                 }
                 DuoChip(title: "Quran", detail: "Listen") {
-                    showQuran = true
+                    phoneTab = .quran
                 }
                 DailyVerseCard()
                 QiblaCard()
@@ -207,7 +267,9 @@ struct ContentView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
-            .padding(.bottom, 32)
+            // Clears the floating tab bar (and the mini player above
+            // it) in the phone tab shell.
+            .padding(.bottom, 150)
         }
         .scrollIndicators(.hidden)
         .coordinateSpace(name: "homeScroll")
@@ -1839,6 +1901,7 @@ private struct SettingsView: View {
             ForEach(AdhanSound.allCases) { sound in
                 Button {
                     soundRaw = sound.rawValue
+                    AdhanSoundPreview.play(sound)
                 } label: {
                     HStack {
                         Text(L10n.t(sound.l10nKey))
@@ -2808,6 +2871,150 @@ private struct QiblaCard: View {
     }
 }
 
+// MARK: - Phone tab bar + Qibla tab (v2.2.0-alpha)
+
+/// The floating pill tab bar: a translucent capsule with the four
+/// tabs; the selected tab gets a filled deep-green pill of its own.
+private struct PhoneTabBar: View {
+    @Binding var selection: ContentView.PhoneTab
+
+    private struct TabItem {
+        let tab: ContentView.PhoneTab
+        let icon: String
+        let label: String
+    }
+
+    private var items: [TabItem] {
+        [
+            TabItem(tab: .prayer, icon: "house.fill", label: "Prayer"),
+            TabItem(tab: .quran, icon: "book.fill", label: "Quran"),
+            TabItem(tab: .qibla, icon: "location.north.circle.fill", label: L10n.t("qibla")),
+            TabItem(tab: .settings, icon: "gearshape.fill", label: L10n.t("settings")),
+        ]
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(items, id: \.tab) { item in
+                Button {
+                    selection = item.tab
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 19, weight: .semibold))
+                        Text(item.label)
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(selection == item.tab ? .white : .secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(
+                        selection == item.tab ? Theme.deepGreen : Color.clear,
+                        in: Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(5)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay {
+            Capsule().strokeBorder(Color.primary.opacity(0.09), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.22), radius: 14, y: 6)
+    }
+}
+
+/// The Qibla tab: the full-screen compass content (dial, bearing,
+/// facing state, hint) without the sheet chrome of
+/// QiblaCompassView, which stays as the card's sheet.
+private struct QiblaTabView: View {
+    @StateObject private var manager = QiblaHeadingManager()
+    @State private var facingQibla = false
+
+    private var bearing: Double { QiblaMath.bearingFromMosque }
+
+    private var offset: Double? {
+        guard let heading = manager.heading else { return nil }
+        var diff = (bearing - heading).truncatingRemainder(dividingBy: 360)
+        if diff > 180 { diff -= 360 }
+        if diff < -180 { diff += 360 }
+        return diff
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Label(L10n.t("qibla"), systemImage: "location.north.circle.fill")
+                .font(.title2.weight(.bold))
+                .foregroundStyle(Theme.onSurface)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            QiblaDial(heading: manager.heading, bearing: bearing)
+                .frame(width: 300, height: 300)
+                .frame(maxWidth: .infinity)
+            VStack(spacing: 6) {
+                Text("\(Int(bearing.rounded()))°")
+                    .font(.system(size: 44, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(Theme.adaptiveGold)
+                Text(L10n.t("fromNorth"))
+                    .font(.headline)
+                    .foregroundStyle(Theme.onSurface)
+                Text(L10n.t("qiblaFromMosque"))
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.onSurfaceSecondary)
+                if let offset, abs(offset) <= 3 {
+                    Label(L10n.t("facingQibla"), systemImage: "checkmark.circle.fill")
+                        .font(.headline)
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .padding(.top, 4)
+                }
+            }
+            Text(L10n.t("qiblaHint"))
+                .font(.caption)
+                .foregroundStyle(Theme.onSurfaceMuted)
+                .multilineTextAlignment(.center)
+            Spacer()
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background { AppBackground() }
+        .onAppear { manager.start() }
+        .onDisappear { manager.stop() }
+        .onChange(of: offset.map { abs($0) <= 3 }) { _, isFacing in
+            let facing = isFacing ?? false
+            if facing && !facingQibla && CompassSettings.hapticsEnabled {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+            facingQibla = facing
+        }
+    }
+}
+
+/// Plays the bundled file for an Adhan sound when it is picked in
+/// Settings (v2.2.0-alpha). Default and Silent have no file.
+private enum AdhanSoundPreview {
+    private static var player: AVAudioPlayer?
+
+    static func play(_ sound: AdhanSound) {
+        let fileName: String
+        switch sound {
+        case .chime: fileName = "adhan_chime"
+        case .bell: fileName = "adhan_bell"
+        case .makkah: fileName = "adhan_makkah"
+        case .fajr: fileName = "adhan_fajr"
+        case .classic: fileName = "adhan_classic"
+        case .default, .silent:
+            player?.stop()
+            player = nil
+            return
+        }
+        guard let url = Bundle.main.url(forResource: fileName, withExtension: "wav")
+        else { return }
+        player = try? AVAudioPlayer(contentsOf: url)
+        player?.play()
+    }
+}
+
 // MARK: - Update checker (v1.7.0)
 
 /// The version note hosted in the c12nfeather source
@@ -2893,6 +3100,14 @@ struct WhatsNewView: View {
 
     static func entries(for version: String) -> [(icon: String, key: String)]? {
         switch version {
+        case "2.2.0":
+            return [
+                ("square.grid.2x2.fill", "wnTabs220"),
+                ("play.circle.fill", "wnPlayer220"),
+                ("text.quote", "wnLyrics220"),
+                ("checkmark.circle.fill", "wnTracker220"),
+                ("speaker.wave.3.fill", "wnSounds220"),
+            ]
         case "2.0.0":
             return [
                 ("paintpalette.fill", "wnWidgets200"),
