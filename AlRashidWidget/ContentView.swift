@@ -132,7 +132,9 @@ struct ContentView: View {
         .id("\(appearanceStamp)#\(appearanceGeneration)")
         .environmentObject(trackerStore)
         .background { AppBackground() }
-        .preferredColorScheme(AppAppearance.Mode(rawValue: modeRaw)?.colorScheme)
+        // Color scheme is applied once at the WindowGroup root by
+        // AlRashidWidgetApp's AppearanceModeObserver (v2.2.0-alpha fix);
+        // a second modifier here could pin a stale mode.
         .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
         .environment(\.locale, AppLanguage.current.locale)
         .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
@@ -1453,7 +1455,8 @@ private struct SettingsView: View {
                     Button(L10n.t("done")) { dismiss() }
                 }
             }
-            .preferredColorScheme(AppAppearance.Mode(rawValue: modeRaw)?.colorScheme)
+            // Scheme comes from the WindowGroup root observer (see
+            // ContentView note); sheets inherit it from the presenter.
             .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
             .environment(\.locale, AppLanguage.current.locale)
             .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)

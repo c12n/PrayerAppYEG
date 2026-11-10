@@ -15,8 +15,32 @@ import UIKit
 import UserNotifications
 import WidgetKit
 
+/// Live appearance mode (v2.2.0-alpha fix): the in-app Light/Dark/System
+/// choice lives in the App Group suite and is written by Settings'
+/// @AppStorage. Cross-instance @AppStorage observation proved unreliable
+/// for driving preferredColorScheme (the app kept the launch appearance
+/// until relaunched), so the App observes UserDefaults changes directly
+/// and re-applies the scheme at the WindowGroup root. System = nil =
+/// follows the device's own Dark Mode, live.
+final class AppearanceModeObserver: ObservableObject {
+    @Published private(set) var mode: AppAppearance.Mode
+    private var token: NSObjectProtocol?
+
+    init() {
+        mode = AppAppearance.mode
+        token = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            let current = AppAppearance.mode
+            if current != self.mode { self.mode = current }
+        }
+    }
+}
+
 @main
 struct AlRashidWidgetApp: App {
+    @StateObject private var appearanceObserver = AppearanceModeObserver()
     /// Quran player (v2.1.0-private): one engine + one download
     /// store for the whole app, injected for ContentView's mini
     /// player overlay and the Quran cover. The player's init
@@ -39,6 +63,7 @@ struct AlRashidWidgetApp: App {
             ContentView()
                 .environmentObject(quranPlayer)
                 .environmentObject(quranDownloads)
+                .preferredColorScheme(appearanceObserver.mode.colorScheme)
                 .tint(Theme.adaptiveGold)
         }
     }

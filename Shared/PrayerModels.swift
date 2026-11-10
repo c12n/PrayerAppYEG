@@ -642,6 +642,18 @@ struct PrayerProvider: Sendable {
                 if let iqamah = slot.iqamah, iqamah > now {
                     boundaries.insert(iqamah)
                 }
+                // v2.0.1: settle entries one minute after each Adhan
+                // and each Iqamah. WidgetKit occasionally skips or
+                // delays a single entry swap (seen on device 2026-11-07:
+                // the large widget sat in the Dhuhr iqamah phase at
+                // 0:00 for almost two hours until a tap forced a
+                // reload). A skipped boundary now self-corrects at the
+                // settle entry a minute later instead of freezing the
+                // hero until the next prayer.
+                boundaries.insert(slot.adhan.addingTimeInterval(60))
+                if let iqamah = slot.iqamah, iqamah > now {
+                    boundaries.insert(iqamah.addingTimeInterval(60))
+                }
             }
         }
         if tomorrowStart > now { boundaries.insert(tomorrowStart) }
@@ -1971,7 +1983,7 @@ enum L10n {
     }
 
     static func t(_ key: String, in language: AppLanguage) -> String {
-        (table[key] ?? moreTable[key])?[language] ?? key
+        (table[key] ?? moreTable[key] ?? formatTable[key])?[language] ?? key
     }
 
     private static let table: [String: [AppLanguage: String]] = [
@@ -2074,11 +2086,6 @@ enum L10n {
         "wnCalendar200": [.en: "Monthly calendar: the whole month's times, tap a day to preview it, share or print it", .ar: "التقويم الشهري: مواقيت الشهر كاملة، انقر أي يوم لمعاينته، وشاركه أو اطبعه", .fr: "Calendrier mensuel : les horaires de tout le mois, touchez un jour pour l'apercevoir, partagez ou imprimez"],
         "wnIqamah200": [.en: "Iqamah-first countdown: after the Adhan, the countdown flips to the Iqamah — with an optional time-to-leave nudge", .ar: "العدّ التنازلي للإقامة أولًا: بعد الأذان يتحوّل العدّ إلى الإقامة — مع تنبيه اختياري لوقت المغادرة", .fr: "Compte à rebours vers l'Iqamah : après l'Adhan, le compte vise l'Iqamah — avec un rappel optionnel de départ"],
         "wnMinimal200": [.en: "Minimal Mode: strip the app to just the times, the countdown and your alerts", .ar: "الوضع الأدنى: اختصر التطبيق إلى المواقيت والعدّ التنازلي وتنبيهاتك فقط", .fr: "Mode minimal : l'app réduite aux horaires, au compte à rebours et à vos alertes"],
-        "wnTabs220": [.en: "A new tab bar: Prayer, Quran, Qibla and Settings are always one tap away", .ar: "شريط تبويب جديد: الصلاة والقرآن والقبلة والإعدادات على بُعد نقرة واحدة دائمًا", .fr: "Une nouvelle barre d'onglets : Prière, Coran, Qibla et Réglages sont toujours à portée de main"],
-        "wnPlayer220": [.en: "A rebuilt Quran player with two looks — Spotify and Apple Music styles — plus a queue, Play Next, and English recitation by Ibrahim Walk", .ar: "مشغّل قرآن جديد بمظهرين — نمطا Spotify و Apple Music — مع قائمة تشغيل و «تشغيل التالي» وتلاوة إنجليزية بصوت إبراهيم ووك", .fr: "Un lecteur de Coran repensé avec deux styles — Spotify et Apple Music — une file d'attente, « Lire ensuite » et la récitation anglaise d'Ibrahim Walk"],
-        "wnLyrics220": [.en: "Lyrics for every surah: the Arabic text with its English translation, following along as it plays", .ar: "كلمات كل سورة: النص العربي مع ترجمته الإنجليزية، يتبعان التلاوة أثناء التشغيل", .fr: "Les paroles de chaque sourate : le texte arabe et sa traduction anglaise, qui suivent la récitation"],
-        "wnTracker220": [.en: "A prayer tracker on the Prayer tab: check off your five prayers and see your Quran listening stats", .ar: "متتبّع صلاة في تبويب الصلاة: علّم صلواتك الخمس واطّلع على إحصائيات استماعك للقرآن", .fr: "Un suivi de prière dans l'onglet Prière : cochez vos cinq prières et consultez vos statistiques d'écoute du Coran"],
-        "wnSounds220": [.en: "Three new Adhan alert sounds: Makkah, Fajr and Classic", .ar: "ثلاثة أصوات تنبيه أذان جديدة: مكة والفجر والكلاسيكي", .fr: "Trois nouveaux sons d'alerte Adhan : La Mecque, Fajr et Classique"],
         "minimalMode": [.en: "Minimal Mode", .ar: "الوضع الأدنى", .fr: "Mode minimal"],
         "minimalModeFooter": [.en: "Just the essentials: today's times, the next-prayer countdown and your Adhan alerts. The verse, Qibla, calendar and extras hide until you turn this off — nothing is deleted and every setting comes back exactly as it was.", .ar: "الأساسيات فقط: مواقيت اليوم والعدّ التنازلي للصلاة التالية وتنبيهات الأذان. يختفي الذكر والقبلة والتقويم والإضافات حتى توقف هذا الوضع — لا يُحذف شيء وتعود كل الإعدادات كما كانت تمامًا.", .fr: "L'essentiel seulement : les horaires du jour, le compte à rebours et vos alertes d'Adhan. Le verset, la Qibla, le calendrier et les extras se cachent jusqu'à la désactivation — rien n'est supprimé et chaque réglage revient exactement comme avant."],
         "fasting": [.en: "Sunnah Fasting", .ar: "صيام السنة", .fr: "Jeûne surérogatoire"],
@@ -2155,9 +2162,6 @@ extension L10n {
         "sound.silent": [.en: "Silent", .ar: "صامت", .fr: "Silencieux"],
         "sound.chime": [.en: "Gentle Chime", .ar: "رنين لطيف", .fr: "Carillon doux"],
         "sound.bell": [.en: "Soft Bell", .ar: "جرس خفيف", .fr: "Cloche douce"],
-        "sound.makkah": [.en: "Adhan | Makkah", .ar: "أذان | مكة", .fr: "Adhan | La Mecque"],
-        "sound.fajr": [.en: "Adhan | Fajr", .ar: "أذان | الفجر", .fr: "Adhan | Fajr"],
-        "sound.classic": [.en: "Adhan | Classic", .ar: "أذان | كلاسيكي", .fr: "Adhan | Classique"],
         "alertSoundFooter": [.en: "The sound played with Adhan notifications. Silent still shows the notification, just without sound.", .ar: "الصوت الذي يُشغَّل مع إشعارات الأذان. «صامت» يُظهر الإشعار من دون صوت.", .fr: "Le son joué avec les notifications de l'Adhan. « Silencieux » affiche la notification, sans le son."],
         // Qibla (v1.1.0)
         "qibla": [.en: "Qibla", .ar: "القبلة", .fr: "Qibla"],
