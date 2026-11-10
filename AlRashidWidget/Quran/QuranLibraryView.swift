@@ -2,19 +2,23 @@
 //  QuranLibraryView.swift
 //  AlRashid Prayer Widget
 //
-//  Quran player (v2.1.0-private): the library, per the approved
-//  mockup — "Quran" title with the reciter, search, Favorites /
-//  Downloaded / Continue chips, and every surah as a track row with
-//  a number tile, names, duration, favorite heart and download
-//  state. Tapping a row plays it with the displayed order as the
-//  queue; the mini player rides at the bottom and opens Now
-//  Playing. Presented as the app's Quran full-screen cover.
+//  Quran player (v2.2.0-alpha): the library — "Quran" title with
+//  the reciter and listening stats, search, Favorites / Downloaded
+//  chips, Ramadan + Eid collections, and every surah as a track row
+//  with a number tile, names, duration, favorite heart and download
+//  state. Hosted either as the app's Quran cover (2.1.0 style) or
+//  in the Quran tab of the phone tab shell (embeddedInTab), where
+//  the app-wide mini player takes over the bottom inset.
 //  Target Membership: AlRashidWidget only.
 //
 
 import SwiftUI
 
 struct QuranLibraryView: View {
+    /// True when hosted in the phone tab shell: no close button and
+    /// no own mini player (the shell floats one above the tab bar).
+    var embeddedInTab: Bool = false
+
     @EnvironmentObject private var player: QuranPlayer
     @EnvironmentObject private var downloads: QuranDownloads
     @Environment(\.dismiss) private var dismiss
@@ -30,7 +34,7 @@ struct QuranLibraryView: View {
         }
         if downloadedOnly {
             list = list.filter {
-                downloads.isDownloaded(reciterId: player.reciterId, surahNumber: $0.number)
+                downloads.isDownloaded(reciterId: player.activeReciterId, surahNumber: $0.number)
             }
         }
         let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
@@ -56,25 +60,33 @@ struct QuranLibraryView: View {
             List {
                 headerSection
                 chipsSection
+                if searchText.isEmpty, !favoritesOnly, !downloadedOnly {
+                    collectionsSection
+                }
                 if favoritesOnly, !displayedSurahs.isEmpty {
                     playAllSection
                 }
                 surahSection
             }
             .listStyle(.plain)
-            .background(QuranTheme.pageTint)
+            .background(Color(uiColor: .systemBackground))
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: QuranCollection.self) { collection in
+                CollectionDetailView(collection: collection)
+            }
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.subheadline.weight(.bold))
+                if !embeddedInTab {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.subheadline.weight(.bold))
+                        }
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    reciterMenu
+                    optionsMenu
                 }
                 if player.currentSurah != nil {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -89,7 +101,7 @@ struct QuranLibraryView: View {
             }
             .searchable(text: $searchText, prompt: "Search surahs")
             .safeAreaInset(edge: .bottom) {
-                if player.currentSurah != nil, !showNowPlaying {
+                if !embeddedInTab, player.currentSurah != nil, !showNowPlaying {
                     MiniPlayerView { showNowPlaying = true }
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
@@ -111,11 +123,22 @@ struct QuranLibraryView: View {
                 Text("114 surahs | \(player.currentReciter?.name ?? "")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                Text("\(player.completedSurahsTotal) surahs completed • \(listenedLabel) listened")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.green)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .padding(.top, 4)
         }
+    }
+
+    /// "12h 5m" / "45m" / "0m" of accumulated listening time.
+    private var listenedLabel: String {
+        let total = Int(player.totalSecondsListened.rounded())
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
     }
 
     private var chipsSection: some View {
@@ -124,14 +147,14 @@ struct QuranLibraryView: View {
                 HStack(spacing: 10) {
                     chip(title: "Favorites",
                          systemImage: "heart.fill",
-                         iconColor: QuranTheme.heartRed,
+                         iconColor: Color(red: 0.9, green: 0.28, blue: 0.3),
                          count: player.favorites.count,
                          isOn: favoritesOnly) {
                         favoritesOnly.toggle()
                     }
                     chip(title: "Downloaded",
                          systemImage: "arrow.down.circle.fill",
-                         iconColor: QuranTheme.accentGreen,
+                         iconColor: Theme.green,
                          count: downloads.downloadedCount,
                          isOn: downloadedOnly) {
                         downloadedOnly.toggle()
@@ -139,7 +162,7 @@ struct QuranLibraryView: View {
                     if player.currentSurah != nil {
                         chip(title: "Continue",
                              systemImage: "arrow.counterclockwise",
-                             iconColor: QuranTheme.accentGreen,
+                             iconColor: Theme.green,
                              count: nil,
                              isOn: false) {
                             player.resume()
@@ -166,18 +189,18 @@ struct QuranLibraryView: View {
                 if let count {
                     Text("\(count)")
                         .font(.subheadline.weight(.bold))
-                        .foregroundStyle(QuranTheme.accentGreen)
+                        .foregroundStyle(Theme.green)
                 }
             }
             .foregroundStyle(.primary)
             .padding(.horizontal, 13)
             .padding(.vertical, 9)
             .background(
-                isOn ? QuranTheme.accentGreen.opacity(0.18) : Color.white,
+                isOn ? Theme.green.opacity(0.16) : Color(uiColor: .secondarySystemBackground),
                 in: Capsule())
             .overlay {
                 Capsule().strokeBorder(
-                    isOn ? QuranTheme.accentGreen : Color.gray.opacity(0.25),
+                    isOn ? Theme.green : Color.gray.opacity(0.25),
                     lineWidth: 1)
             }
         }
@@ -199,7 +222,7 @@ struct QuranLibraryView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
                     .background(
-                        LinearGradient(colors: [QuranTheme.midGreen, QuranTheme.deepGreen],
+                        LinearGradient(colors: [Theme.green, Theme.deepGreen],
                                        startPoint: .leading, endPoint: .trailing),
                         in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
@@ -208,6 +231,46 @@ struct QuranLibraryView: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 2, trailing: 16))
         }
+    }
+
+    // MARK: Collections
+
+    private var collectionsSection: some View {
+        Section {
+            ForEach(QuranLibrary.collections) { collection in
+                NavigationLink(value: collection) {
+                    CollectionCard(collection: collection)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                .contextMenu {
+                    Button {
+                        playCollection(collection, shuffle: false)
+                    } label: {
+                        Label("Play All", systemImage: "play.fill")
+                    }
+                    Button {
+                        playCollection(collection, shuffle: true)
+                    } label: {
+                        Label("Shuffle Play", systemImage: "shuffle")
+                    }
+                }
+            }
+        } header: {
+            Text("Collections")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func playCollection(_ collection: QuranCollection, shuffle: Bool) {
+        guard let first = collection.surahNumbers.first else { return }
+        player.play(surahNumber: first,
+                    queue: collection.surahNumbers,
+                    contextLabel: collection.title)
+        if shuffle, !player.shuffle { player.toggleShuffle() }
+        if !shuffle, player.shuffle { player.toggleShuffle() }
     }
 
     // MARK: Surah rows
@@ -232,22 +295,11 @@ struct QuranLibraryView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparatorTint(Color.gray.opacity(0.18))
                     .contextMenu {
-                        Button {
+                        surahMenuItems(surah) {
                             player.play(surahNumber: surah.number,
                                         queue: displayedSurahs.map(\.number),
                                         contextLabel: contextLabel)
-                        } label: {
-                            Label("Play", systemImage: "play.fill")
                         }
-                        Button {
-                            player.toggleFavorite(surah.number)
-                        } label: {
-                            Label(player.isFavorite(surah.number)
-                                  ? "Remove from Favorites" : "Add to Favorites",
-                                  systemImage: player.isFavorite(surah.number)
-                                  ? "heart.slash" : "heart")
-                        }
-                        downloadMenuItems(surah)
                     }
             }
         } header: {
@@ -261,13 +313,43 @@ struct QuranLibraryView: View {
 
     private var emptyMessage: String {
         if favoritesOnly { return "No favorites yet. Tap the heart on any surah." }
-        if downloadedOnly { return "Nothing downloaded for this reciter yet." }
+        if downloadedOnly { return "Nothing downloaded for this voice yet." }
         return "No surahs match your search."
+    }
+
+    /// The context menu shared by library rows and collection rows:
+    /// Play, Play Next, Add to Queue, Favorite, Download.
+    @ViewBuilder
+    func surahMenuItems(_ surah: QuranSurah, onPlay: @escaping () -> Void) -> some View {
+        Button {
+            onPlay()
+        } label: {
+            Label("Play", systemImage: "play.fill")
+        }
+        Button {
+            player.playNext(surah.number)
+        } label: {
+            Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+        }
+        Button {
+            player.enqueue(surah.number)
+        } label: {
+            Label("Add to Queue", systemImage: "list.bullet")
+        }
+        Button {
+            player.toggleFavorite(surah.number)
+        } label: {
+            Label(player.isFavorite(surah.number)
+                  ? "Remove from Favorites" : "Add to Favorites",
+                  systemImage: player.isFavorite(surah.number)
+                  ? "heart.slash" : "heart")
+        }
+        downloadMenuItems(surah)
     }
 
     @ViewBuilder
     private func downloadMenuItems(_ surah: QuranSurah) -> some View {
-        let reciterId = player.reciterId
+        let reciterId = player.activeReciterId
         if downloads.isDownloading(reciterId: reciterId, surahNumber: surah.number) {
             Button {
                 downloads.cancel(surahNumber: surah.number, reciterId: reciterId)
@@ -278,7 +360,7 @@ struct QuranLibraryView: View {
             Button(role: .destructive) {
                 downloads.delete(surahNumber: surah.number, reciterId: reciterId)
             } label: {
-                Label("Delete download", systemImage: "trash")
+                Label("Remove download", systemImage: "trash")
             }
         } else {
             Button {
@@ -289,25 +371,210 @@ struct QuranLibraryView: View {
         }
     }
 
-    // MARK: Reciter picker
+    // MARK: Options (language / reciter / player style)
 
-    private var reciterMenu: some View {
+    private var optionsMenu: some View {
         Menu {
-            ForEach(QuranLibrary.reciters) { reciter in
+            Section("Audio language") {
                 Button {
-                    player.setReciter(reciter.id)
+                    player.setAudioLanguage(.arabic)
                 } label: {
-                    if reciter.id == player.reciterId {
-                        Label(reciter.name, systemImage: "checkmark")
+                    if player.audioLanguage == .arabic {
+                        Label("Arabic", systemImage: "checkmark")
                     } else {
-                        Text(reciter.name)
+                        Text("Arabic")
+                    }
+                }
+                Button {
+                    player.setAudioLanguage(.english)
+                } label: {
+                    if player.audioLanguage == .english {
+                        Label("English (Ibrahim Walk)", systemImage: "checkmark")
+                    } else {
+                        Text("English (Ibrahim Walk)")
+                    }
+                }
+            }
+            Section("Reciter") {
+                ForEach(QuranLibrary.reciters) { reciter in
+                    Button {
+                        if player.audioLanguage != .arabic {
+                            player.setAudioLanguage(.arabic)
+                        }
+                        player.setReciter(reciter.id)
+                    } label: {
+                        if player.audioLanguage == .arabic, reciter.id == player.reciterId {
+                            Label(reciter.name, systemImage: "checkmark")
+                        } else {
+                            Text(reciter.name)
+                        }
+                    }
+                }
+            }
+            Section("Player style") {
+                Button {
+                    player.playerStyle = .spotify
+                } label: {
+                    if player.playerStyle == .spotify {
+                        Label("Spotify", systemImage: "checkmark")
+                    } else {
+                        Text("Spotify")
+                    }
+                }
+                Button {
+                    player.playerStyle = .appleMusic
+                } label: {
+                    if player.playerStyle == .appleMusic {
+                        Label("Apple Music", systemImage: "checkmark")
+                    } else {
+                        Text("Apple Music")
                     }
                 }
             }
         } label: {
-            Label("Reciter", systemImage: "person.wave.2")
+            Label("Options", systemImage: "ellipsis.circle")
                 .font(.subheadline.weight(.semibold))
         }
+    }
+}
+
+// MARK: - Collection card & detail
+
+private struct CollectionCard: View {
+    let collection: QuranCollection
+
+    private var isRamadan: Bool { collection.id == "ramadan" }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: isRamadan ? "moon.stars.fill" : "sparkles")
+                .font(.title2)
+                .foregroundStyle(.white)
+                .frame(width: 52, height: 52)
+                .background(
+                    LinearGradient(
+                        colors: isRamadan
+                            ? [Theme.green, Theme.deepGreen]
+                            : [Theme.gold, Theme.deepGreen],
+                        startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(collection.title)
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(.primary)
+                Text(collection.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text("\(collection.surahNumbers.count) surahs")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.green)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct CollectionDetailView: View {
+    @EnvironmentObject private var player: QuranPlayer
+    @EnvironmentObject private var downloads: QuranDownloads
+    let collection: QuranCollection
+    @State private var showNowPlaying = false
+
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: 12) {
+                    Button {
+                        play(shuffle: false)
+                    } label: {
+                        Label("Play All", systemImage: "play.fill")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Theme.deepGreen,
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        play(shuffle: true)
+                    } label: {
+                        Label("Shuffle", systemImage: "shuffle")
+                            .font(.headline)
+                            .foregroundStyle(Theme.deepGreen)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Theme.adaptiveGold.opacity(0.25),
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+            }
+            Section {
+                ForEach(collection.surahs) { surah in
+                    SurahRow(surah: surah,
+                             isCurrent: surah.number == player.currentSurah?.number,
+                             onPlay: { playSurah(surah) })
+                        .listRowBackground(Color.clear)
+                        .listRowSeparatorTint(Color.gray.opacity(0.18))
+                        .contextMenu {
+                            Button {
+                                playSurah(surah)
+                            } label: {
+                                Label("Play", systemImage: "play.fill")
+                            }
+                            Button {
+                                player.playNext(surah.number)
+                            } label: {
+                                Label("Play Next",
+                                      systemImage: "text.line.first.and.arrowtriangle.forward")
+                            }
+                            Button {
+                                player.enqueue(surah.number)
+                            } label: {
+                                Label("Add to Queue", systemImage: "list.bullet")
+                            }
+                            Button {
+                                player.toggleFavorite(surah.number)
+                            } label: {
+                                Label(player.isFavorite(surah.number)
+                                      ? "Remove from Favorites" : "Add to Favorites",
+                                      systemImage: player.isFavorite(surah.number)
+                                      ? "heart.slash" : "heart")
+                            }
+                        }
+                }
+            }
+        }
+        .listStyle(.plain)
+        .background(Color(uiColor: .systemBackground))
+        .navigationTitle(collection.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showNowPlaying) {
+            NowPlayingView()
+        }
+    }
+
+    private func play(shuffle: Bool) {
+        guard let first = collection.surahNumbers.first else { return }
+        player.play(surahNumber: first,
+                    queue: collection.surahNumbers,
+                    contextLabel: collection.title)
+        if shuffle, !player.shuffle { player.toggleShuffle() }
+        if !shuffle, player.shuffle { player.toggleShuffle() }
+        showNowPlaying = true
+    }
+
+    private func playSurah(_ surah: QuranSurah) {
+        player.play(surahNumber: surah.number,
+                    queue: collection.surahNumbers,
+                    contextLabel: collection.title)
     }
 }
 
@@ -332,21 +599,21 @@ private struct SurahRow: View {
                     HStack(spacing: 8) {
                         Text(surah.english)
                             .font(.body.weight(.bold))
-                            .foregroundStyle(isCurrent ? QuranTheme.accentGreen : .primary)
+                            .foregroundStyle(isCurrent ? Theme.green : .primary)
                         Text(surah.arabic)
                             .font(.body)
-                            .foregroundStyle(QuranTheme.deepGreen)
+                            .foregroundStyle(Theme.deepGreen)
                         if isFridayPick {
                             Text("FRIDAY PICK")
                                 .font(.system(size: 9, weight: .heavy))
                                 .tracking(0.6)
-                                .foregroundStyle(QuranTheme.accentGreen)
+                                .foregroundStyle(Theme.green)
                         }
                         if isCurrent {
                             Image(systemName: player.isPlaying
                                   ? "speaker.wave.2.fill" : "pause.circle.fill")
                                 .font(.caption)
-                                .foregroundStyle(QuranTheme.accentGreen)
+                                .foregroundStyle(Theme.green)
                         }
                     }
                     Text("\(surah.meaning) | \(surah.ayahs) ayahs | \(surah.revelation)")
@@ -355,8 +622,8 @@ private struct SurahRow: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 6)
-                if let seconds = surah.duration(for: player.reciterId) {
-                    Text(QuranLibrary.formatDuration(TimeInterval(seconds)))
+                if let seconds = player.displayDuration(for: surah) {
+                    Text(QuranLibrary.formatDuration(seconds))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -373,13 +640,13 @@ private struct SurahRow: View {
     private var numberTile: some View {
         Text("\(surah.number)")
             .font(.subheadline.weight(.heavy))
-            .foregroundStyle(isFridayPick ? QuranTheme.deepGreen : QuranTheme.lightGold)
+            .foregroundStyle(isFridayPick ? Theme.deepGreen : Theme.lightGold)
             .frame(width: 46, height: 46)
             .background(
                 LinearGradient(
                     colors: isFridayPick
-                        ? [QuranTheme.lightGold, QuranTheme.gold]
-                        : [QuranTheme.deepGreen, QuranTheme.midGreen],
+                        ? [Theme.lightGold, Theme.gold]
+                        : [Theme.deepGreen, Theme.green],
                     startPoint: .topLeading, endPoint: .bottomTrailing),
                 in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
@@ -391,7 +658,7 @@ private struct SurahRow: View {
             Image(systemName: player.isFavorite(surah.number) ? "heart.fill" : "heart")
                 .font(.body)
                 .foregroundStyle(player.isFavorite(surah.number)
-                                 ? QuranTheme.heartRed : Color.gray.opacity(0.45))
+                                 ? Color(red: 0.9, green: 0.28, blue: 0.3) : Color.gray.opacity(0.45))
                 .frame(width: 34, height: 40)
         }
         .buttonStyle(.plain)
@@ -399,7 +666,7 @@ private struct SurahRow: View {
 
     @ViewBuilder
     private var downloadControl: some View {
-        let reciterId = player.reciterId
+        let reciterId = player.activeReciterId
         if let progress = downloads.progress(reciterId: reciterId, surahNumber: surah.number) {
             Button {
                 downloads.cancel(surahNumber: surah.number, reciterId: reciterId)
@@ -409,13 +676,13 @@ private struct SurahRow: View {
                         .frame(width: 22, height: 22)
                     Circle()
                         .trim(from: 0, to: max(0.02, progress))
-                        .stroke(QuranTheme.accentGreen,
+                        .stroke(Theme.green,
                                 style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                         .frame(width: 22, height: 22)
                         .rotationEffect(.degrees(-90))
                     Image(systemName: "stop.fill")
                         .font(.system(size: 7))
-                        .foregroundStyle(QuranTheme.accentGreen)
+                        .foregroundStyle(Theme.green)
                 }
                 .frame(width: 34, height: 40)
             }
@@ -423,7 +690,7 @@ private struct SurahRow: View {
         } else if downloads.isDownloaded(reciterId: reciterId, surahNumber: surah.number) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.body)
-                .foregroundStyle(QuranTheme.accentGreen)
+                .foregroundStyle(Theme.green)
                 .frame(width: 34, height: 40)
         } else {
             Button {

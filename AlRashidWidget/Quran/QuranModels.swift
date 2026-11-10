@@ -83,6 +83,46 @@ enum QuranLibrary {
         return TimeInterval(seconds)
     }
 
+    // MARK: English audio (v2.2.0-alpha)
+
+    /// The pseudo-reciter id for the English translation audio. It
+    /// keys the downloads folder (QuranAudio/english/) exactly like a
+    /// reciter id, so the downloads machinery needs no special case.
+    static let englishReciterId = "english"
+
+    static let englishReciter = QuranReciter(
+        id: englishReciterId, name: "Ibrahim Walk (English)")
+
+    /// Full-surah English translation MP3s (Ibrahim Walk), hosted by
+    /// QuranicAudio; surah number zero-padded to three digits.
+    static func englishStreamURL(surahNumber: Int) -> URL? {
+        URL(string: String(format: "https://download.quranicaudio.com/quran/ibrahim_walk/%03d.mp3",
+                           surahNumber))
+    }
+
+    /// The stream URL for any reciter id, English included.
+    static func audioURL(surahNumber: Int, reciterId: String) -> URL? {
+        reciterId == englishReciterId
+            ? englishStreamURL(surahNumber: surahNumber)
+            : streamURL(surahNumber: surahNumber, reciterId: reciterId)
+    }
+
+    /// Bundled English durations (en_durations.json, measured from
+    /// the hosted files), keyed by surah number.
+    static let englishDurations: [Int: Int] = {
+        guard let url = Bundle.main.url(forResource: "en_durations", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([String: Int].self, from: data)
+        else { return [:] }
+        return decoded.reduce(into: [Int: Int]()) { result, pair in
+            if let number = Int(pair.key) { result[number] = pair.value }
+        }
+    }()
+
+    static func englishDuration(surahNumber: Int) -> TimeInterval? {
+        englishDurations[surahNumber].map(TimeInterval.init)
+    }
+
     /// "7:02" under an hour, "2:05:40" above it.
     static func formatDuration(_ seconds: TimeInterval) -> String {
         let total = max(0, Int(seconds.rounded()))
@@ -93,6 +133,43 @@ enum QuranLibrary {
             return String(format: "%d:%02d:%02d", h, m, s)
         }
         return String(format: "%d:%02d", m, s)
+    }
+}
+
+// MARK: - Collections (v2.2.0-alpha)
+
+/// A named playlist of surahs, shown as a card in the library.
+struct QuranCollection: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let surahNumbers: [Int]
+
+    var surahs: [QuranSurah] { surahNumbers.compactMap(QuranLibrary.surah) }
+
+    static func == (lhs: QuranCollection, rhs: QuranCollection) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+extension QuranLibrary {
+    static var collections: [QuranCollection] {
+        [
+            QuranCollection(
+                id: "ramadan",
+                title: "Ramadan",
+                subtitle: "For the nights of Ramadan",
+                surahNumbers: [2, 36, 18, 55, 67, 97, 12, 19, 78, 112, 113, 114]),
+            QuranCollection(
+                id: "eid",
+                title: "Eid",
+                subtitle: "Recited in the Eid prayers",
+                surahNumbers: [87, 88, 50, 54, 109, 112, 113, 114]),
+        ]
     }
 }
 

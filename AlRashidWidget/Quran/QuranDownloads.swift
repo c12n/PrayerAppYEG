@@ -106,7 +106,7 @@ final class QuranDownloads: NSObject, ObservableObject {
     func download(surahNumber: Int, reciterId: String) {
         let key = Self.key(reciterId: reciterId, surahNumber: surahNumber)
         guard !downloadedKeys.contains(key), progressByKey[key] == nil else { return }
-        guard let url = QuranLibrary.streamURL(surahNumber: surahNumber, reciterId: reciterId)
+        guard let url = QuranLibrary.audioURL(surahNumber: surahNumber, reciterId: reciterId)
         else { return }
         let task = session.downloadTask(with: url)
         bookkeepingLock.lock()

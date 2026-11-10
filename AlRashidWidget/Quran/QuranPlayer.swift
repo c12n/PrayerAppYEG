@@ -33,6 +33,30 @@ final class QuranPlayer: ObservableObject {
         case endOfSurah
     }
 
+    /// Now Playing appearance (v2.2.0-alpha), switchable in the
+    /// player and in the library menu. Raw values are the persisted
+    /// `quran.playerStyle` strings.
+    enum PlayerStyle: String, CaseIterable {
+        case spotify = "spotify"
+        case appleMusic = "applemusic"
+    }
+
+    /// Recitation language (v2.2.0-alpha): the Arabic reciters, or
+    /// the English translation (Ibrahim Walk).
+    enum AudioLanguage: String, CaseIterable {
+        case arabic
+        case english
+    }
+
+    /// Listening statistics (v2.2.0-alpha), persisted as JSON under
+    /// `quran.stats.v1` and shown in the prayer tracker.
+    struct ListeningStats: Codable, Equatable {
+        var completedTotal: Int = 0
+        /// Completion counts keyed by surah number (as a string).
+        var perSurah: [String: Int] = [:]
+        var secondsListened: Double = 0
+    }
+
     // MARK: Published state
 
     @Published private(set) var currentSurah: QuranSurah?
@@ -60,18 +84,54 @@ final class QuranPlayer: ObservableObject {
         }
     }
     @Published private(set) var sleepOption: SleepOption = .off
+    @Published var playerStyle: PlayerStyle = .spotify {
+        didSet { defaults.set(playerStyle.rawValue, forKey: Keys.playerStyle) }
+    }
+    @Published var audioLanguage: AudioLanguage = .arabic {
+        didSet { defaults.set(audioLanguage.rawValue, forKey: Keys.audioLanguage) }
+    }
+    @Published private(set) var stats = ListeningStats()
 
     /// The best duration known for the current surah: the player
     /// item's own duration once loaded, else the bundled stream
-    /// duration for the current reciter.
+    /// duration for the active language / reciter.
     var duration: TimeInterval {
         if let itemDuration, itemDuration > 0 { return itemDuration }
         guard let currentSurah else { return 0 }
+        if audioLanguage == .english {
+            return QuranLibrary.englishDuration(surahNumber: currentSurah.number) ?? 0
+        }
         return QuranLibrary.duration(surahNumber: currentSurah.number,
                                      reciterId: reciterId) ?? 0
     }
 
-    var currentReciter: QuranReciter? { QuranLibrary.reciter(reciterId) }
+    /// The reciter whose audio is actually playing: the English
+    /// translation voice while the language is English.
+    var currentReciter: QuranReciter? {
+        audioLanguage == .english
+            ? QuranLibrary.englishReciter
+            : QuranLibrary.reciter(reciterId)
+    }
+
+    /// The id downloads and file lookups key on for the active
+    /// language ("english" in English mode).
+    var activeReciterId: String {
+        audioLanguage == .english ? QuranLibrary.englishReciterId : reciterId
+    }
+
+    /// Duration to display for a surah in lists: follows the active
+    /// language, like playback does.
+    func displayDuration(for surah: QuranSurah) -> TimeInterval? {
+        audioLanguage == .english
+            ? QuranLibrary.englishDuration(surahNumber: surah.number)
+            : QuranLibrary.duration(surahNumber: surah.number, reciterId: reciterId)
+    }
+
+    /// The surah that plays after the current one, if any.
+    var upNextSurah: QuranSurah? {
+        guard traversalPos + 1 < traversal.count else { return nil }
+        return QuranLibrary.surah(queue[traversal[traversalPos + 1]])
+    }
 
     var hasQueue: Bool { !queue.isEmpty }
 
@@ -85,6 +145,9 @@ final class QuranPlayer: ObservableObject {
         static let repeatMode = "quran.repeatMode"
         static let shuffle = "quran.shuffle"
         static let rate = "quran.rate"
+        static let playerStyle = "quran.playerStyle"
+        static let audioLanguage = "quran.audioLanguage"
+        static let stats = "quran.stats.v1"
     }
 
     private var defaults: UserDefaults { .standard }
@@ -101,6 +164,11 @@ final class QuranPlayer: ObservableObject {
     private var pendingSeek: TimeInterval?
     private var lastSavedSecond = -1
     private var lastInfoSecond = -1
+    /// Listening-stats accumulation (v2.2.0-alpha): playback position
+    /// at the last time-observer tick, and seconds not yet flushed
+    /// into the persisted stats.
+    private var lastObservedPlaybackTime: TimeInterval = 0
+    private var unflushedListenSeconds: Double = 0
 
     /// Play order: indices into `queue`. Natural order, or shuffled
     /// (with the current surah first) while shuffle is on.
@@ -117,6 +185,14 @@ final class QuranPlayer: ObservableObject {
         shuffle = defaults.bool(forKey: Keys.shuffle)
         let storedRate = defaults.double(forKey: Keys.rate)
         rate = Self.allowedRates.contains(Float(storedRate)) ? Float(storedRate) : 1.0
+        playerStyle = PlayerStyle(
+            rawValue: defaults.string(forKey: Keys.playerStyle) ?? "") ?? .spotify
+        audioLanguage = AudioLanguage(
+            rawValue: defaults.string(forKey: Keys.audioLanguage) ?? "") ?? .arabic
+        if let data = defaults.data(forKey: Keys.stats),
+           let decoded = try? JSONDecoder().decode(ListeningStats.self, from: data) {
+            stats = decoded
+        }
 
         installTimeObserver()
         installRemoteCommands()
@@ -158,6 +234,35 @@ final class QuranPlayer: ObservableObject {
         load(surah, startAt: 0, autoplay: true)
     }
 
+    /// Inserts a surah into the queue immediately after the current
+    /// one (v2.2.0-alpha), in both the display queue and the play
+    /// traversal, so it plays next whether shuffle is on or off.
+    func playNext(_ surahNumber: Int) {
+        guard QuranLibrary.surah(surahNumber) != nil else { return }
+        guard !queue.isEmpty, !traversal.isEmpty, currentSurah != nil else {
+            play(surahNumber: surahNumber, queue: [surahNumber],
+                 contextLabel: contextLabel.isEmpty ? "All Surahs" : contextLabel)
+            return
+        }
+        let insertAt = traversal[traversalPos] + 1
+        queue.insert(surahNumber, at: insertAt)
+        traversal = traversal.map { $0 >= insertAt ? $0 + 1 : $0 }
+        traversal.insert(insertAt, at: traversalPos + 1)
+    }
+
+    /// Appends a surah to the end of the queue (v2.2.0-alpha), in
+    /// both the display queue and the play traversal.
+    func enqueue(_ surahNumber: Int) {
+        guard QuranLibrary.surah(surahNumber) != nil else { return }
+        guard !queue.isEmpty, currentSurah != nil else {
+            play(surahNumber: surahNumber, queue: [surahNumber],
+                 contextLabel: contextLabel.isEmpty ? "All Surahs" : contextLabel)
+            return
+        }
+        queue.append(surahNumber)
+        traversal.append(queue.count - 1)
+    }
+
     func togglePlayPause() {
         isPlaying ? pause() : resume()
     }
@@ -174,6 +279,7 @@ final class QuranPlayer: ObservableObject {
     func pause() {
         player.pause()
         isPlaying = false
+        flushListenStats()
         persistPosition()
         updateNowPlaying()
     }
@@ -201,6 +307,7 @@ final class QuranPlayer: ObservableObject {
     func seek(to seconds: TimeInterval) {
         let target = max(0, seconds)
         currentTime = target
+        lastObservedPlaybackTime = target
         if player.currentItem?.status == .readyToPlay {
             player.seek(to: CMTime(seconds: target, preferredTimescale: 600),
                         toleranceBefore: CMTime(seconds: 0.5, preferredTimescale: 600),
@@ -240,6 +347,49 @@ final class QuranPlayer: ObservableObject {
         itemDuration = nil
         if let surah = currentSurah {
             load(surah, startAt: currentTime, autoplay: isPlaying)
+        }
+    }
+
+    /// Switches between the Arabic reciters and the English
+    /// translation; a loaded surah reloads at the same position,
+    /// playing or paused as it was (v2.2.0-alpha).
+    func setAudioLanguage(_ newLanguage: AudioLanguage) {
+        guard newLanguage != audioLanguage else { return }
+        audioLanguage = newLanguage
+        itemDuration = nil
+        if let surah = currentSurah {
+            load(surah, startAt: currentTime, autoplay: isPlaying)
+        }
+    }
+
+    // MARK: Listening stats (v2.2.0-alpha)
+
+    var completedSurahsTotal: Int { stats.completedTotal }
+
+    var totalSecondsListened: TimeInterval { stats.secondsListened }
+
+    func completionCount(for surahNumber: Int) -> Int {
+        stats.perSurah["\(surahNumber)"] ?? 0
+    }
+
+    private func flushListenStats() {
+        guard unflushedListenSeconds > 0 else { return }
+        stats.secondsListened += unflushedListenSeconds
+        unflushedListenSeconds = 0
+        saveStats()
+    }
+
+    /// A surah reached its natural end (not a skip): count it.
+    private func recordCompletion(of surah: QuranSurah) {
+        flushListenStats()
+        stats.completedTotal += 1
+        stats.perSurah["\(surah.number)", default: 0] += 1
+        saveStats()
+    }
+
+    private func saveStats() {
+        if let data = try? JSONEncoder().encode(stats) {
+            defaults.set(data, forKey: Keys.stats)
         }
     }
 
@@ -320,6 +470,7 @@ final class QuranPlayer: ObservableObject {
     private func finishPlayback() {
         player.pause()
         isPlaying = false
+        flushListenStats()
         persistPosition()
         updateNowPlaying()
         try? AVAudioSession.sharedInstance()
@@ -329,8 +480,8 @@ final class QuranPlayer: ObservableObject {
     // MARK: - Item loading
 
     private func load(_ surah: QuranSurah, startAt: TimeInterval, autoplay: Bool) {
-        let url = QuranDownloads.localFileURL(reciterId: reciterId, surahNumber: surah.number)
-            ?? QuranLibrary.streamURL(surahNumber: surah.number, reciterId: reciterId)
+        let url = QuranDownloads.localFileURL(reciterId: activeReciterId, surahNumber: surah.number)
+            ?? QuranLibrary.audioURL(surahNumber: surah.number, reciterId: activeReciterId)
         guard let url else { return }
 
         if let existingEndObserver = endObserver {
@@ -348,6 +499,7 @@ final class QuranPlayer: ObservableObject {
         currentSurah = surah
         itemDuration = nil
         currentTime = startAt
+        lastObservedPlaybackTime = startAt
         pendingSeek = startAt > 0 ? startAt : nil
         lastSavedSecond = -1
         lastInfoSecond = -1
@@ -365,6 +517,11 @@ final class QuranPlayer: ObservableObject {
     }
 
     private func handleItemEnd() {
+        // The item played to its natural end: a completion, however
+        // playback continues from here (sleep stop, repeat, advance).
+        if let finished = currentSurah {
+            recordCompletion(of: finished)
+        }
         if sleepOption == .endOfSurah {
             sleepOption = .off
             finishPlayback()
@@ -416,6 +573,17 @@ final class QuranPlayer: ObservableObject {
                                                       queue: .main) { [weak self] time in
             guard let self else { return }
             self.currentTime = max(0, time.seconds.isFinite ? time.seconds : 0)
+            // Listening stats: credit the position delta while
+            // playing (small, forward only, so seeks and stalls
+            // never inflate it).
+            let delta = self.currentTime - self.lastObservedPlaybackTime
+            if self.isPlaying, delta > 0, delta <= 2 {
+                self.unflushedListenSeconds += delta
+            }
+            self.lastObservedPlaybackTime = self.currentTime
+            if self.unflushedListenSeconds >= 10 {
+                self.flushListenStats()
+            }
             if let item = self.player.currentItem {
                 if item.status == .failed, self.isPlaying {
                     self.isPlaying = false
