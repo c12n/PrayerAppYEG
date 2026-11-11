@@ -12,6 +12,7 @@
 
 Usage: patch_android.py <path-to-generated-android-dir>
 """
+import base64
 import pathlib
 import re
 import sys
@@ -160,7 +161,21 @@ def main() -> None:
         gradle = gradle.rstrip() + "\n" + deps
     gradle_path.write_text(gradle)
 
-    print("patched AndroidManifest.xml (label + widget receivers + alert receivers + QS tile + CarAppService + shortcuts + notification permissions) and build.gradle.kts (minSdk 26 + car app + play-services-auth)")
+    # Bundled adhan sounds (v3.0.0): the WAVs live in the repo
+    # base64-encoded under android_overlay/raw_b64 (the repo tooling
+    # moves text only); decode them into res/raw next to keep.xml.
+    overlay = android.parent / "android_overlay"
+    b64_dir = overlay / "raw_b64"
+    raw_dir = android / "app/src/main/res/raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    decoded = []
+    if b64_dir.is_dir():
+        for b64_file in sorted(b64_dir.glob("*.wav.b64")):
+            target = raw_dir / b64_file.name[: -len(".b64")]
+            target.write_bytes(base64.b64decode(b64_file.read_text()))
+            decoded.append(target.name)
+
+    print("patched AndroidManifest.xml (label + widget receivers + alert receivers + QS tile + CarAppService + shortcuts + notification permissions) and build.gradle.kts (minSdk 26 + car app + play-services-auth); decoded raw sounds:", ", ".join(decoded))
 
 
 if __name__ == "__main__":
