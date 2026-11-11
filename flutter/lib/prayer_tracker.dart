@@ -243,7 +243,6 @@ class PrayerTrackerDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tracker = TrackerScope.of(context);
-    final settings = SettingsScope.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(S.t('trackerTitle'))),
       body: AnimatedBuilder(

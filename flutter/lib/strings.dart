@@ -262,6 +262,7 @@ class S {
     'searchSurahs': {AppLanguage.en: 'Search surahs', AppLanguage.ar: 'ابحث في السور', AppLanguage.fr: 'Rechercher une sourate'},
     'allSurahs': {AppLanguage.en: 'All Surahs', AppLanguage.ar: 'كل السور', AppLanguage.fr: 'Toutes les sourates'},
     'favorites': {AppLanguage.en: 'Favorites', AppLanguage.ar: 'المفضلة', AppLanguage.fr: 'Favoris'},
+    'bookmarks': {AppLanguage.en: 'Bookmarks', AppLanguage.ar: 'العلامات', AppLanguage.fr: 'Signets'},
     'downloadedFilter': {AppLanguage.en: 'Downloaded', AppLanguage.ar: 'المُنزّلة', AppLanguage.fr: 'Téléchargées'},
     'continueListeningTitle': {AppLanguage.en: 'Continue Listening', AppLanguage.ar: 'متابعة الاستماع', AppLanguage.fr: "Continuer l'écoute"},
     'playAllFavorites': {AppLanguage.en: 'Play all favorites', AppLanguage.ar: 'تشغيل كل المفضلة', AppLanguage.fr: 'Lire tous les favoris'},

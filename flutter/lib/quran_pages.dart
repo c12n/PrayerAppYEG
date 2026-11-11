@@ -8,7 +8,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'app_settings.dart';
 import 'quran_downloads.dart';
 import 'quran_models.dart';
 import 'quran_player.dart';
@@ -483,7 +482,6 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
                           Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => const NowPlayingPage()));
                         }),
-                      ),
                   ],
                 ),
               ),
@@ -691,7 +689,6 @@ class SurahRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = QuranScope.of(context);
     final player = scope.player;
-    final downloads = scope.downloads;
     final isCurrent = surah.number == player.currentSurah?.number;
     final isFridayPick = surah.number == 18;
     final reciterId = player.activeReciterId;
@@ -988,34 +985,42 @@ class QuranOptionsPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
               _header(context, S.t('audioLanguage')),
-              RadioListTile<QuranAudioLanguage>(
-                value: QuranAudioLanguage.arabic,
+              RadioGroup<QuranAudioLanguage>(
                 groupValue: player.audioLanguage,
-                title: Text(S.t('arabicLang')),
                 onChanged: (v) {
                   if (v != null) player.setAudioLanguage(v);
                 },
-              ),
-              RadioListTile<QuranAudioLanguage>(
-                value: QuranAudioLanguage.english,
-                groupValue: player.audioLanguage,
-                title: Text(S.t('englishWalk')),
-                onChanged: (v) {
-                  if (v != null) player.setAudioLanguage(v);
-                },
+                child: Column(
+                  children: [
+                    RadioListTile<QuranAudioLanguage>(
+                      value: QuranAudioLanguage.arabic,
+                      title: Text(S.t('arabicLang')),
+                    ),
+                    RadioListTile<QuranAudioLanguage>(
+                      value: QuranAudioLanguage.english,
+                      title: Text(S.t('englishWalk')),
+                    ),
+                  ],
+                ),
               ),
               if (player.audioLanguage == QuranAudioLanguage.arabic) ...[
                 const SizedBox(height: 12),
                 _header(context, S.t('reciterLabel')),
-                for (final reciter in QuranLibrary.reciters)
-                  RadioListTile<String>(
-                    value: reciter.id,
-                    groupValue: player.reciterId,
-                    title: Text(reciter.name),
-                    onChanged: (v) {
-                      if (v != null) player.setReciter(v);
-                    },
+                RadioGroup<String>(
+                  groupValue: player.reciterId,
+                  onChanged: (v) {
+                    if (v != null) player.setReciter(v);
+                  },
+                  child: Column(
+                    children: [
+                      for (final reciter in QuranLibrary.reciters)
+                        RadioListTile<String>(
+                          value: reciter.id,
+                          title: Text(reciter.name),
+                        ),
+                    ],
                   ),
+                ),
               ],
               const SizedBox(height: 12),
               ListTile(
