@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Alternate launcher icon backgrounds (v3.0.0): the deep tones
+     of the nine iOS alternate icons, as flat adaptive-icon
+     backgrounds under the shared gold mosque glyph. -->
+<resources>
+    <color name="icon_bg_midnight">#050F23</color>
+    <color name="icon_bg_desert">#8A5A28</color>
+    <color name="icon_bg_rose">#2E081C</color>
+    <color name="icon_bg_royal">#180836</color>
+    <color name="icon_bg_emerald">#032016</color>
+    <color name="icon_bg_ocean">#061830</color>
+    <color name="icon_bg_crimson">#2C060C</color>
+    <color name="icon_bg_plum">#1A092E</color>
+    <color name="icon_bg_teal">#03242A</color>
+</resources>

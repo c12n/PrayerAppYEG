@@ -3,4 +3,5 @@
     <string name="widget_next_info_desc">Next prayer and countdown for Prayer YEG</string>
     <string name="widget_schedule_info_desc">Prayer YEG prayer schedule with next-prayer header</string>
     <string name="widget_large_info_desc">Prayer YEG full prayer schedule</string>
+    <string name="widget_listening_info_desc">Prayer YEG Continue Listening, your last Quran session</string>
 </resources>

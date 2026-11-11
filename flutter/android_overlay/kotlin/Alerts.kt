@@ -258,6 +258,9 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
             AlertArmer.rearm(context)
+            // The ongoing countdown notification (v3.0.0) re-posts
+            // itself too when the user has it enabled.
+            OngoingNotification.refresh(context)
         }
     }
 }

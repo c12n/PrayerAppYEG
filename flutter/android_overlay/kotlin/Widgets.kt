@@ -229,6 +229,19 @@ object WidgetStrings {
         "ar" -> "في"; "fr" -> "à"; else -> "at"
     }
 
+    /// Continue Listening widget (v3.0.0).
+    fun continueListening(language: String): String = when (language) {
+        "ar" -> "متابعة الاستماع"
+        "fr" -> "Continuer l'écoute"
+        else -> "Continue Listening"
+    }
+
+    fun tapToListen(language: String): String = when (language) {
+        "ar" -> "اضغط للاستماع إلى القرآن"
+        "fr" -> "Touchez pour écouter le Coran"
+        else -> "Tap to listen to the Quran"
+    }
+
     fun nextCaption(tomorrow: Boolean, caps: Boolean, language: String): String =
         when (language) {
             "ar" -> if (tomorrow) "الصلاة التالية · غدًا" else "الصلاة التالية"
@@ -735,6 +748,56 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
         views.setTextViewText(
             R.id.widget_verse_ref, DailyVerses.reference(verse, language))
         views.setTextColor(R.id.widget_verse_ref, WidgetPrefs.accentColor(context))
+        return views
+    }
+}
+
+
+/// Continue Listening widget (v3.0.0): the Quran player's last
+/// session, read from the snapshot the Dart player writes into the
+/// Flutter preferences (keys quran.widget.*). Tapping opens the
+/// app, where the home Quran card resumes the same surah.
+class ContinueListeningWidgetProvider : BaseWidgetProvider() {
+    override fun layoutId() = R.layout.widget_listening
+
+    override fun buildViews(context: Context, model: WidgetData.Model): RemoteViews {
+        val views = RemoteViews(context.packageName, layoutId())
+        val language = WidgetPrefs.language(context)
+        val prefs = context.getSharedPreferences(
+            "FlutterSharedPreferences", Context.MODE_PRIVATE)
+        val has = prefs.getBoolean("flutter.quran.widget.has", false)
+        views.setTextViewText(R.id.widget_listen_caption,
+            WidgetStrings.continueListening(language).uppercase())
+        if (has) {
+            val surah = prefs.getString("flutter.quran.widget.surah", "") ?: ""
+            val arabic = prefs.getString("flutter.quran.widget.arabic", "") ?: ""
+            val reciter = prefs.getString("flutter.quran.widget.reciter", "") ?: ""
+            val position = prefs.getLong("flutter.quran.widget.position", 0)
+            val duration = prefs.getLong("flutter.quran.widget.duration", 0)
+            views.setTextViewText(R.id.widget_listen_title,
+                if (arabic.isNotEmpty()) arabic else surah)
+            views.setTextViewText(R.id.widget_listen_sub,
+                listOf(surah, reciter).filter { it.isNotEmpty() }.joinToString(" · "))
+            if (duration > 0) {
+                views.setProgressBar(R.id.widget_listen_progress, 1000,
+                    (position * 1000 / duration).toInt(), false)
+                views.setViewVisibility(R.id.widget_listen_progress, android.view.View.VISIBLE)
+            } else {
+                views.setViewVisibility(R.id.widget_listen_progress, android.view.View.GONE)
+            }
+        } else {
+            views.setTextViewText(R.id.widget_listen_title,
+                WidgetStrings.tapToListen(language))
+            views.setTextViewText(R.id.widget_listen_sub, "")
+            views.setViewVisibility(R.id.widget_listen_progress, android.view.View.GONE)
+        }
+        paintWidget(context, views,
+            accentIds = intArrayOf(R.id.widget_listen_caption),
+            textIds = intArrayOf(R.id.widget_listen_title),
+            secondaryIds = intArrayOf(R.id.widget_listen_sub))
+        applyTextScale(context, views,
+            R.id.widget_listen_caption to 11f, R.id.widget_listen_title to 20f,
+            R.id.widget_listen_sub to 13f)
         return views
     }
 }

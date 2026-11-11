@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Patch the flutter-create generated Android scaffold for Al Rashid Prayer:
+"""Patch the flutter-create generated Android scaffold for Prayer YEG:
 - app label -> "Prayer YEG"
-- register the three home-screen widget providers in AndroidManifest.xml
+- register the four home-screen widget providers in AndroidManifest.xml
+- v3.0.0: the ongoing-notification tick receiver and the nine
+  activity-alias alternate launcher icons
 - minSdk -> 26 (the widget providers use java.time)
 - v1.5 notification engine: POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM
   and RECEIVE_BOOT_COMPLETED permissions, plus the alarm and boot
@@ -56,6 +58,17 @@ RECEIVERS = """        <receiver
                 android:resource="@xml/widget_large_info" />
         </receiver>
         <receiver
+            android:name=".ContinueListeningWidgetProvider"
+            android:exported="false"
+            android:label="Prayer YEG - Continue Listening">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_listening_info" />
+        </receiver>
+        <receiver
             android:name=".AdhanAlarmReceiver"
             android:exported="false">
         </receiver>
@@ -88,6 +101,121 @@ RECEIVERS = """        <receiver
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".OngoingTickReceiver"
+            android:exported="false">
+        </receiver>
+        <!-- Alternate launcher icons (v3.0.0): one disabled alias
+             per iOS alternate icon; MainActivity switches them
+             through the alrashid/icons channel. -->
+        <activity-alias
+            android:name=".MainActivityMidnight"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_midnight"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityDesert"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_desert"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityRose"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_rose"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityRoyal"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_royal"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityEmerald"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_emerald"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityOcean"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_ocean"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityCrimson"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_crimson"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityPlum"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_plum"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityTeal"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_teal"
+            android:label="Prayer YEG"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
     </application>"""
 
 

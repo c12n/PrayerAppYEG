@@ -3,6 +3,8 @@ package com.c12n.alrashidwidget
 import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationManager
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -164,6 +166,90 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                     else -> result.notImplemented()
                 }
             }
+        // Ongoing countdown notification (v3.0.0, see
+        // OngoingNotification.kt): the Dart side syncs the user's
+        // opt-in; the notification itself is kept fresh natively.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/live")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setOngoing" -> {
+                        OngoingNotification.setEnabled(
+                            this, call.argument<Boolean>("enabled") ?: false)
+                        result.success(null)
+                    }
+                    "refreshOngoing" -> {
+                        OngoingNotification.refresh(this)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        // Widget refresh pings (v3.0.0): the Quran player asks for
+        // the Continue Listening widget to re-read its snapshot.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/widgets")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "refreshListening" -> {
+                        val manager = AppWidgetManager.getInstance(this)
+                        val component = ComponentName(
+                            this, ContinueListeningWidgetProvider::class.java)
+                        val ids = manager.getAppWidgetIds(component)
+                        if (ids.isNotEmpty()) {
+                            ContinueListeningWidgetProvider()
+                                .onUpdate(this, manager, ids)
+                        }
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        // Alternate launcher icons (v3.0.0): toggle the
+        // activity-alias components (see patch_android.py). Class
+        // names are the namespace-expanded manifest names; the
+        // package part is the runtime applicationId.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/icons")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setIcon" -> {
+                        setLauncherIcon(call.argument<String>("name") ?: "default")
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    /// Enables exactly one launcher component: MainActivity itself
+    /// for 'default', or its alias for a colorway (v3.0.0).
+    private fun setLauncherIcon(name: String) {
+        val pm = packageManager
+        val variants = listOf(
+            "default", "midnight", "desert", "rose", "royal",
+            "emerald", "ocean", "crimson", "plum", "teal"
+        )
+        for (variant in variants) {
+            val className = if (variant == "default") {
+                "com.c12n.alrashidwidget.MainActivity"
+            } else {
+                "com.c12n.alrashidwidget.MainActivity" +
+                    variant.replaceFirstChar { it.uppercase() }
+            }
+            val state = if (variant == name) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+            try {
+                pm.setComponentEnabledSetting(
+                    ComponentName(packageName, className),
+                    state,
+                    PackageManager.DONT_KILL_APP
+                )
+            } catch (e: Exception) {
+                // A missing component on an unusual build must not
+                // take the settings page down with it.
+            }
+        }
     }
 
     /// The sound picker's preview player (build 34): one at a time,
