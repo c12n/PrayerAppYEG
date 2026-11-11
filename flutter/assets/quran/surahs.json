@@ -1,0 +1,1619 @@
+{
+ "reciters": [
+  {
+   "id": "ar.alafasy",
+   "name": "Mishary Rashid Alafasy"
+  },
+  {
+   "id": "ar.abdulbasitmurattal",
+   "name": "Abdul Basit Abdul Samad"
+  },
+  {
+   "id": "ar.abdullahbasfar",
+   "name": "Abdullah Basfar"
+  },
+  {
+   "id": "ar.azizalili",
+   "name": "Aziz Alili"
+  }
+ ],
+ "audioBase": "https://cdn.islamic.network/quran/audio-surah/128",
+ "surahs": [
+  {
+   "number": 1,
+   "arabic": "الفاتحة",
+   "english": "Al-Fatiha",
+   "meaning": "The Opening",
+   "ayahs": 7,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 89,
+    "ar.abdulbasitmurattal": 103,
+    "ar.abdullahbasfar": 89,
+    "ar.azizalili": 87
+   }
+  },
+  {
+   "number": 2,
+   "arabic": "البقرة",
+   "english": "Al-Baqara",
+   "meaning": "The Cow",
+   "ayahs": 286,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 7613,
+    "ar.abdulbasitmurattal": 14568,
+    "ar.abdullahbasfar": 7191,
+    "ar.azizalili": 7591
+   }
+  },
+  {
+   "number": 3,
+   "arabic": "آل عمران",
+   "english": "Aal-i-Imraan",
+   "meaning": "The Family of Imraan",
+   "ayahs": 200,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 4762,
+    "ar.abdulbasitmurattal": 7936,
+    "ar.abdullahbasfar": 4347,
+    "ar.azizalili": 4210
+   }
+  },
+  {
+   "number": 4,
+   "arabic": "النساء",
+   "english": "An-Nisaa",
+   "meaning": "The Women",
+   "ayahs": 176,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 4834,
+    "ar.abdulbasitmurattal": 7957,
+    "ar.abdullahbasfar": 4573,
+    "ar.azizalili": 4535
+   }
+  },
+  {
+   "number": 5,
+   "arabic": "المائدة",
+   "english": "Al-Maaida",
+   "meaning": "The Table",
+   "ayahs": 120,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 3818,
+    "ar.abdulbasitmurattal": 6130,
+    "ar.abdullahbasfar": 3420,
+    "ar.azizalili": 3397
+   }
+  },
+  {
+   "number": 6,
+   "arabic": "الأنعام",
+   "english": "Al-An'aam",
+   "meaning": "The Cattle",
+   "ayahs": 165,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 4387,
+    "ar.abdulbasitmurattal": 7322,
+    "ar.abdullahbasfar": 3725,
+    "ar.azizalili": 3521
+   }
+  },
+  {
+   "number": 7,
+   "arabic": "الأعراف",
+   "english": "Al-A'raaf",
+   "meaning": "The Heights",
+   "ayahs": 206,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 5032,
+    "ar.abdulbasitmurattal": 8587,
+    "ar.abdullahbasfar": 4064,
+    "ar.azizalili": 3895
+   }
+  },
+  {
+   "number": 8,
+   "arabic": "الأنفال",
+   "english": "Al-Anfaal",
+   "meaning": "The Spoils of War",
+   "ayahs": 75,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 1875,
+    "ar.abdulbasitmurattal": 2533,
+    "ar.abdullahbasfar": 1575,
+    "ar.azizalili": 1607
+   }
+  },
+  {
+   "number": 9,
+   "arabic": "التوبة",
+   "english": "At-Tawba",
+   "meaning": "The Repentance",
+   "ayahs": 129,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 3661,
+    "ar.abdulbasitmurattal": 4948,
+    "ar.abdullahbasfar": 2982,
+    "ar.azizalili": 3193
+   }
+  },
+  {
+   "number": 10,
+   "arabic": "يونس",
+   "english": "Yunus",
+   "meaning": "Jonas",
+   "ayahs": 109,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 2750,
+    "ar.abdulbasitmurattal": 3601,
+    "ar.abdullahbasfar": 1982,
+    "ar.azizalili": 2100
+   }
+  },
+  {
+   "number": 11,
+   "arabic": "هود",
+   "english": "Hud",
+   "meaning": "Hud",
+   "ayahs": 123,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 2823,
+    "ar.abdulbasitmurattal": 3694,
+    "ar.abdullahbasfar": 2120,
+    "ar.azizalili": 2165
+   }
+  },
+  {
+   "number": 12,
+   "arabic": "يوسف",
+   "english": "Yusuf",
+   "meaning": "Joseph",
+   "ayahs": 111,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 2562,
+    "ar.abdulbasitmurattal": 3341,
+    "ar.abdullahbasfar": 2077,
+    "ar.azizalili": 2011
+   }
+  },
+  {
+   "number": 13,
+   "arabic": "الرعد",
+   "english": "Ar-Ra'd",
+   "meaning": "The Thunder",
+   "ayahs": 43,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 1268,
+    "ar.abdulbasitmurattal": 1632,
+    "ar.abdullahbasfar": 958,
+    "ar.azizalili": 997
+   }
+  },
+  {
+   "number": 14,
+   "arabic": "إبراهيم",
+   "english": "Ibrahim",
+   "meaning": "Abraham",
+   "ayahs": 52,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1264,
+    "ar.abdulbasitmurattal": 1554,
+    "ar.abdullahbasfar": 1006,
+    "ar.azizalili": 1008
+   }
+  },
+  {
+   "number": 15,
+   "arabic": "الحجر",
+   "english": "Al-Hijr",
+   "meaning": "The Rock",
+   "ayahs": 99,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 992,
+    "ar.abdulbasitmurattal": 1284,
+    "ar.abdullahbasfar": 726,
+    "ar.azizalili": 831
+   }
+  },
+  {
+   "number": 16,
+   "arabic": "النحل",
+   "english": "An-Nahl",
+   "meaning": "The Bee",
+   "ayahs": 128,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 2580,
+    "ar.abdulbasitmurattal": 3732,
+    "ar.abdullahbasfar": 1973,
+    "ar.azizalili": 2198
+   }
+  },
+  {
+   "number": 17,
+   "arabic": "الإسراء",
+   "english": "Al-Israa",
+   "meaning": "The Night Journey",
+   "ayahs": 111,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 2034,
+    "ar.abdulbasitmurattal": 3371,
+    "ar.abdullahbasfar": 1819,
+    "ar.azizalili": 1853
+   }
+  },
+  {
+   "number": 18,
+   "arabic": "الكهف",
+   "english": "Al-Kahf",
+   "meaning": "The Cave",
+   "ayahs": 110,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 2047,
+    "ar.abdulbasitmurattal": 3530,
+    "ar.abdullahbasfar": 1838,
+    "ar.azizalili": 1821
+   }
+  },
+  {
+   "number": 19,
+   "arabic": "مريم",
+   "english": "Maryam",
+   "meaning": "Mary",
+   "ayahs": 98,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1320,
+    "ar.abdulbasitmurattal": 2144,
+    "ar.abdullahbasfar": 1176,
+    "ar.azizalili": 1122
+   }
+  },
+  {
+   "number": 20,
+   "arabic": "طه",
+   "english": "Taa-Haa",
+   "meaning": "Taa-Haa",
+   "ayahs": 135,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1665,
+    "ar.abdulbasitmurattal": 2903,
+    "ar.abdullahbasfar": 1497,
+    "ar.azizalili": 1565
+   }
+  },
+  {
+   "number": 21,
+   "arabic": "الأنبياء",
+   "english": "Al-Anbiyaa",
+   "meaning": "The Prophets",
+   "ayahs": 112,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1622,
+    "ar.abdulbasitmurattal": 2779,
+    "ar.abdullahbasfar": 1335,
+    "ar.azizalili": 1501
+   }
+  },
+  {
+   "number": 22,
+   "arabic": "الحج",
+   "english": "Al-Hajj",
+   "meaning": "The Pilgrimage",
+   "ayahs": 78,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 1809,
+    "ar.abdulbasitmurattal": 2837,
+    "ar.abdullahbasfar": 1561,
+    "ar.azizalili": 1543
+   }
+  },
+  {
+   "number": 23,
+   "arabic": "المؤمنون",
+   "english": "Al-Muminoon",
+   "meaning": "The Believers",
+   "ayahs": 118,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1537,
+    "ar.abdulbasitmurattal": 2339,
+    "ar.abdullahbasfar": 1241,
+    "ar.azizalili": 1290
+   }
+  },
+  {
+   "number": 24,
+   "arabic": "النور",
+   "english": "An-Noor",
+   "meaning": "The Light",
+   "ayahs": 64,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 1877,
+    "ar.abdulbasitmurattal": 2516,
+    "ar.abdullahbasfar": 1608,
+    "ar.azizalili": 1567
+   }
+  },
+  {
+   "number": 25,
+   "arabic": "الفرقان",
+   "english": "Al-Furqaan",
+   "meaning": "The Criterion",
+   "ayahs": 77,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1138,
+    "ar.abdulbasitmurattal": 1555,
+    "ar.abdullahbasfar": 1074,
+    "ar.azizalili": 1077
+   }
+  },
+  {
+   "number": 26,
+   "arabic": "الشعراء",
+   "english": "Ash-Shu'araa",
+   "meaning": "The Poets",
+   "ayahs": 227,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1884,
+    "ar.abdulbasitmurattal": 2811,
+    "ar.abdullahbasfar": 1513,
+    "ar.azizalili": 1674
+   }
+  },
+  {
+   "number": 27,
+   "arabic": "النمل",
+   "english": "An-Naml",
+   "meaning": "The Ant",
+   "ayahs": 93,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1609,
+    "ar.abdulbasitmurattal": 2838,
+    "ar.abdullahbasfar": 1406,
+    "ar.azizalili": 1417
+   }
+  },
+  {
+   "number": 28,
+   "arabic": "القصص",
+   "english": "Al-Qasas",
+   "meaning": "The Stories",
+   "ayahs": 88,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1941,
+    "ar.abdulbasitmurattal": 3407,
+    "ar.abdullahbasfar": 1663,
+    "ar.azizalili": 1671
+   }
+  },
+  {
+   "number": 29,
+   "arabic": "العنكبوت",
+   "english": "Al-Ankaboot",
+   "meaning": "The Spider",
+   "ayahs": 69,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1322,
+    "ar.abdulbasitmurattal": 2263,
+    "ar.abdullahbasfar": 1165,
+    "ar.azizalili": 1272
+   }
+  },
+  {
+   "number": 30,
+   "arabic": "الروم",
+   "english": "Ar-Room",
+   "meaning": "The Romans",
+   "ayahs": 60,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1208,
+    "ar.abdulbasitmurattal": 1799,
+    "ar.abdullahbasfar": 954,
+    "ar.azizalili": 1029
+   }
+  },
+  {
+   "number": 31,
+   "arabic": "لقمان",
+   "english": "Luqman",
+   "meaning": "Luqman",
+   "ayahs": 34,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 753,
+    "ar.abdulbasitmurattal": 957,
+    "ar.abdullahbasfar": 659,
+    "ar.azizalili": 669
+   }
+  },
+  {
+   "number": 32,
+   "arabic": "السجدة",
+   "english": "As-Sajda",
+   "meaning": "The Prostration",
+   "ayahs": 30,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 561,
+    "ar.abdulbasitmurattal": 707,
+    "ar.abdullahbasfar": 523,
+    "ar.azizalili": 479
+   }
+  },
+  {
+   "number": 33,
+   "arabic": "الأحزاب",
+   "english": "Al-Ahzaab",
+   "meaning": "The Clans",
+   "ayahs": 73,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 1794,
+    "ar.abdulbasitmurattal": 2424,
+    "ar.abdullahbasfar": 1614,
+    "ar.azizalili": 1624
+   }
+  },
+  {
+   "number": 34,
+   "arabic": "سبأ",
+   "english": "Saba",
+   "meaning": "Sheba",
+   "ayahs": 54,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1180,
+    "ar.abdulbasitmurattal": 1580,
+    "ar.abdullahbasfar": 1041,
+    "ar.azizalili": 1017
+   }
+  },
+  {
+   "number": 35,
+   "arabic": "فاطر",
+   "english": "Faatir",
+   "meaning": "The Originator",
+   "ayahs": 45,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1094,
+    "ar.abdulbasitmurattal": 1490,
+    "ar.abdullahbasfar": 1012,
+    "ar.azizalili": 939
+   }
+  },
+  {
+   "number": 36,
+   "arabic": "يس",
+   "english": "Ya-Sin",
+   "meaning": "Ya Sin",
+   "ayahs": 83,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1097,
+    "ar.abdulbasitmurattal": 1339,
+    "ar.abdullahbasfar": 884,
+    "ar.azizalili": 964
+   }
+  },
+  {
+   "number": 37,
+   "arabic": "الصافات",
+   "english": "As-Saaffaat",
+   "meaning": "Those drawn up in Ranks",
+   "ayahs": 182,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1501,
+    "ar.abdulbasitmurattal": 1744,
+    "ar.abdullahbasfar": 1096,
+    "ar.azizalili": 1100
+   }
+  },
+  {
+   "number": 38,
+   "arabic": "ص",
+   "english": "Saad",
+   "meaning": "The letter Saad",
+   "ayahs": 88,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1107,
+    "ar.abdulbasitmurattal": 1524,
+    "ar.abdullahbasfar": 910,
+    "ar.azizalili": 929
+   }
+  },
+  {
+   "number": 39,
+   "arabic": "الزمر",
+   "english": "Az-Zumar",
+   "meaning": "The Groups",
+   "ayahs": 75,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1667,
+    "ar.abdulbasitmurattal": 2606,
+    "ar.abdullahbasfar": 1420,
+    "ar.azizalili": 1362
+   }
+  },
+  {
+   "number": 40,
+   "arabic": "غافر",
+   "english": "Ghafir",
+   "meaning": "The Forgiver",
+   "ayahs": 85,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1619,
+    "ar.abdulbasitmurattal": 2580,
+    "ar.abdullahbasfar": 1462,
+    "ar.azizalili": 1444
+   }
+  },
+  {
+   "number": 41,
+   "arabic": "فصلت",
+   "english": "Fussilat",
+   "meaning": "Explained in detail",
+   "ayahs": 54,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1197,
+    "ar.abdulbasitmurattal": 1847,
+    "ar.abdullahbasfar": 1045,
+    "ar.azizalili": 1012
+   }
+  },
+  {
+   "number": 42,
+   "arabic": "الشورى",
+   "english": "Ash-Shura",
+   "meaning": "Consultation",
+   "ayahs": 53,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1207,
+    "ar.abdulbasitmurattal": 1976,
+    "ar.abdullahbasfar": 1096,
+    "ar.azizalili": 1015
+   }
+  },
+  {
+   "number": 43,
+   "arabic": "الزخرف",
+   "english": "Az-Zukhruf",
+   "meaning": "Ornaments of gold",
+   "ayahs": 89,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 1265,
+    "ar.abdulbasitmurattal": 2023,
+    "ar.abdullahbasfar": 1052,
+    "ar.azizalili": 1030
+   }
+  },
+  {
+   "number": 44,
+   "arabic": "الدخان",
+   "english": "Ad-Dukhaan",
+   "meaning": "The Smoke",
+   "ayahs": 59,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 629,
+    "ar.abdulbasitmurattal": 853,
+    "ar.abdullahbasfar": 491,
+    "ar.azizalili": 477
+   }
+  },
+  {
+   "number": 45,
+   "arabic": "الجاثية",
+   "english": "Al-Jaathiya",
+   "meaning": "Crouching",
+   "ayahs": 37,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 688,
+    "ar.abdulbasitmurattal": 1167,
+    "ar.abdullahbasfar": 615,
+    "ar.azizalili": 588
+   }
+  },
+  {
+   "number": 46,
+   "arabic": "الأحقاف",
+   "english": "Al-Ahqaf",
+   "meaning": "The Dunes",
+   "ayahs": 35,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 995,
+    "ar.abdulbasitmurattal": 1554,
+    "ar.abdullahbasfar": 749,
+    "ar.azizalili": 743
+   }
+  },
+  {
+   "number": 47,
+   "arabic": "محمد",
+   "english": "Muhammad",
+   "meaning": "Muhammad",
+   "ayahs": 38,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 775,
+    "ar.abdulbasitmurattal": 1300,
+    "ar.abdullahbasfar": 702,
+    "ar.azizalili": 650
+   }
+  },
+  {
+   "number": 48,
+   "arabic": "الفتح",
+   "english": "Al-Fath",
+   "meaning": "The Victory",
+   "ayahs": 29,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 759,
+    "ar.abdulbasitmurattal": 1241,
+    "ar.abdullahbasfar": 730,
+    "ar.azizalili": 688
+   }
+  },
+  {
+   "number": 49,
+   "arabic": "الحجرات",
+   "english": "Al-Hujuraat",
+   "meaning": "The Inner Apartments",
+   "ayahs": 18,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 553,
+    "ar.abdulbasitmurattal": 790,
+    "ar.abdullahbasfar": 472,
+    "ar.azizalili": 451
+   }
+  },
+  {
+   "number": 50,
+   "arabic": "ق",
+   "english": "Qaaf",
+   "meaning": "The letter Qaaf",
+   "ayahs": 45,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 597,
+    "ar.abdulbasitmurattal": 776,
+    "ar.abdullahbasfar": 505,
+    "ar.azizalili": 460
+   }
+  },
+  {
+   "number": 51,
+   "arabic": "الذاريات",
+   "english": "Adh-Dhaariyat",
+   "meaning": "The Winnowing Winds",
+   "ayahs": 60,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 582,
+    "ar.abdulbasitmurattal": 839,
+    "ar.abdullahbasfar": 461,
+    "ar.azizalili": 460
+   }
+  },
+  {
+   "number": 52,
+   "arabic": "الطور",
+   "english": "At-Tur",
+   "meaning": "The Mount",
+   "ayahs": 49,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 523,
+    "ar.abdulbasitmurattal": 727,
+    "ar.abdullahbasfar": 428,
+    "ar.azizalili": 405
+   }
+  },
+  {
+   "number": 53,
+   "arabic": "النجم",
+   "english": "An-Najm",
+   "meaning": "The Star",
+   "ayahs": 62,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 499,
+    "ar.abdulbasitmurattal": 799,
+    "ar.abdullahbasfar": 462,
+    "ar.azizalili": 437
+   }
+  },
+  {
+   "number": 54,
+   "arabic": "القمر",
+   "english": "Al-Qamar",
+   "meaning": "The Moon",
+   "ayahs": 55,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 520,
+    "ar.abdulbasitmurattal": 845,
+    "ar.abdullahbasfar": 493,
+    "ar.azizalili": 445
+   }
+  },
+  {
+   "number": 55,
+   "arabic": "الرحمن",
+   "english": "Ar-Rahmaan",
+   "meaning": "The Beneficent",
+   "ayahs": 78,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 717,
+    "ar.abdulbasitmurattal": 961,
+    "ar.abdullahbasfar": 587,
+    "ar.azizalili": 557
+   }
+  },
+  {
+   "number": 56,
+   "arabic": "الواقعة",
+   "english": "Al-Waaqia",
+   "meaning": "The Inevitable",
+   "ayahs": 96,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 754,
+    "ar.abdulbasitmurattal": 964,
+    "ar.abdullahbasfar": 603,
+    "ar.azizalili": 557
+   }
+  },
+  {
+   "number": 57,
+   "arabic": "الحديد",
+   "english": "Al-Hadid",
+   "meaning": "The Iron",
+   "ayahs": 29,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 861,
+    "ar.abdulbasitmurattal": 1237,
+    "ar.abdullahbasfar": 719,
+    "ar.azizalili": 703
+   }
+  },
+  {
+   "number": 58,
+   "arabic": "المجادلة",
+   "english": "Al-Mujaadila",
+   "meaning": "The Pleading Woman",
+   "ayahs": 22,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 651,
+    "ar.abdulbasitmurattal": 1049,
+    "ar.abdullahbasfar": 589,
+    "ar.azizalili": 598
+   }
+  },
+  {
+   "number": 59,
+   "arabic": "الحشر",
+   "english": "Al-Hashr",
+   "meaning": "The Exile",
+   "ayahs": 24,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 664,
+    "ar.abdulbasitmurattal": 1069,
+    "ar.abdullahbasfar": 576,
+    "ar.azizalili": 578
+   }
+  },
+  {
+   "number": 60,
+   "arabic": "الممتحنة",
+   "english": "Al-Mumtahana",
+   "meaning": "She that is to be examined",
+   "ayahs": 13,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 489,
+    "ar.abdulbasitmurattal": 906,
+    "ar.abdullahbasfar": 459,
+    "ar.azizalili": 476
+   }
+  },
+  {
+   "number": 61,
+   "arabic": "الصف",
+   "english": "As-Saff",
+   "meaning": "The Ranks",
+   "ayahs": 14,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 330,
+    "ar.abdulbasitmurattal": 507,
+    "ar.abdullahbasfar": 293,
+    "ar.azizalili": 288
+   }
+  },
+  {
+   "number": 62,
+   "arabic": "الجمعة",
+   "english": "Al-Jumu'a",
+   "meaning": "Friday",
+   "ayahs": 11,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 251,
+    "ar.abdulbasitmurattal": 410,
+    "ar.abdullahbasfar": 250,
+    "ar.azizalili": 224
+   }
+  },
+  {
+   "number": 63,
+   "arabic": "المنافقون",
+   "english": "Al-Munaafiqoon",
+   "meaning": "The Hypocrites",
+   "ayahs": 11,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 295,
+    "ar.abdulbasitmurattal": 444,
+    "ar.abdullahbasfar": 275,
+    "ar.azizalili": 242
+   }
+  },
+  {
+   "number": 64,
+   "arabic": "التغابن",
+   "english": "At-Taghaabun",
+   "meaning": "Mutual Disillusion",
+   "ayahs": 18,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 362,
+    "ar.abdulbasitmurattal": 563,
+    "ar.abdullahbasfar": 317,
+    "ar.azizalili": 310
+   }
+  },
+  {
+   "number": 65,
+   "arabic": "الطلاق",
+   "english": "At-Talaaq",
+   "meaning": "Divorce",
+   "ayahs": 12,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 398,
+    "ar.abdulbasitmurattal": 678,
+    "ar.abdullahbasfar": 373,
+    "ar.azizalili": 348
+   }
+  },
+  {
+   "number": 66,
+   "arabic": "التحريم",
+   "english": "At-Tahrim",
+   "meaning": "The Prohibition",
+   "ayahs": 12,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 409,
+    "ar.abdulbasitmurattal": 676,
+    "ar.abdullahbasfar": 349,
+    "ar.azizalili": 317
+   }
+  },
+  {
+   "number": 67,
+   "arabic": "الملك",
+   "english": "Al-Mulk",
+   "meaning": "The Sovereignty",
+   "ayahs": 30,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 493,
+    "ar.abdulbasitmurattal": 773,
+    "ar.abdullahbasfar": 398,
+    "ar.azizalili": 386
+   }
+  },
+  {
+   "number": 68,
+   "arabic": "القلم",
+   "english": "Al-Qalam",
+   "meaning": "The Pen",
+   "ayahs": 52,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 493,
+    "ar.abdulbasitmurattal": 734,
+    "ar.abdullahbasfar": 382,
+    "ar.azizalili": 404
+   }
+  },
+  {
+   "number": 69,
+   "arabic": "الحاقة",
+   "english": "Al-Haaqqa",
+   "meaning": "The Reality",
+   "ayahs": 52,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 443,
+    "ar.abdulbasitmurattal": 662,
+    "ar.abdullahbasfar": 449,
+    "ar.azizalili": 359
+   }
+  },
+  {
+   "number": 70,
+   "arabic": "المعارج",
+   "english": "Al-Ma'aarij",
+   "meaning": "The Ascending Stairways",
+   "ayahs": 44,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 355,
+    "ar.abdulbasitmurattal": 559,
+    "ar.abdullahbasfar": 359,
+    "ar.azizalili": 291
+   }
+  },
+  {
+   "number": 71,
+   "arabic": "نوح",
+   "english": "Nooh",
+   "meaning": "Noah",
+   "ayahs": 28,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 318,
+    "ar.abdulbasitmurattal": 566,
+    "ar.abdullahbasfar": 303,
+    "ar.azizalili": 293
+   }
+  },
+  {
+   "number": 72,
+   "arabic": "الجن",
+   "english": "Al-Jinn",
+   "meaning": "The Jinn",
+   "ayahs": 28,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 372,
+    "ar.abdulbasitmurattal": 655,
+    "ar.abdullahbasfar": 352,
+    "ar.azizalili": 346
+   }
+  },
+  {
+   "number": 73,
+   "arabic": "المزمل",
+   "english": "Al-Muzzammil",
+   "meaning": "The Enshrouded One",
+   "ayahs": 20,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 281,
+    "ar.abdulbasitmurattal": 479,
+    "ar.abdullahbasfar": 269,
+    "ar.azizalili": 261
+   }
+  },
+  {
+   "number": 74,
+   "arabic": "المدثر",
+   "english": "Al-Muddaththir",
+   "meaning": "The Cloaked One",
+   "ayahs": 56,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 362,
+    "ar.abdulbasitmurattal": 643,
+    "ar.abdullahbasfar": 347,
+    "ar.azizalili": 334
+   }
+  },
+  {
+   "number": 75,
+   "arabic": "القيامة",
+   "english": "Al-Qiyaama",
+   "meaning": "The Resurrection",
+   "ayahs": 40,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 249,
+    "ar.abdulbasitmurattal": 411,
+    "ar.abdullahbasfar": 248,
+    "ar.azizalili": 229
+   }
+  },
+  {
+   "number": 76,
+   "arabic": "الإنسان",
+   "english": "Al-Insaan",
+   "meaning": "Man",
+   "ayahs": 31,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 352,
+    "ar.abdulbasitmurattal": 583,
+    "ar.abdullahbasfar": 323,
+    "ar.azizalili": 337
+   }
+  },
+  {
+   "number": 77,
+   "arabic": "المرسلات",
+   "english": "Al-Mursalaat",
+   "meaning": "The Emissaries",
+   "ayahs": 50,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 336,
+    "ar.abdulbasitmurattal": 463,
+    "ar.abdullahbasfar": 280,
+    "ar.azizalili": 272
+   }
+  },
+  {
+   "number": 78,
+   "arabic": "النبأ",
+   "english": "An-Naba",
+   "meaning": "The Announcement",
+   "ayahs": 40,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 329,
+    "ar.abdulbasitmurattal": 454,
+    "ar.abdullahbasfar": 260,
+    "ar.azizalili": 248
+   }
+  },
+  {
+   "number": 79,
+   "arabic": "النازعات",
+   "english": "An-Naazi'aat",
+   "meaning": "Those who drag forth",
+   "ayahs": 46,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 293,
+    "ar.abdulbasitmurattal": 422,
+    "ar.abdullahbasfar": 268,
+    "ar.azizalili": 251
+   }
+  },
+  {
+   "number": 80,
+   "arabic": "عبس",
+   "english": "Abasa",
+   "meaning": "He frowned",
+   "ayahs": 42,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 257,
+    "ar.abdulbasitmurattal": 354,
+    "ar.abdullahbasfar": 220,
+    "ar.azizalili": 204
+   }
+  },
+  {
+   "number": 81,
+   "arabic": "التكوير",
+   "english": "At-Takwir",
+   "meaning": "The Overthrowing",
+   "ayahs": 29,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 195,
+    "ar.abdulbasitmurattal": 255,
+    "ar.abdullahbasfar": 159,
+    "ar.azizalili": 159
+   }
+  },
+  {
+   "number": 82,
+   "arabic": "الانفطار",
+   "english": "Al-Infitaar",
+   "meaning": "The Cleaving",
+   "ayahs": 19,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 174,
+    "ar.abdulbasitmurattal": 210,
+    "ar.abdullahbasfar": 133,
+    "ar.azizalili": 132
+   }
+  },
+  {
+   "number": 83,
+   "arabic": "المطففين",
+   "english": "Al-Mutaffifin",
+   "meaning": "Defrauding",
+   "ayahs": 36,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 347,
+    "ar.abdulbasitmurattal": 414,
+    "ar.abdullahbasfar": 245,
+    "ar.azizalili": 242
+   }
+  },
+  {
+   "number": 84,
+   "arabic": "الانشقاق",
+   "english": "Al-Inshiqaaq",
+   "meaning": "The Splitting Open",
+   "ayahs": 25,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 197,
+    "ar.abdulbasitmurattal": 255,
+    "ar.abdullahbasfar": 160,
+    "ar.azizalili": 152
+   }
+  },
+  {
+   "number": 85,
+   "arabic": "البروج",
+   "english": "Al-Burooj",
+   "meaning": "The Constellations",
+   "ayahs": 22,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 235,
+    "ar.abdulbasitmurattal": 250,
+    "ar.abdullahbasfar": 170,
+    "ar.azizalili": 154
+   }
+  },
+  {
+   "number": 86,
+   "arabic": "الطارق",
+   "english": "At-Taariq",
+   "meaning": "The Morning Star",
+   "ayahs": 17,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 137,
+    "ar.abdulbasitmurattal": 171,
+    "ar.abdullahbasfar": 117,
+    "ar.azizalili": 105
+   }
+  },
+  {
+   "number": 87,
+   "arabic": "الأعلى",
+   "english": "Al-A'laa",
+   "meaning": "The Most High",
+   "ayahs": 19,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 145,
+    "ar.abdulbasitmurattal": 190,
+    "ar.abdullahbasfar": 120,
+    "ar.azizalili": 111
+   }
+  },
+  {
+   "number": 88,
+   "arabic": "الغاشية",
+   "english": "Al-Ghaashiya",
+   "meaning": "The Overwhelming",
+   "ayahs": 26,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 171,
+    "ar.abdulbasitmurattal": 228,
+    "ar.abdullahbasfar": 155,
+    "ar.azizalili": 137
+   }
+  },
+  {
+   "number": 89,
+   "arabic": "الفجر",
+   "english": "Al-Fajr",
+   "meaning": "The Dawn",
+   "ayahs": 30,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 250,
+    "ar.abdulbasitmurattal": 321,
+    "ar.abdullahbasfar": 213,
+    "ar.azizalili": 197
+   }
+  },
+  {
+   "number": 90,
+   "arabic": "البلد",
+   "english": "Al-Balad",
+   "meaning": "The City",
+   "ayahs": 20,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 157,
+    "ar.abdulbasitmurattal": 203,
+    "ar.abdullahbasfar": 135,
+    "ar.azizalili": 129
+   }
+  },
+  {
+   "number": 91,
+   "arabic": "الشمس",
+   "english": "Ash-Shams",
+   "meaning": "The Sun",
+   "ayahs": 15,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 121,
+    "ar.abdulbasitmurattal": 160,
+    "ar.abdullahbasfar": 109,
+    "ar.azizalili": 104
+   }
+  },
+  {
+   "number": 92,
+   "arabic": "الليل",
+   "english": "Al-Lail",
+   "meaning": "The Night",
+   "ayahs": 21,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 149,
+    "ar.abdulbasitmurattal": 202,
+    "ar.abdullahbasfar": 128,
+    "ar.azizalili": 123
+   }
+  },
+  {
+   "number": 93,
+   "arabic": "الضحى",
+   "english": "Ad-Dhuhaa",
+   "meaning": "The Morning Hours",
+   "ayahs": 11,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 102,
+    "ar.abdulbasitmurattal": 128,
+    "ar.abdullahbasfar": 93,
+    "ar.azizalili": 84
+   }
+  },
+  {
+   "number": 94,
+   "arabic": "الشرح",
+   "english": "Ash-Sharh",
+   "meaning": "The Consolation",
+   "ayahs": 8,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 80,
+    "ar.abdulbasitmurattal": 91,
+    "ar.abdullahbasfar": 73,
+    "ar.azizalili": 65
+   }
+  },
+  {
+   "number": 95,
+   "arabic": "التين",
+   "english": "At-Tin",
+   "meaning": "The Fig",
+   "ayahs": 8,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 102,
+    "ar.abdulbasitmurattal": 107,
+    "ar.abdullahbasfar": 83,
+    "ar.azizalili": 76
+   }
+  },
+  {
+   "number": 96,
+   "arabic": "العلق",
+   "english": "Al-Alaq",
+   "meaning": "The Clot",
+   "ayahs": 19,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 132,
+    "ar.abdulbasitmurattal": 184,
+    "ar.abdullahbasfar": 123,
+    "ar.azizalili": 113
+   }
+  },
+  {
+   "number": 97,
+   "arabic": "القدر",
+   "english": "Al-Qadr",
+   "meaning": "The Power, Fate",
+   "ayahs": 5,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 82,
+    "ar.abdulbasitmurattal": 94,
+    "ar.abdullahbasfar": 77,
+    "ar.azizalili": 67
+   }
+  },
+  {
+   "number": 98,
+   "arabic": "البينة",
+   "english": "Al-Bayyina",
+   "meaning": "The Evidence",
+   "ayahs": 8,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 163,
+    "ar.abdulbasitmurattal": 218,
+    "ar.abdullahbasfar": 153,
+    "ar.azizalili": 135
+   }
+  },
+  {
+   "number": 99,
+   "arabic": "الزلزلة",
+   "english": "Az-Zalzala",
+   "meaning": "The Earthquake",
+   "ayahs": 8,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 97,
+    "ar.abdulbasitmurattal": 114,
+    "ar.abdullahbasfar": 90,
+    "ar.azizalili": 78
+   }
+  },
+  {
+   "number": 100,
+   "arabic": "العاديات",
+   "english": "Al-Aadiyaat",
+   "meaning": "The Chargers",
+   "ayahs": 11,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 107,
+    "ar.abdulbasitmurattal": 119,
+    "ar.abdullahbasfar": 96,
+    "ar.azizalili": 81
+   }
+  },
+  {
+   "number": 101,
+   "arabic": "القارعة",
+   "english": "Al-Qaari'a",
+   "meaning": "The Calamity",
+   "ayahs": 11,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 99,
+    "ar.abdulbasitmurattal": 116,
+    "ar.abdullahbasfar": 89,
+    "ar.azizalili": 78
+   }
+  },
+  {
+   "number": 102,
+   "arabic": "التكاثر",
+   "english": "At-Takaathur",
+   "meaning": "Competition",
+   "ayahs": 8,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 99,
+    "ar.abdulbasitmurattal": 100,
+    "ar.abdullahbasfar": 81,
+    "ar.azizalili": 71
+   }
+  },
+  {
+   "number": 103,
+   "arabic": "العصر",
+   "english": "Al-Asr",
+   "meaning": "The Declining Day, Epoch",
+   "ayahs": 3,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 64,
+    "ar.abdulbasitmurattal": 67,
+    "ar.abdullahbasfar": 64,
+    "ar.azizalili": 53
+   }
+  },
+  {
+   "number": 104,
+   "arabic": "الهمزة",
+   "english": "Al-Humaza",
+   "meaning": "The Traducer",
+   "ayahs": 9,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 95,
+    "ar.abdulbasitmurattal": 108,
+    "ar.abdullahbasfar": 85,
+    "ar.azizalili": 73
+   }
+  },
+  {
+   "number": 105,
+   "arabic": "الفيل",
+   "english": "Al-Fil",
+   "meaning": "The Elephant",
+   "ayahs": 5,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 86,
+    "ar.abdulbasitmurattal": 83,
+    "ar.abdullahbasfar": 73,
+    "ar.azizalili": 63
+   }
+  },
+  {
+   "number": 106,
+   "arabic": "قريش",
+   "english": "Quraish",
+   "meaning": "Quraysh",
+   "ayahs": 4,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 79,
+    "ar.abdulbasitmurattal": 77,
+    "ar.abdullahbasfar": 70,
+    "ar.azizalili": 60
+   }
+  },
+  {
+   "number": 107,
+   "arabic": "الماعون",
+   "english": "Al-Maa'un",
+   "meaning": "Almsgiving",
+   "ayahs": 7,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 94,
+    "ar.abdulbasitmurattal": 91,
+    "ar.abdullahbasfar": 77,
+    "ar.azizalili": 68
+   }
+  },
+  {
+   "number": 108,
+   "arabic": "الكوثر",
+   "english": "Al-Kawthar",
+   "meaning": "Abundance",
+   "ayahs": 3,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 61,
+    "ar.abdulbasitmurattal": 60,
+    "ar.abdullahbasfar": 58,
+    "ar.azizalili": 49
+   }
+  },
+  {
+   "number": 109,
+   "arabic": "الكافرون",
+   "english": "Al-Kaafiroon",
+   "meaning": "The Disbelievers",
+   "ayahs": 6,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 91,
+    "ar.abdulbasitmurattal": 93,
+    "ar.abdullahbasfar": 76,
+    "ar.azizalili": 66
+   }
+  },
+  {
+   "number": 110,
+   "arabic": "النصر",
+   "english": "An-Nasr",
+   "meaning": "Divine Support",
+   "ayahs": 3,
+   "revelation": "Madani",
+   "durations": {
+    "ar.alafasy": 72,
+    "ar.abdulbasitmurattal": 73,
+    "ar.abdullahbasfar": 67,
+    "ar.azizalili": 57
+   }
+  },
+  {
+   "number": 111,
+   "arabic": "المسد",
+   "english": "Al-Masad",
+   "meaning": "The Palm Fibre",
+   "ayahs": 5,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 78,
+    "ar.abdulbasitmurattal": 82,
+    "ar.abdullahbasfar": 72,
+    "ar.azizalili": 61
+   }
+  },
+  {
+   "number": 112,
+   "arabic": "الإخلاص",
+   "english": "Al-Ikhlaas",
+   "meaning": "Sincerity",
+   "ayahs": 4,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 59,
+    "ar.abdulbasitmurattal": 59,
+    "ar.abdullahbasfar": 58,
+    "ar.azizalili": 47
+   }
+  },
+  {
+   "number": 113,
+   "arabic": "الفلق",
+   "english": "Al-Falaq",
+   "meaning": "The Dawn",
+   "ayahs": 5,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 70,
+    "ar.abdulbasitmurattal": 76,
+    "ar.abdullahbasfar": 68,
+    "ar.azizalili": 56
+   }
+  },
+  {
+   "number": 114,
+   "arabic": "الناس",
+   "english": "An-Naas",
+   "meaning": "Mankind",
+   "ayahs": 6,
+   "revelation": "Makki",
+   "durations": {
+    "ar.alafasy": 87,
+    "ar.abdulbasitmurattal": 84,
+    "ar.abdullahbasfar": 79,
+    "ar.azizalili": 61
+   }
+  }
+ ]
+}

@@ -13,6 +13,8 @@ dependencies:
   timezone: ^0.10.1
   intl: ^0.20.2
   shared_preferences: ^2.3.2
+  just_audio: ^0.9.46
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
@@ -20,3 +22,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Quran layer (v3.0.0): the same data files the iOS app bundles.
+  assets:
+    - assets/quran/surahs.json
+    - assets/quran/quran_text.json
+    - assets/quran/en_durations.json
