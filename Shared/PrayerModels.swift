@@ -1459,6 +1459,16 @@ enum PrayerFormat {
         return date.formatted(style)
     }
 
+    /// Just the 3-letter day name ("Tue", "Wed", …) — the small
+    /// widget's header row has no room for the full short date
+    /// next to the caption, and both sides were truncating.
+    static func weekdayShort(_ date: Date) -> String {
+        var style = Date.FormatStyle().weekday(.abbreviated)
+        style.timeZone = timeZone
+        style.locale = AppLanguage.current.locale
+        return date.formatted(style)
+    }
+
     /// Jumu'ah Khutbah time (1:30 PM local) formatted for the given day.
     static func khutbahTime(on day: Date) -> String {
         var localCalendar = Calendar(identifier: .gregorian)

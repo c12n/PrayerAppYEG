@@ -21,7 +21,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
+// show-only: intl.dart also exports a TextDirection class that
+// would shadow Flutter's (the v2.3.0 build broke on exactly that).
+import 'package:intl/intl.dart' show DateFormat;
 
 import 'alerts.dart';
 import 'app_settings.dart';

@@ -171,8 +171,9 @@ struct SmallPrayerWidgetView: View {
                     .tracking(0.8)
                     .foregroundStyle(palette.textMuted)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                 Spacer(minLength: 2)
-                Text(PrayerFormat.shortDate(snapshot.day.date))
+                Text(PrayerFormat.weekdayShort(snapshot.day.date))
                     .font(.system(size: WidgetTextScale.size(11.5), weight: .semibold))
                     .foregroundStyle(palette.textMuted)
                     .lineLimit(1)
@@ -400,7 +401,6 @@ struct LargePrayerWidgetView: View {
             PrayerTableView(snapshot: snapshot, fontSize: WidgetTextScale.size(15), timeColumnWidth: WidgetTextScale.size(74), rowVerticalPadding: 2)
                 .frame(maxHeight: .infinity)
             LargeVerseView(snapshot: snapshot)
-            LargeFooterView(snapshot: snapshot)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -542,43 +542,6 @@ struct LargeNextPrayerBanner: View {
     }
 }
 
-struct LargeFooterView: View {
-    @Environment(\.partPalette) private var palette
-    let snapshot: PrayerSnapshot
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Rectangle()
-                .fill(palette.hairline)
-                .frame(height: 0.5)
-                .padding(.bottom, 2)
-            HStack(spacing: 5) {
-                Image(systemName: "mappin.and.ellipse")
-                    .foregroundStyle(palette.accent)
-                Text(MosqueInfo.address)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            HStack(spacing: 5) {
-                Image(systemName: "building.columns.fill")
-                    .foregroundStyle(palette.accent)
-                Text(jumuahNote)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-        }
-        .font(.system(size: WidgetTextScale.size(12), weight: .medium))
-        .foregroundStyle(palette.textSecondary)
-    }
-
-    private var jumuahNote: String {
-        let khutbah = PrayerFormat.khutbahTime(on: snapshot.day.date)
-        let label = snapshot.day.slots.first(where: { $0.isJumuah })?.iqamahLabel ?? "Khutbah"
-        return snapshot.day.isFriday
-            ? "\(L10n.t("jumuahToday")) · \(label) \(khutbah)"
-            : "\(L10n.t("jumuahWeekly")) · \(label) \(khutbah)"
-    }
-}
 
 // MARK: - Lock Screen: rectangular
 
