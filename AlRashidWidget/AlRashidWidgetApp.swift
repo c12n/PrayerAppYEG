@@ -40,16 +40,27 @@ final class AppearanceModeObserver: ObservableObject {
     }
 }
 
-/// Imperative window appearance (build 34): on Youssef's phone the
-/// scene-root preferredColorScheme(nil) did not re-follow the device
-/// in System mode — flipping iPhone Dark Mode from Control Center
-/// left the app in its launch appearance until relaunch, while the
-/// explicit Light/Dark picks (non-nil schemes) worked. Setting each
-/// window's overrideUserInterfaceStyle directly is authoritative:
-/// System clears the override (.unspecified) so windows track the
-/// device live; Light/Dark pin it. Re-applied on mode writes (via
-/// the observer above), on device trait flips (WindowStyleHook),
-/// and on every activation (AppDelegate).
+/// Imperative window appearance (build 34; simplified in build 36):
+/// on Youssef's phone the scene-root preferredColorScheme(nil) did
+/// not re-follow the device in System mode — flipping iPhone Dark
+/// Mode from Control Center left the app in its launch appearance
+/// until relaunch, while the explicit Light/Dark picks (non-nil
+/// schemes) worked. Setting each window's overrideUserInterfaceStyle
+/// directly is authoritative: System clears the override
+/// (.unspecified) so windows track the device live; Light/Dark pin
+/// it. Applied on mode writes (the observer above) and on every
+/// activation (AppDelegate).
+///
+/// Build 36 removed the WindowStyleHook UIViewRepresentable that
+/// build 34 added (didMoveToWindow / traitCollectionDidChange hooks
+/// inside ContentView's background) together with the prayer tab's
+/// .id(appearanceStamp): on build 34, tapping Light or Dark in
+/// Settings crashed the app immediately, and those two were the only
+/// new moving parts on that path — a UIView hook mutating window
+/// state from inside the SwiftUI view lifecycle, and an identity
+/// change on a page of the paged TabView while the Settings tab was
+/// alive. Theme freshness without them flows from ContentView's own
+/// @AppStorage re-renders, as it did before build 34.
 enum WindowStyleApplier {
     static func apply() {
         let style: UIUserInterfaceStyle
@@ -63,32 +74,6 @@ enum WindowStyleApplier {
             for window in windowScene.windows
             where window.overrideUserInterfaceStyle != style {
                 window.overrideUserInterfaceStyle = style
-            }
-        }
-    }
-}
-
-/// Zero-footprint hook that re-applies the window style when the
-/// device's own appearance flips while the app is alive.
-struct WindowStyleHook: UIViewRepresentable {
-    func makeUIView(context: Context) -> StyleHookView {
-        let view = StyleHookView()
-        view.isUserInteractionEnabled = false
-        return view
-    }
-
-    func updateUIView(_ uiView: StyleHookView, context: Context) {}
-
-    final class StyleHookView: UIView {
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            WindowStyleApplier.apply()
-        }
-
-        override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-            super.traitCollectionDidChange(previous)
-            if traitCollection.userInterfaceStyle != previous?.userInterfaceStyle {
-                WindowStyleApplier.apply()
             }
         }
     }

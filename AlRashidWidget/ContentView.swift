@@ -106,11 +106,6 @@ struct ContentView: View {
     @State private var statusBarHidden = false
     private let provider = PrayerProvider.standard
 
-    /// Changes whenever any appearance value changes.
-    private var appearanceStamp: String {
-        "\(modeRaw)-\(primaryHex)-\(accentHex)-\(textHex)-\(languageCode)-\(textSizeRaw)"
-    }
-
     var body: some View {
         TimelineView(.everyMinute) { context in
             let snapshot = provider.snapshot(at: context.date)
@@ -154,7 +149,9 @@ struct ContentView: View {
         }
         .environmentObject(trackerStore)
         .background { AppBackground() }
-        .background { WindowStyleHook() }
+        // (Build 36: the WindowStyleHook background hook is gone —
+        // see AlRashidWidgetApp.swift. Window appearance is applied
+        // from the mode observer and on activation only.)
         // Color scheme is applied once at the WindowGroup root by
         // AlRashidWidgetApp's AppearanceModeObserver (v2.2.0-alpha fix);
         // a second modifier here could pin a stale mode.
@@ -244,11 +241,6 @@ struct ContentView: View {
             // each tab's scroll position and toolbars stable.
             TabView(selection: $phoneTab) {
                 phoneLayout(snapshot: snapshot, today: today, now: now)
-                    // The appearance stamp lives here now (build 34):
-                    // the prayer tab rebuilds with fresh theme colors
-                    // on any appearance change, without touching the
-                    // Settings tab's identity or scroll position.
-                    .id(appearanceStamp)
                     .tag(PhoneTab.prayer)
                 QuranLibraryView(embeddedInTab: true)
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
