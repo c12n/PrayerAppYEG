@@ -13,7 +13,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp">
-    <TextView android:id="@+id/widget_mosque" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AL RASHID MOSQUE" android:textSize="14sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
+    <TextView android:id="@+id/widget_mosque" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PRAYER YEG" android:textSize="14sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
     <TextView android:id="@+id/widget_hijri" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="@color/widget_muted" />
     <TextView android:id="@+id/widget_next_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textSize="13sp" android:textColor="@color/widget_accent" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
@@ -22,6 +22,7 @@
     </LinearLayout>
     <TextView android:id="@+id/widget_countdown" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
     <TextView android:id="@+id/widget_iqamah" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="@color/widget_secondary" />
+    <ProgressBar android:id="@+id/widget_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="8dp" android:max="1000" android:progressDrawable="@drawable/widget_progress" />
     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="10dp" android:background="@color/widget_panel" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="6dp" android:paddingBottom="2dp">
         <TextView android:id="@+id/widget_col_prayer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="PRAYER" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/widget_muted" />

@@ -9,7 +9,7 @@ import 'hijri_calendar.dart';
 import 'prayer_calculator.dart';
 
 class MosqueInfo {
-  static const String name = 'Al Rashid Mosque';
+  static const String name = 'Prayer YEG';
   static const String address = '13070 113 St NW, Edmonton, AB';
   static const String directionsAddress = '13070 113 St NW, Edmonton, AB, Canada';
   static const String timeZoneIdentifier = 'America/Edmonton';

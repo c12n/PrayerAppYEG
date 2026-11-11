@@ -317,3 +317,65 @@ class UmmAlQuraCalendar {
     return '${h.day} $monthName ${h.year} AH';
   }
 }
+
+/// One upcoming Islamic date (v2.3.0), mirroring the iOS HijriEvent.
+class HijriEvent {
+  final int month;
+  final int day;
+  final String key;
+  const HijriEvent(this.month, this.day, this.key);
+}
+
+/// An event occurrence: the event, its Gregorian date, and how many
+/// days away it is (0 = today).
+class HijriEventOccurrence {
+  final HijriEvent event;
+  final DateTime date;
+  final int days;
+  const HijriEventOccurrence(this.event, this.date, this.days);
+}
+
+/// Countdown targets in the Hijri year (v2.3.0), mirroring iOS
+/// HijriEvents: same Umm al-Qura conversion and the same ±day user
+/// offset (applied by shifting the Gregorian date, like hijriString).
+/// Laylat al-Qadr is marked "expected": it is looked for on the
+/// 27th night, not fixed.
+class HijriEvents {
+  static const List<HijriEvent> all = [
+    HijriEvent(1, 1, 'evNewYear'),
+    HijriEvent(1, 10, 'evAshura'),
+    HijriEvent(3, 12, 'evMawlid'),
+    HijriEvent(7, 27, 'evIsra'),
+    HijriEvent(9, 1, 'evRamadan'),
+    HijriEvent(9, 27, 'evQadr'),
+    HijriEvent(10, 1, 'evFitr'),
+    HijriEvent(12, 9, 'evArafah'),
+    HijriEvent(12, 10, 'evAdha'),
+  ];
+
+  /// The next [count] events at or after [from], scanning forward
+  /// day by day (a full Hijri year always completes the set).
+  static List<HijriEventOccurrence> upcoming(DateTime from, {int count = 3}) {
+    final start = DateTime.utc(from.year, from.month, from.day);
+    final found = <HijriEventOccurrence>[];
+    final foundKeys = <String>{};
+    for (var offset = 0; offset <= 400 && found.length < count; offset++) {
+      final day = start.add(Duration(days: offset));
+      final shifted = HijriState.offsetDays == 0
+          ? day
+          : day.add(Duration(days: HijriState.offsetDays));
+      final h = UmmAlQuraCalendar.hijri(shifted.year, shifted.month, shifted.day);
+      if (h == null) continue;
+      for (final event in all) {
+        if (event.month == h.month &&
+            event.day == h.day &&
+            !foundKeys.contains(event.key)) {
+          found.add(HijriEventOccurrence(
+              event, DateTime(day.year, day.month, day.day), offset));
+          foundKeys.add(event.key);
+        }
+      }
+    }
+    return found;
+  }
+}

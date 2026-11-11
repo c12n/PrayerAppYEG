@@ -13,7 +13,7 @@
     <capability android:name="actions.intent.OPEN_APP_FEATURE">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetPackage="com.c12n.prayerappAndroid"
             android:targetClass="com.c12n.alrashidwidget.MainActivity">
             <parameter
                 android:name="feature"
@@ -28,7 +28,7 @@
         android:shortcutShortLabel="@string/shortcut_next_prayer">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetPackage="com.c12n.prayerappAndroid"
             android:targetClass="com.c12n.alrashidwidget.MainActivity">
             <extra
                 android:name="prayer"
@@ -43,7 +43,7 @@
         android:shortcutShortLabel="@string/shortcut_fajr">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetPackage="com.c12n.prayerappAndroid"
             android:targetClass="com.c12n.alrashidwidget.MainActivity">
             <extra
                 android:name="prayer"
@@ -58,7 +58,7 @@
         android:shortcutShortLabel="@string/shortcut_dhuhr">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetPackage="com.c12n.prayerappAndroid"
             android:targetClass="com.c12n.alrashidwidget.MainActivity">
             <extra
                 android:name="prayer"
@@ -73,7 +73,7 @@
         android:shortcutShortLabel="@string/shortcut_asr">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetPackage="com.c12n.prayerappAndroid"
             android:targetClass="com.c12n.alrashidwidget.MainActivity">
             <extra
                 android:name="prayer"
@@ -88,7 +88,7 @@
         android:shortcutShortLabel="@string/shortcut_maghrib">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetPackage="com.c12n.prayerappAndroid"
             android:targetClass="com.c12n.alrashidwidget.MainActivity">
             <extra
                 android:name="prayer"
@@ -103,7 +103,7 @@
         android:shortcutShortLabel="@string/shortcut_isha">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.c12n.alrashidwidget"
+            android:targetPackage="com.c12n.prayerappAndroid"
             android:targetClass="com.c12n.alrashidwidget.MainActivity">
             <extra
                 android:name="prayer"

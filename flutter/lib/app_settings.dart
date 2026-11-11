@@ -17,15 +17,19 @@ import 'hijri_calendar.dart';
 import 'prayer_models.dart';
 
 /// App version identity (v2.0.0) — keep in step with pubspec.yaml's
-/// version (2.0.0+16). Shown in the Settings footer and used by the
+/// version (3.0.0+22). Shown in the Settings footer and used by the
 /// What's New sheet to decide whether to appear.
-const kAppVersion = '2.0.1';
-const kAppBuildNumber = '16';
+const kAppVersion = '3.0.0';
+const kAppBuildNumber = '22';
 
 /// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
 /// what travel over the alerts MethodChannel and name the Android
 /// notification channels.
-const alertSoundNames = ['default', 'silent', 'chime', 'bell'];
+/// Build 35: every earlier bundled sound was replaced by the single
+/// adhan from the mosque's MadinaAPPS app — Default / Silent /
+/// Mosque Adhan, same as iOS. v3.0.0 adds the Classic Adhan back as
+/// a fourth choice, again matching iOS.
+const alertSoundNames = ['default', 'silent', 'alrashid', 'classic'];
 
 class SavedTheme {
   final String id;
@@ -148,8 +152,10 @@ class AppSettings extends ChangeNotifier {
   bool jumuahReminderEnabled = true;
 
   /// Alert sounds (v1.8.0): the app-wide Adhan sound plus optional
-  /// per-prayer overrides. See [effectiveSound].
-  String alertSound = 'default';
+  /// per-prayer overrides. See [effectiveSound]. v3.0.0: a fresh
+  /// install starts on the Mosque Adhan, like iOS (stored choices
+  /// are untouched — see load()).
+  String alertSound = 'alrashid';
   final Map<Prayer, String> prayerSoundOverrides = {};
 
   /// The sound an Adhan alert for [prayer] actually uses.
@@ -217,6 +223,10 @@ class AppSettings extends ChangeNotifier {
     final storedSound = prefs.getString(alertSoundKey);
     if (storedSound != null && alertSoundNames.contains(storedSound)) {
       s.alertSound = storedSound;
+    } else if (storedSound != null && storedSound.isNotEmpty) {
+      // A sound removed in build 35: replaced by the Mosque
+      // Adhan, not silently reset to the system default.
+      s.alertSound = 'alrashid';
     }
     for (final p in Prayer.values) {
       final override = prefs.getString(prayerSoundKey(p));
@@ -404,7 +414,7 @@ class AppSettings extends ChangeNotifier {
         reminderEnabled = true;
         reminderLeadMinutes = 10;
         jumuahReminderEnabled = true;
-        alertSound = 'default';
+        alertSound = 'alrashid';
         prayerSoundOverrides.clear();
         hijriOffsetDays = 0;
         hapticsEnabled = true;
@@ -551,4 +561,10 @@ const presetThemes = <SavedTheme>[
   SavedTheme(id: 'preset-desert', name: 'Desert Dunes', primaryHex: 0x6B4420, accentHex: 0xF2C14E, textHex: 0xFFF8E7, mode: ThemeMode.system),
   SavedTheme(id: 'preset-forest', name: 'Forest Canopy', primaryHex: 0x14532D, accentHex: 0xFDE68A, textHex: 0xF0FDF4, mode: ThemeMode.system),
   SavedTheme(id: 'preset-charcoal', name: 'Charcoal Mono', primaryHex: 0x171717, accentHex: 0xE7E5E4, textHex: 0xFAFAF9, mode: ThemeMode.dark),
+  // Five more presets (build 35), led by a true high-contrast theme.
+  SavedTheme(id: 'preset-contrast', name: 'High Contrast', primaryHex: 0x000000, accentHex: 0xFFD60A, textHex: 0xFFFFFF, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-emerald', name: 'Emerald Night', primaryHex: 0x052E22, accentHex: 0x34D399, textHex: 0xECFDF5, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-crimson', name: 'Crimson Dusk', primaryHex: 0x450A0A, accentHex: 0xFCA5A5, textHex: 0xFEF2F2, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-sapphire', name: 'Sapphire Noor', primaryHex: 0x172554, accentHex: 0x93C5FD, textHex: 0xEFF6FF, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-plum', name: 'Plum Velvet', primaryHex: 0x3B0764, accentHex: 0xF0ABFC, textHex: 0xFAF5FF, mode: ThemeMode.dark),
 ];

@@ -19,5 +19,6 @@
     <TextView android:id="@+id/widget_next_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="17sp" android:textColor="@color/widget_secondary" />
     <TextView android:id="@+id/widget_countdown" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textSize="24sp" android:textStyle="bold" android:textColor="@color/widget_accent" />
     <TextView android:id="@+id/widget_iqamah" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="13sp" android:textColor="@color/widget_muted" />
+    <ProgressBar android:id="@+id/widget_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="10dp" android:max="1000" android:progressDrawable="@drawable/widget_progress" />
 </LinearLayout>
 </FrameLayout>

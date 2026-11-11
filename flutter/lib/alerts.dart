@@ -25,8 +25,8 @@ class PlannedNotification {
   final String title;
   final String body;
 
-  /// Alert sound name (v1.8.0): 'default', 'silent', 'chime' or
-  /// 'bell'. The native side posts on the notification channel for
+  /// Alert sound name (v1.8.0): 'default', 'silent' or 'alrashid'
+  /// (build 35). The native side posts on the notification channel for
   /// this sound. Reminders keep the default sound, like iOS.
   final String sound;
 
@@ -234,6 +234,77 @@ class AlertScheduler {
       await _channel.invokeMethod('cancelAll');
     } on PlatformException {
       // Ignore — nothing was armed.
+    } on MissingPluginException {
+      // Ignore.
+    }
+  }
+
+  /// Alerts health check (v2.3.0): the native side reports whether
+  /// notifications are on, whether exact alarms are allowed
+  /// (Android 12+), whether the app is exempt from battery
+  /// optimization, and how many alerts are armed with the next
+  /// one's epoch millis (0 when none). Null when unavailable.
+  static Future<Map<String, dynamic>?> status() async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>('alertStatus');
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  /// Posts a real notification right now on the channel for
+  /// [sound] (v2.3.0 test alert) — the same channel a real adhan
+  /// alert for that sound uses, so permission, channel and sound
+  /// are all proven at once.
+  /// Plays a bundled alert sound from the picker (build 34) without
+  /// selecting it or scheduling anything.
+  static Future<void> previewSound(String sound) async {
+    try {
+      await _channel.invokeMethod('previewSound', {'sound': sound});
+    } catch (_) {
+      // Preview is a convenience; a platform hiccup stays silent.
+    }
+  }
+
+  static Future<void> testAlert({
+    required String title,
+    required String body,
+    required String sound,
+  }) async {
+    try {
+      await _channel.invokeMethod('testAlert', {
+        'title': title,
+        'body': body,
+        'sound': sound,
+      });
+    } on PlatformException {
+      // Ignore — the health page still shows the status rows.
+    } on MissingPluginException {
+      // Ignore.
+    }
+  }
+
+  /// Opens the system screen where the user can allow exact alarms
+  /// for this app (v2.3.0, Android 12+; app details before that).
+  static Future<void> openExactAlarmSettings() async {
+    try {
+      await _channel.invokeMethod('openExactAlarmSettings');
+    } on PlatformException {
+      // Ignore.
+    } on MissingPluginException {
+      // Ignore.
+    }
+  }
+
+  /// Opens the system prompt to exempt this app from battery
+  /// optimization (v2.3.0).
+  static Future<void> openBatterySettings() async {
+    try {
+      await _channel.invokeMethod('openBatterySettings');
+    } on PlatformException {
+      // Ignore.
     } on MissingPluginException {
       // Ignore.
     }

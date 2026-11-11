@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'alert_health.dart';
 import 'alerts.dart';
 import 'app_settings.dart';
 import 'prayer_models.dart';
@@ -338,6 +339,18 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => _pickPrayerSound(context, prayer),
                 ),
               _sectionNote(context, S.t('prayerSoundsFooter')),
+              _sectionHeader(context, S.t('alertHealth')),
+              ListTile(
+                leading: const Icon(Icons.favorite),
+                title: Text(S.t('alertHealth')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AlertHealthPage(settings: settings),
+                  ),
+                ),
+              ),
+              _sectionNote(context, S.t('alertHealthFooter')),
               _sectionHeader(context, S.t('qibla')),
               SwitchListTile(
                 secondary: const Icon(Icons.vibration),
@@ -505,11 +518,26 @@ class SettingsPage extends StatelessWidget {
           for (final sound in alertSoundNames)
             ListTile(
               title: Text(S.t('sound.$sound')),
-              trailing: settings.alertSound == sound
-                  ? Icon(Icons.check_circle,
+              // Build 34: a small play button hears the sound
+              // without selecting it; the check still marks the
+              // current selection. Default and Silent have no
+              // bundled file to preview.
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (sound != 'default' && sound != 'silent')
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_fill),
                       color:
-                          accentFor(Theme.of(context).brightness, settings))
-                  : null,
+                          accentFor(Theme.of(context).brightness, settings),
+                      onPressed: () => AlertScheduler.previewSound(sound),
+                    ),
+                  if (settings.alertSound == sound)
+                    Icon(Icons.check_circle,
+                        color: accentFor(
+                            Theme.of(context).brightness, settings)),
+                ],
+              ),
               onTap: () => Navigator.pop(context, sound),
             ),
         ],

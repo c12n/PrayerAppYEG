@@ -13,8 +13,34 @@ import 'strings.dart';
 class WhatsNew {
   static const _lastSeenKey = 'whatsnew.lastSeenVersion';
 
+  /// First-install welcome rows (v2.3.0, parity with iOS): a short
+  /// tour shown once, instead of change notes.
+  static const List<(IconData, String)> _welcomeEntries = [
+    (Icons.wb_sunny, 'wnWelcome1'),
+    (Icons.notifications_active, 'wnWelcome2'),
+    (Icons.palette, 'wnWelcome3'),
+    (Icons.menu_book, 'wnWelcome4'),
+  ];
+
   /// One feature row of the dialog: an icon and a strings.dart key.
   static const Map<String, List<(IconData, String)>> _entries = {
+    '3.0.0': [
+      (Icons.drive_file_rename_outline, 'wnName300'),
+      (Icons.play_circle_fill, 'wnQuran300'),
+      (Icons.download, 'wnDownloads300'),
+      (Icons.bedtime, 'wnSleep300'),
+      (Icons.repeat, 'wnMemo300'),
+      (Icons.checklist, 'wnTracker300'),
+      (Icons.auto_awesome, 'wnNames230'),
+      (Icons.palette, 'wnWidgets200'),
+    ],
+    '2.3.0': [
+      (Icons.notifications_active, 'wnTest230'),
+      (Icons.health_and_safety, 'wnHealth230'),
+      (Icons.forum, 'wnHadith230'),
+      (Icons.auto_awesome, 'wnNames230'),
+      (Icons.nightlight_round, 'wnHijri230'),
+    ],
     '2.0.0': [
       (Icons.palette, 'wnWidgets200'),
       (Icons.nightlight_round, 'wnRamadan200'),
@@ -29,22 +55,22 @@ class WhatsNew {
     ],
   };
 
-  /// Called once after the first frame. Shows the dialog when the
-  /// stored version differs from the current one and the current
-  /// version has entries.
+  /// Called once after the first frame. A fresh install gets the
+  /// one-time welcome dialog (v2.3.0); an update shows the dialog
+  /// when the current version has entries.
   static Future<void> maybeShow(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final lastSeen = prefs.getString(_lastSeenKey);
     if (lastSeen == kAppVersion) return;
     await prefs.setString(_lastSeenKey, kAppVersion);
-    if (lastSeen == null) return; // Fresh install: record silently.
-    final entries = _entries[kAppVersion];
+    final welcome = lastSeen == null;
+    final entries = welcome ? _welcomeEntries : _entries[kAppVersion];
     if (entries == null || entries.isEmpty) return;
     if (!context.mounted) return;
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(S.t('whatsNew')),
+        title: Text(welcome ? S.t('welcomeTitle') : S.t('whatsNew')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -53,7 +53,7 @@ class PrayerCarScreen(carContext: CarContext) : Screen(carContext) {
         }
         return ListTemplate.Builder()
             .setSingleList(list.build())
-            .setTitle("Al Rashid Prayer")
+            .setTitle("Prayer YEG")
             .build()
     }
 }
