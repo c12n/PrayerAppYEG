@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Countdown progress bar (v2.3.0, iOS parity): the iOS widgets
+     draw a gold progress bar under the countdown; the track is a
+     translucent white and the fill a light gold that reads well on
+     the deep-green colored widget surface. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="2dp" />
+            <solid android:color="#33FFFFFF" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="2dp" />
+                <solid android:color="#E3C565" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

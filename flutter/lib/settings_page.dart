@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'alert_health.dart';
 import 'alerts.dart';
 import 'app_settings.dart';
 import 'prayer_models.dart';
@@ -338,6 +339,18 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => _pickPrayerSound(context, prayer),
                 ),
               _sectionNote(context, S.t('prayerSoundsFooter')),
+              _sectionHeader(context, S.t('alertHealth')),
+              ListTile(
+                leading: const Icon(Icons.favorite),
+                title: Text(S.t('alertHealth')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AlertHealthPage(settings: settings),
+                  ),
+                ),
+              ),
+              _sectionNote(context, S.t('alertHealthFooter')),
               _sectionHeader(context, S.t('qibla')),
               SwitchListTile(
                 secondary: const Icon(Icons.vibration),

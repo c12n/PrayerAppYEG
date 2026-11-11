@@ -893,6 +893,334 @@ enum DailyVerses {
     }
 }
 
+// MARK: - Hadith of the day (v2.3.0)
+
+/// One daily hadith: the Arabic text, English and French renderings,
+/// and its source collection. Embedded like the daily verses, so it
+/// works fully offline.
+struct DailyHadith {
+    let arabic: String
+    let english: String
+    let french: String
+    let sourceEnglish: String
+    let sourceArabic: String
+
+    func translation(for language: AppLanguage) -> String? {
+        switch language {
+        case .en: return english
+        case .fr: return french
+        case .ar: return nil
+        }
+    }
+
+    func source(for language: AppLanguage) -> String {
+        language == .ar ? sourceArabic : sourceEnglish
+    }
+}
+
+enum DailyHadiths {
+    static let all: [DailyHadith] = [
+        DailyHadith(arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَىٰ",
+                    english: "Actions are but by intentions, and every person shall have only that which he intended.",
+                    french: "Les actes ne valent que par leurs intentions, et chacun n'aura que ce qu'il a eu l'intention de faire.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ",
+                    english: "The most beloved deeds to Allah are the most consistent, even if they are small.",
+                    french: "Les œuvres les plus aimées d'Allah sont les plus constantes, même si elles sont petites.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "الطُّهُورُ شَطْرُ الإِيمَانِ",
+                    english: "Purity is half of faith.",
+                    french: "La pureté est la moitié de la foi.",
+                    sourceEnglish: "Muslim", sourceArabic: "مسلم"),
+        DailyHadith(arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ",
+                    english: "The best among you are those who learn the Quran and teach it.",
+                    french: "Les meilleurs d'entre vous sont ceux qui apprennent le Coran et l'enseignent.",
+                    sourceEnglish: "Bukhari", sourceArabic: "البخاري"),
+        DailyHadith(arabic: "يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا",
+                    english: "Make things easy and do not make them difficult; give glad tidings and do not repel people.",
+                    french: "Facilitez les choses et ne les rendez pas difficiles ; annoncez la bonne nouvelle et ne repoussez pas les gens.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "لَا يَرْحَمُ اللَّهُ مَنْ لَا يَرْحَمُ النَّاسَ",
+                    english: "Allah will not show mercy to one who does not show mercy to people.",
+                    french: "Allah ne fera pas miséricorde à celui qui ne fait pas miséricorde aux gens.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ",
+                    english: "The strong is not the one who overcomes people by wrestling; the strong is the one who controls himself in anger.",
+                    french: "Le fort n'est pas celui qui terrasse les gens à la lutte ; le fort est celui qui se maîtrise dans la colère.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "لَا يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لِأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ",
+                    english: "None of you truly believes until he loves for his brother what he loves for himself.",
+                    french: "Aucun de vous ne croit vraiment tant qu'il n'aime pas pour son frère ce qu'il aime pour lui-même.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ",
+                    english: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.",
+                    french: "Que celui qui croit en Allah et au Jour dernier dise du bien ou se taise.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "أَحَبُّ الْبِلَادِ إِلَى اللَّهِ مَسَاجِدُهَا",
+                    english: "The most beloved places to Allah are the mosques.",
+                    french: "Les lieux les plus aimés d'Allah sont les mosquées.",
+                    sourceEnglish: "Muslim", sourceArabic: "مسلم"),
+        DailyHadith(arabic: "الْيَدُ الْعُلْيَا خَيْرٌ مِنَ الْيَدِ السُّفْلَىٰ",
+                    english: "The upper hand is better than the lower hand.",
+                    french: "La main qui donne est meilleure que la main qui reçoit.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "أَطْعِمُوا الْجَائِعَ، وَعُودُوا الْمَرِيضَ، وَفُكُّوا الْعَانِيَ",
+                    english: "Feed the hungry, visit the sick, and free the captive.",
+                    french: "Nourrissez l'affamé, visitez le malade et libérez le captif.",
+                    sourceEnglish: "Bukhari", sourceArabic: "البخاري"),
+        DailyHadith(arabic: "إِنَّ اللَّهَ رَفِيقٌ يُحِبُّ الرِّفْقَ فِي الْأَمْرِ كُلِّهِ",
+                    english: "Allah is Gentle and loves gentleness in all things.",
+                    french: "Allah est Doux et Il aime la douceur en toute chose.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "خَيْرُكُمْ خَيْرُكُمْ لِأَهْلِهِ",
+                    english: "The best of you is the one who is best to his family.",
+                    french: "Le meilleur d'entre vous est celui qui est le meilleur envers sa famille.",
+                    sourceEnglish: "Tirmidhi", sourceArabic: "الترمذي"),
+        DailyHadith(arabic: "الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ",
+                    english: "A Muslim is one from whose tongue and hand other Muslims are safe.",
+                    french: "Le musulman est celui dont les autres musulmans sont à l'abri de la langue et de la main.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "لَا تَحَاسَدُوا وَلَا تَبَاغَضُوا، وَكُونُوا عِبَادَ اللَّهِ إِخْوَانًا",
+                    english: "Do not envy one another and do not hate one another; be, O servants of Allah, brothers.",
+                    french: "Ne vous enviez pas et ne vous haïssez pas ; soyez, serviteurs d'Allah, des frères.",
+                    sourceEnglish: "Muslim", sourceArabic: "مسلم"),
+        DailyHadith(arabic: "لَيْسَ الْغِنَىٰ عَنْ كَثْرَةِ الْعَرَضِ، وَلَكِنَّ الْغِنَىٰ غِنَى النَّفْسِ",
+                    english: "Richness is not having many possessions; richness is the contentment of the soul.",
+                    french: "La richesse n'est pas l'abondance des biens ; la richesse est celle de l'âme.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "مَنْ غَدَا إِلَى الْمَسْجِدِ أَوْ رَاحَ، أَعَدَّ اللَّهُ لَهُ فِي الْجَنَّةِ نُزُلًا",
+                    english: "Whoever goes to the mosque in the morning or the evening, Allah prepares for him a place in Paradise.",
+                    french: "Celui qui se rend à la mosquée matin ou soir, Allah lui prépare une demeure au Paradis.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "الصَّلَوَاتُ الْخَمْسُ كَفَّارَةٌ لِمَا بَيْنَهُنَّ",
+                    english: "The five daily prayers expiate what is committed between them.",
+                    french: "Les cinq prières quotidiennes effacent ce qui est commis entre elles.",
+                    sourceEnglish: "Muslim", sourceArabic: "مسلم"),
+        DailyHadith(arabic: "إِذَا مَاتَ الْإِنْسَانُ انْقَطَعَ عَمَلُهُ إِلَّا مِنْ ثَلَاثٍ: صَدَقَةٍ جَارِيَةٍ، أَوْ عِلْمٍ يُنْتَفَعُ بِهِ، أَوْ وَلَدٍ صَالِحٍ يَدْعُو لَهُ",
+                    english: "When a person dies, his deeds end except three: ongoing charity, knowledge that benefits others, or a righteous child who prays for him.",
+                    french: "Quand une personne meurt, ses œuvres s'arrêtent sauf trois : une aumône continue, un savoir utile aux autres, ou un enfant vertueux qui prie pour elle.",
+                    sourceEnglish: "Muslim", sourceArabic: "مسلم"),
+        DailyHadith(arabic: "إِنَّ اللَّهَ كَتَبَ الْإِحْسَانَ عَلَىٰ كُلِّ شَيْءٍ",
+                    english: "Verily Allah has prescribed excellence in all things.",
+                    french: "Allah a prescrit l'excellence en toute chose.",
+                    sourceEnglish: "Muslim", sourceArabic: "مسلم"),
+        DailyHadith(arabic: "مَنْ بَنَىٰ مَسْجِدًا لِلَّهِ، بَنَى اللَّهُ لَهُ بَيْتًا فِي الْجَنَّةِ",
+                    english: "Whoever builds a mosque for Allah, Allah builds for him a house in Paradise.",
+                    french: "Celui qui construit une mosquée pour Allah, Allah lui construit une maison au Paradis.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "صَلَاةُ الْجَمَاعَةِ تَفْضُلُ صَلَاةَ الْفَذِّ بِسَبْعٍ وَعِشْرِينَ دَرَجَةً",
+                    english: "Prayer in congregation is twenty-seven degrees better than prayer prayed alone.",
+                    french: "La prière en groupe vaut vingt-sept degrés de plus que la prière accomplie seul.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "كُلُّ بَنِي آدَمَ خَطَّاءٌ، وَخَيْرُ الْخَطَّائِينَ التَّوَّابُونَ",
+                    english: "Every child of Adam errs, and the best of those who err are those who repent.",
+                    french: "Tout fils d'Adam commet des erreurs, et les meilleurs de ceux qui errent sont ceux qui se repentent.",
+                    sourceEnglish: "Tirmidhi", sourceArabic: "الترمذي"),
+        DailyHadith(arabic: "أَفْضَلُ الذِّكْرِ لَا إِلَهَ إِلَّا اللَّهُ",
+                    english: "The best remembrance is: there is no god but Allah.",
+                    french: "La meilleure invocation est : il n'y a de dieu qu'Allah.",
+                    sourceEnglish: "Tirmidhi", sourceArabic: "الترمذي"),
+        DailyHadith(arabic: "كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ",
+                    english: "Two words light on the tongue and heavy in the scale: Glory be to Allah and His praise; Glory be to Allah, the Magnificent.",
+                    french: "Deux paroles légères sur la langue et lourdes dans la balance : Gloire à Allah et louange à Lui ; Gloire à Allah, le Magnifique.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "مَثَلُ الَّذِي يَذْكُرُ رَبَّهُ وَالَّذِي لَا يَذْكُرُ رَبَّهُ مَثَلُ الْحَيِّ وَالْمَيِّتِ",
+                    english: "The example of the one who remembers his Lord and the one who does not is like the living and the dead.",
+                    french: "L'exemple de celui qui invoque son Seigneur et de celui qui ne l'invoque pas est comme le vivant et le mort.",
+                    sourceEnglish: "Bukhari & Muslim", sourceArabic: "البخاري ومسلم"),
+        DailyHadith(arabic: "أَكْمَلُ الْمُؤْمِنِينَ إِيمَانًا أَحْسَنُهُمْ خُلُقًا",
+                    english: "The most complete of the believers in faith are those with the best character.",
+                    french: "Les croyants dont la foi est la plus complète sont ceux qui ont le meilleur caractère.",
+                    sourceEnglish: "Tirmidhi", sourceArabic: "الترمذي"),
+        DailyHadith(arabic: "اتَّقِ اللَّهَ حَيْثُمَا كُنْتَ، وَأَتْبِعِ السَّيِّئَةَ الْحَسَنَةَ تَمْحُهَا، وَخَالِقِ النَّاسَ بِخُلُقٍ حَسَنٍ",
+                    english: "Fear Allah wherever you are; follow a bad deed with a good one and it will erase it; and treat people with good character.",
+                    french: "Crains Allah où que tu sois ; fais suivre la mauvaise action d'une bonne et elle l'effacera ; et comporte-toi envers les gens avec un bon caractère.",
+                    sourceEnglish: "Tirmidhi", sourceArabic: "الترمذي"),
+        DailyHadith(arabic: "دَعْ مَا يَرِيبُكَ إِلَىٰ مَا لَا يَرِيبُكَ",
+                    english: "Leave what makes you doubt for what does not make you doubt.",
+                    french: "Laisse ce qui te fait douter pour ce qui ne te fait pas douter.",
+                    sourceEnglish: "Tirmidhi", sourceArabic: "الترمذي"),
+    ]
+
+    /// Offset by 11 from the verse pick so the pair varies.
+    static func hadith(for date: Date) -> DailyHadith {
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: date) ?? 0
+        return all[(day + 11) % all.count]
+    }
+}
+
+// MARK: - The 99 Names of Allah (v2.3.0)
+
+struct AllahName {
+    let arabic: String
+    let transliteration: String
+    let english: String
+    let french: String
+    let arabicGloss: String
+
+    func meaning(for language: AppLanguage) -> String {
+        switch language {
+        case .en: return english
+        case .fr: return french
+        case .ar: return arabicGloss
+        }
+    }
+}
+
+enum NamesOfAllah {
+    static let all: [AllahName] = [
+        AllahName(arabic: "الرحمن", transliteration: "Ar-Rahman", english: "The Most Gracious", french: "Le Tout Miséricordieux", arabicGloss: "ذو الرحمة الواسعة"),
+        AllahName(arabic: "الرحيم", transliteration: "Ar-Rahim", english: "The Most Merciful", french: "Le Très Miséricordieux", arabicGloss: "المنعم على عباده"),
+        AllahName(arabic: "الملك", transliteration: "Al-Malik", english: "The King", french: "Le Roi", arabicGloss: "مالك الملك كله"),
+        AllahName(arabic: "القدوس", transliteration: "Al-Quddus", english: "The Most Holy", french: "Le Saint", arabicGloss: "المنزه عن كل نقص"),
+        AllahName(arabic: "السلام", transliteration: "As-Salam", english: "The Source of Peace", french: "La Paix", arabicGloss: "السالم من كل عيب"),
+        AllahName(arabic: "المؤمن", transliteration: "Al-Mu'min", english: "The Giver of Faith", french: "Le Garant de la foi", arabicGloss: "واهب الأمن والإيمان"),
+        AllahName(arabic: "المهيمن", transliteration: "Al-Muhaymin", english: "The Guardian", french: "Le Protecteur", arabicGloss: "الرقيب الحافظ"),
+        AllahName(arabic: "العزيز", transliteration: "Al-Aziz", english: "The Almighty", french: "Le Tout-Puissant", arabicGloss: "الغالب الذي لا يُقهر"),
+        AllahName(arabic: "الجبار", transliteration: "Al-Jabbar", english: "The Compeller", french: "Le Contraignant", arabicGloss: "العالي الذي يجبر الكسير"),
+        AllahName(arabic: "المتكبر", transliteration: "Al-Mutakabbir", english: "The Supreme", french: "Le Superbe", arabicGloss: "المتعالي عن صفات الخلق"),
+        AllahName(arabic: "الخالق", transliteration: "Al-Khaliq", english: "The Creator", french: "Le Créateur", arabicGloss: "المبدع للخلق"),
+        AllahName(arabic: "البارئ", transliteration: "Al-Bari", english: "The Originator", french: "L'Initiateur", arabicGloss: "المنشئ بلا مثال"),
+        AllahName(arabic: "المصور", transliteration: "Al-Musawwir", english: "The Fashioner", french: "Le Formateur", arabicGloss: "الذي صوّر المخلوقات"),
+        AllahName(arabic: "الغفار", transliteration: "Al-Ghaffar", english: "The Great Forgiver", french: "Le Grand Pardonneur", arabicGloss: "الساتر لذنوب عباده"),
+        AllahName(arabic: "القهار", transliteration: "Al-Qahhar", english: "The Subduer", french: "Le Dominateur", arabicGloss: "الغالب لكل شيء"),
+        AllahName(arabic: "الوهاب", transliteration: "Al-Wahhab", english: "The Bestower", french: "Le Donateur", arabicGloss: "كثير العطاء بلا عوض"),
+        AllahName(arabic: "الرزاق", transliteration: "Ar-Razzaq", english: "The Provider", french: "Le Pourvoyeur", arabicGloss: "المتكفل بأرزاق العباد"),
+        AllahName(arabic: "الفتاح", transliteration: "Al-Fattah", english: "The Opener, the Judge", french: "L'Ouvreur, le Juge", arabicGloss: "الحاكم الفاتح لعباده"),
+        AllahName(arabic: "العليم", transliteration: "Al-Alim", english: "The All-Knowing", french: "L'Omniscient", arabicGloss: "المحيط علمه بكل شيء"),
+        AllahName(arabic: "القابض", transliteration: "Al-Qabid", english: "The Withholder", french: "Celui qui restreint", arabicGloss: "الذي يقبض الرزق بحكمته"),
+        AllahName(arabic: "الباسط", transliteration: "Al-Basit", english: "The Extender", french: "Celui qui étend", arabicGloss: "الذي يبسط الرزق لمن يشاء"),
+        AllahName(arabic: "الخافض", transliteration: "Al-Khafid", english: "The Abaser", french: "Celui qui abaisse", arabicGloss: "الذي يخفض المتكبرين"),
+        AllahName(arabic: "الرافع", transliteration: "Ar-Rafi", english: "The Exalter", french: "Celui qui élève", arabicGloss: "الذي يرفع أولياءه"),
+        AllahName(arabic: "المعز", transliteration: "Al-Mu'izz", english: "The Honourer", french: "Celui qui honore", arabicGloss: "واهب العزة لمن يشاء"),
+        AllahName(arabic: "المذل", transliteration: "Al-Mudhill", english: "The Dishonourer", french: "Celui qui humilie", arabicGloss: "الذي يذل أعداءه"),
+        AllahName(arabic: "السميع", transliteration: "As-Sami", english: "The All-Hearing", french: "L'Audient", arabicGloss: "الذي يسمع كل شيء"),
+        AllahName(arabic: "البصير", transliteration: "Al-Basir", english: "The All-Seeing", french: "Le Clairvoyant", arabicGloss: "الذي يرى كل شيء"),
+        AllahName(arabic: "الحكم", transliteration: "Al-Hakam", english: "The Judge", french: "Le Juge", arabicGloss: "الحاكم العادل"),
+        AllahName(arabic: "العدل", transliteration: "Al-Adl", english: "The Just", french: "Le Juste", arabicGloss: "المنزه عن الظلم"),
+        AllahName(arabic: "اللطيف", transliteration: "Al-Latif", english: "The Subtle One", french: "Le Subtil", arabicGloss: "البار بعباده الرفيق بهم"),
+        AllahName(arabic: "الخبير", transliteration: "Al-Khabir", english: "The All-Aware", french: "Le Parfaitement Informé", arabicGloss: "العالم ببواطن الأمور"),
+        AllahName(arabic: "الحليم", transliteration: "Al-Halim", english: "The Forbearing", french: "Le Longanime", arabicGloss: "الذي لا يعجل بالعقوبة"),
+        AllahName(arabic: "العظيم", transliteration: "Al-Azim", english: "The Magnificent", french: "L'Immense", arabicGloss: "ذو العظمة في كل شيء"),
+        AllahName(arabic: "الغفور", transliteration: "Al-Ghafur", english: "The All-Forgiving", french: "Le Pardonneur", arabicGloss: "الساتر المغفرة لذنوب عباده"),
+        AllahName(arabic: "الشكور", transliteration: "Ash-Shakur", english: "The Appreciative", french: "Le Reconnaissant", arabicGloss: "الذي يجازي على العمل القليل"),
+        AllahName(arabic: "العلي", transliteration: "Al-Ali", english: "The Most High", french: "Le Très-Haut", arabicGloss: "المتعالي فوق خلقه"),
+        AllahName(arabic: "الكبير", transliteration: "Al-Kabir", english: "The Most Great", french: "Le Grand", arabicGloss: "الأكبر من كل شيء"),
+        AllahName(arabic: "الحفيظ", transliteration: "Al-Hafiz", english: "The Preserver", french: "Le Gardien", arabicGloss: "الحافظ لكل شيء"),
+        AllahName(arabic: "المقيت", transliteration: "Al-Muqit", english: "The Sustainer", french: "Le Nourricier", arabicGloss: "الموصل لكل مخلوق قوته"),
+        AllahName(arabic: "الحسيب", transliteration: "Al-Hasib", english: "The Reckoner", french: "Celui qui suffit", arabicGloss: "الكافي المحاسب"),
+        AllahName(arabic: "الجليل", transliteration: "Al-Jalil", english: "The Majestic", french: "Le Majestueux", arabicGloss: "الموصوف بصفات الجلال"),
+        AllahName(arabic: "الكريم", transliteration: "Al-Karim", english: "The Generous", french: "Le Généreux", arabicGloss: "كثير الخير والعطاء"),
+        AllahName(arabic: "الرقيب", transliteration: "Ar-Raqib", english: "The Watchful", french: "Le Vigilant", arabicGloss: "المطلع على كل شيء"),
+        AllahName(arabic: "المجيب", transliteration: "Al-Mujib", english: "The Responsive", french: "Celui qui répond", arabicGloss: "الذي يجيب من دعاه"),
+        AllahName(arabic: "الواسع", transliteration: "Al-Wasi", english: "The All-Encompassing", french: "Le Vaste", arabicGloss: "الذي وسع كل شيء"),
+        AllahName(arabic: "الحكيم", transliteration: "Al-Hakim", english: "The All-Wise", french: "Le Sage", arabicGloss: "المحكم لخلقه وأمره"),
+        AllahName(arabic: "الودود", transliteration: "Al-Wadud", english: "The Most Loving", french: "Le Très Affectueux", arabicGloss: "المحب لعباده الصالحين"),
+        AllahName(arabic: "المجيد", transliteration: "Al-Majid", english: "The Most Glorious", french: "Le Glorieux", arabicGloss: "الواسع المجد والشرف"),
+        AllahName(arabic: "الباعث", transliteration: "Al-Ba'ith", english: "The Resurrector", french: "Le Résurrecteur", arabicGloss: "الذي يبعث الخلق يوم القيامة"),
+        AllahName(arabic: "الشهيد", transliteration: "Ash-Shahid", english: "The Witness", french: "Le Témoin", arabicGloss: "الشاهد على كل شيء"),
+        AllahName(arabic: "الحق", transliteration: "Al-Haqq", english: "The Truth", french: "La Vérité", arabicGloss: "الثابت الذي لا يزول"),
+        AllahName(arabic: "الوكيل", transliteration: "Al-Wakil", english: "The Trustee", french: "Le Tuteur", arabicGloss: "المتكفل بأمور عباده"),
+        AllahName(arabic: "القوي", transliteration: "Al-Qawiyy", english: "The Strong", french: "Le Fort", arabicGloss: "كامل القوة"),
+        AllahName(arabic: "المتين", transliteration: "Al-Matin", english: "The Firm", french: "Le Ferme", arabicGloss: "شديد القوة لا يلحقه تعب"),
+        AllahName(arabic: "الولي", transliteration: "Al-Waliyy", english: "The Protecting Friend", french: "L'Allié", arabicGloss: "الناصر المتولي أمور عباده"),
+        AllahName(arabic: "الحميد", transliteration: "Al-Hamid", english: "The Praiseworthy", french: "Le Louable", arabicGloss: "المستحق للحمد دائمًا"),
+        AllahName(arabic: "المحصي", transliteration: "Al-Muhsi", english: "The Counter", french: "Celui qui dénombre", arabicGloss: "الذي أحصى كل شيء عددًا"),
+        AllahName(arabic: "المبدئ", transliteration: "Al-Mubdi", english: "The Initiator", french: "L'Initiateur premier", arabicGloss: "الذي بدأ الخلق"),
+        AllahName(arabic: "المعيد", transliteration: "Al-Mu'id", english: "The Restorer", french: "Le Restaurateur", arabicGloss: "الذي يعيد الخلق بعد الموت"),
+        AllahName(arabic: "المحيي", transliteration: "Al-Muhyi", english: "The Giver of Life", french: "Celui qui donne la vie", arabicGloss: "واهب الحياة"),
+        AllahName(arabic: "المميت", transliteration: "Al-Mumit", english: "The Bringer of Death", french: "Celui qui donne la mort", arabicGloss: "مقدّر الموت على خلقه"),
+        AllahName(arabic: "الحي", transliteration: "Al-Hayy", english: "The Ever-Living", french: "Le Vivant", arabicGloss: "الدائم الحياة بلا زوال"),
+        AllahName(arabic: "القيوم", transliteration: "Al-Qayyum", english: "The Self-Subsisting", french: "Le Subsistant", arabicGloss: "القائم بنفسه المقيم لغيره"),
+        AllahName(arabic: "الواجد", transliteration: "Al-Wajid", english: "The Perceiver", french: "Celui qui trouve", arabicGloss: "الغني الذي لا يفتقر"),
+        AllahName(arabic: "الماجد", transliteration: "Al-Majid (Al-Maajid)", english: "The Illustrious", french: "L'Illustre", arabicGloss: "الواسع الكرم والمجد"),
+        AllahName(arabic: "الواحد", transliteration: "Al-Wahid", english: "The One", french: "L'Unique", arabicGloss: "المتفرد بالألوهية"),
+        AllahName(arabic: "الأحد", transliteration: "Al-Ahad", english: "The Unique", french: "L'Un", arabicGloss: "المتفرد بصفات الكمال"),
+        AllahName(arabic: "الصمد", transliteration: "As-Samad", english: "The Eternal Refuge", french: "L'Éternel", arabicGloss: "السيد المقصود في الحوائج"),
+        AllahName(arabic: "القادر", transliteration: "Al-Qadir", english: "The Capable", french: "Le Capable", arabicGloss: "التام القدرة"),
+        AllahName(arabic: "المقتدر", transliteration: "Al-Muqtadir", english: "The Powerful", french: "Le Puissant", arabicGloss: "الكامل القدرة لا يمتنع عليه شيء"),
+        AllahName(arabic: "المقدم", transliteration: "Al-Muqaddim", english: "The Expediter", french: "Celui qui avance", arabicGloss: "الذي يقدم من يشاء"),
+        AllahName(arabic: "المؤخر", transliteration: "Al-Mu'akhkhir", english: "The Delayer", french: "Celui qui retarde", arabicGloss: "الذي يؤخر من يشاء بحكمته"),
+        AllahName(arabic: "الأول", transliteration: "Al-Awwal", english: "The First", french: "Le Premier", arabicGloss: "الذي ليس قبله شيء"),
+        AllahName(arabic: "الآخر", transliteration: "Al-Akhir", english: "The Last", french: "Le Dernier", arabicGloss: "الذي ليس بعده شيء"),
+        AllahName(arabic: "الظاهر", transliteration: "Az-Zahir", english: "The Manifest", french: "L'Apparent", arabicGloss: "الظاهر بآياته ودلائله"),
+        AllahName(arabic: "الباطن", transliteration: "Al-Batin", english: "The Hidden", french: "Le Caché", arabicGloss: "المحتجب عن أنظار الخلق"),
+        AllahName(arabic: "الوالي", transliteration: "Al-Wali", english: "The Governor", french: "Le Gouverneur", arabicGloss: "المالك للأشياء المتصرف فيها"),
+        AllahName(arabic: "المتعالي", transliteration: "Al-Muta'ali", english: "The Most Exalted", french: "Le Très Élevé", arabicGloss: "المنزه عن كل سوء"),
+        AllahName(arabic: "البر", transliteration: "Al-Barr", english: "The Source of Goodness", french: "Le Bienfaisant", arabicGloss: "الكثير الإحسان واللطف"),
+        AllahName(arabic: "التواب", transliteration: "At-Tawwab", english: "The Acceptor of Repentance", french: "L'Accueillant au repentir", arabicGloss: "الذي يقبل التوبة دائمًا"),
+        AllahName(arabic: "المنتقم", transliteration: "Al-Muntaqim", english: "The Avenger", french: "Le Vengeur", arabicGloss: "الذي ينتقم ممن عصاه"),
+        AllahName(arabic: "العفو", transliteration: "Al-Afuww", english: "The Pardoner", french: "L'Indulgent", arabicGloss: "الذي يمحو السيئات"),
+        AllahName(arabic: "الرؤوف", transliteration: "Ar-Ra'uf", english: "The Most Kind", french: "Le Compatissant", arabicGloss: "شديد الرحمة بعباده"),
+        AllahName(arabic: "مالك الملك", transliteration: "Malik-ul-Mulk", english: "Master of the Kingdom", french: "Maître de la Royauté", arabicGloss: "يؤتي الملك من يشاء"),
+        AllahName(arabic: "ذو الجلال والإكرام", transliteration: "Dhul-Jalali wal-Ikram", english: "Lord of Majesty and Honour", french: "Détenteur de la Majesté et de l'Honneur", arabicGloss: "المستحق وحده للتعظيم"),
+        AllahName(arabic: "المقسط", transliteration: "Al-Muqsit", english: "The Equitable", french: "L'Équitable", arabicGloss: "العادل في حكمه"),
+        AllahName(arabic: "الجامع", transliteration: "Al-Jami", english: "The Gatherer", french: "Le Rassembleur", arabicGloss: "الذي يجمع الخلق ليوم الحساب"),
+        AllahName(arabic: "الغني", transliteration: "Al-Ghaniyy", english: "The Self-Sufficient", french: "L'Indépendant", arabicGloss: "المستغني عن كل ما سواه"),
+        AllahName(arabic: "المغني", transliteration: "Al-Mughni", english: "The Enricher", french: "Celui qui enrichit", arabicGloss: "الذي يغني من يشاء"),
+        AllahName(arabic: "المانع", transliteration: "Al-Mani", english: "The Preventer", french: "Celui qui empêche", arabicGloss: "الذي يمنع العطاء عمن يشاء"),
+        AllahName(arabic: "الضار", transliteration: "Ad-Darr", english: "The Distresser", french: "Celui qui nuit", arabicGloss: "الذي يقدّر الضر على من يشاء"),
+        AllahName(arabic: "النافع", transliteration: "An-Nafi", english: "The Benefactor", french: "Le Bienfaiteur", arabicGloss: "الذي يقدّر النفع لمن يشاء"),
+        AllahName(arabic: "النور", transliteration: "An-Nur", english: "The Light", french: "La Lumière", arabicGloss: "نور السماوات والأرض"),
+        AllahName(arabic: "الهادي", transliteration: "Al-Hadi", english: "The Guide", french: "Le Guide", arabicGloss: "الذي يهدي من يشاء"),
+        AllahName(arabic: "البديع", transliteration: "Al-Badi", english: "The Incomparable", french: "L'Inventeur", arabicGloss: "المبدع الخلق على غير مثال"),
+        AllahName(arabic: "الباقي", transliteration: "Al-Baqi", english: "The Everlasting", french: "L'Éternel subsistant", arabicGloss: "الدائم الوجود بلا فناء"),
+        AllahName(arabic: "الوارث", transliteration: "Al-Warith", english: "The Inheritor", french: "L'Héritier", arabicGloss: "الباقي بعد فناء الخلق"),
+        AllahName(arabic: "الرشيد", transliteration: "Ar-Rashid", english: "The Guide to the Right Path", french: "Le Guide droit", arabicGloss: "المرشد إلى مصالح العباد"),
+        AllahName(arabic: "الصبور", transliteration: "As-Sabur", english: "The Patient", french: "Le Patient", arabicGloss: "الذي لا يعجل بعقوبة العصاة"),
+    ]
+}
+
+// MARK: - Upcoming Islamic dates (v2.3.0)
+
+struct HijriEvent {
+    let month: Int
+    let day: Int
+    let key: String
+}
+
+/// Countdown targets in the Hijri year. Dates use the same Umm
+/// al-Qura conversion (and the user's Hijri offset) as the rest of
+/// the app, so a countdown always agrees with the displayed date.
+/// Laylat al-Qadr is marked "expected": it is looked for on the
+/// 27th night, not fixed.
+enum HijriEvents {
+    static let all: [HijriEvent] = [
+        HijriEvent(month: 1, day: 1, key: "evNewYear"),
+        HijriEvent(month: 1, day: 10, key: "evAshura"),
+        HijriEvent(month: 3, day: 12, key: "evMawlid"),
+        HijriEvent(month: 7, day: 27, key: "evIsra"),
+        HijriEvent(month: 9, day: 1, key: "evRamadan"),
+        HijriEvent(month: 9, day: 27, key: "evQadr"),
+        HijriEvent(month: 10, day: 1, key: "evFitr"),
+        HijriEvent(month: 12, day: 9, key: "evArafah"),
+        HijriEvent(month: 12, day: 10, key: "evAdha"),
+    ]
+
+    /// The next `count` events at or after `date`, scanning forward
+    /// day by day (a full Hijri year always completes the set).
+    static func upcoming(from date: Date = .now, timeZone: TimeZone,
+                         count: Int = 3) -> [(event: HijriEvent, date: Date, days: Int)] {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let start = calendar.startOfDay(for: date)
+        var found: [(event: HijriEvent, date: Date, days: Int)] = []
+        var foundKeys = Set<String>()
+        for offset in 0...400 {
+            guard found.count < count,
+                  let day = calendar.date(byAdding: .day, value: offset, to: start),
+                  let hijri = RamadanMode.hijriComponents(for: day, timeZone: timeZone)
+            else { continue }
+            for event in all where event.month == hijri.month && event.day == hijri.day
+                && !foundKeys.contains(event.key) {
+                found.append((event, day, offset))
+                foundKeys.insert(event.key)
+            }
+        }
+        return found
+    }
+}
+
 // MARK: - Umm al-Qura Hijri conversion
 
 /// Gregorian -> Hijri conversion using the official Umm al-Qura month
@@ -2144,6 +2472,52 @@ enum L10n {
         "reset": [.en: "Reset to Defaults", .ar: "إعادة تعيين إلى الافتراضي", .fr: "Réinitialiser par défaut"],
         "resetFooter": [.en: "Restores the original appearance, colors, icon and prayer alerts. Your saved themes are kept.", .ar: "يستعيد المظهر والألوان والأيقونة وتنبيهات الصلاة الأصلية. تُحفظ سماتك المحفوظة.", .fr: "Rétablit l'apparence, les couleurs, l'icône et les alertes de prière d'origine. Vos thèmes enregistrés sont conservés."],
         "resetConfirm": [.en: "Reset all appearance and alert settings to the defaults?", .ar: "إعادة تعيين كل إعدادات المظهر والتنبيهات إلى الافتراضية؟", .fr: "Réinitialiser tous les réglages d'apparence et d'alertes par défaut ?"],
+        // v2.3.0: alert test + health check
+        "alertHealth": [.en: "Alerts health check", .ar: "فحص صحة التنبيهات", .fr: "Vérification des alertes"],
+        "alertHealthFooter": [.en: "Confirms your prayer alerts can actually reach you, and lets you hear a test alert with your chosen adhan sound.", .ar: "يؤكد أن تنبيهات الصلاة يمكنها الوصول إليك فعلاً، ويتيح لك سماع تنبيه تجريبي بصوت الأذان الذي اخترته.", .fr: "Confirme que vos alertes de prière peuvent vraiment vous atteindre, et vous permet d'entendre une alerte test avec le son d'adhan choisi."],
+        "healthNotifOn": [.en: "Notifications are on", .ar: "الإشعارات مفعّلة", .fr: "Les notifications sont activées"],
+        "healthNotifOff": [.en: "Notifications are off", .ar: "الإشعارات متوقفة", .fr: "Les notifications sont désactivées"],
+        "healthNotifOffBody": [.en: "Prayer alerts cannot arrive until notifications are allowed for this app.", .ar: "لا يمكن وصول تنبيهات الصلاة حتى يُسمح بالإشعارات لهذا التطبيق.", .fr: "Les alertes de prière ne peuvent pas arriver tant que les notifications ne sont pas autorisées pour cette app."],
+        "healthScheduledFmt": [.en: "%d alerts scheduled · next %@", .ar: "%d تنبيهًا مجدولاً · التالي %@", .fr: "%d alertes programmées · prochaine %@"],
+        "healthNoScheduled": [.en: "No alerts are scheduled right now. They rebuild whenever you open the app.", .ar: "لا توجد تنبيهات مجدولة الآن. تُعاد جدولتها كلما فتحت التطبيق.", .fr: "Aucune alerte n'est programmée pour le moment. Elles sont reprogrammées à chaque ouverture de l'app."],
+        "healthTimesReady": [.en: "Today's prayer times are ready", .ar: "مواقيت صلاة اليوم جاهزة", .fr: "Les heures de prière du jour sont prêtes"],
+        "healthOpenSettings": [.en: "Open Settings", .ar: "فتح الإعدادات", .fr: "Ouvrir les Réglages"],
+        "healthRecheck": [.en: "Recheck", .ar: "إعادة الفحص", .fr: "Revérifier"],
+        "sendTestAlert": [.en: "Send a test alert", .ar: "إرسال تنبيه تجريبي", .fr: "Envoyer une alerte test"],
+        "testAlertFooter": [.en: "The test alert arrives in about 5 seconds with your chosen adhan sound, exactly like a real prayer alert. Lock the phone or leave the app to hear it the way an adhan would play.", .ar: "يصل التنبيه التجريبي بعد نحو ٥ ثوانٍ بصوت الأذان الذي اخترته، تمامًا مثل تنبيه الصلاة الحقيقي. اقفل الهاتف أو اخرج من التطبيق لتسمعه كما يُسمع الأذان.", .fr: "L'alerte test arrive dans environ 5 secondes avec le son d'adhan choisi, exactement comme une vraie alerte de prière. Verrouillez le téléphone ou quittez l'app pour l'entendre comme un adhan."],
+        "testAlertTitle": [.en: "Test alert", .ar: "تنبيه تجريبي", .fr: "Alerte test"],
+        "testAlertBody": [.en: "Your prayer alerts are working.", .ar: "تنبيهات الصلاة تعمل لديك.", .fr: "Vos alertes de prière fonctionnent."],
+        "testAlertSent": [.en: "Test alert sent · listen for it in a few seconds", .ar: "أُرسل التنبيه التجريبي · استمع إليه بعد ثوانٍ", .fr: "Alerte test envoyée · écoutez-la dans quelques secondes"],
+        // v2.3.0: daily hadith, 99 Names, Hijri dates
+        "dailyHadith": [.en: "Hadith of the Day", .ar: "حديث اليوم", .fr: "Hadith du jour"],
+        "namesOfAllah": [.en: "The 99 Names of Allah", .ar: "أسماء الله الحسنى", .fr: "Les 99 noms d'Allah"],
+        "namesSearch": [.en: "Search names", .ar: "ابحث في الأسماء", .fr: "Rechercher un nom"],
+        "upcomingEvents": [.en: "Upcoming Islamic dates", .ar: "المناسبات الإسلامية القادمة", .fr: "Dates islamiques à venir"],
+        "eventInDaysFmt": [.en: "in %d days", .ar: "بعد %d يوم", .fr: "dans %d jours"],
+        "evNewYear": [.en: "Islamic New Year", .ar: "رأس السنة الهجرية", .fr: "Nouvel An islamique"],
+        "evAshura": [.en: "Ashura", .ar: "عاشوراء", .fr: "Achoura"],
+        "evMawlid": [.en: "Mawlid · the Prophet's Birthday", .ar: "المولد النبوي", .fr: "Mawlid · naissance du Prophète"],
+        "evIsra": [.en: "Isra and Mi'raj", .ar: "الإسراء والمعراج", .fr: "Isra et Mi'raj"],
+        "evRamadan": [.en: "Ramadan begins", .ar: "بداية رمضان", .fr: "Début du Ramadan"],
+        "evQadr": [.en: "Laylat al-Qadr (expected)", .ar: "ليلة القدر (المتوقعة)", .fr: "Laylat al-Qadr (estimée)"],
+        "evFitr": [.en: "Eid al-Fitr", .ar: "عيد الفطر", .fr: "Aïd el-Fitr"],
+        "evArafah": [.en: "Day of Arafah", .ar: "يوم عرفة", .fr: "Jour d'Arafah"],
+        "evAdha": [.en: "Eid al-Adha", .ar: "عيد الأضحى", .fr: "Aïd el-Adha"],
+        // v2.3.0: Continue Listening widget
+        "continueListening": [.en: "Continue Listening", .ar: "متابعة الاستماع", .fr: "Continuer l'écoute"],
+        "tapToResume": [.en: "Tap to resume", .ar: "اضغط للمتابعة", .fr: "Touchez pour reprendre"],
+        // v2.3.0: welcome + What's New
+        "welcomeTitle": [.en: "Welcome", .ar: "مرحبًا بك", .fr: "Bienvenue"],
+        "wnWelcome1": [.en: "Prayer times for Al Rashid Mosque, calculated on your device.", .ar: "مواقيت الصلاة لمسجد الراشد، تُحسب على جهازك.", .fr: "Les heures de prière de la mosquée Al Rashid, calculées sur votre appareil."],
+        "wnWelcome2": [.en: "An alert at every prayer with your choice of adhan sounds, plus a Live Activity countdown on your Lock Screen.", .ar: "تنبيه عند كل صلاة بصوت الأذان الذي تختاره، مع عدّاد مباشر على شاشة القفل.", .fr: "Une alerte à chaque prière avec le son d'adhan de votre choix, et un compte à rebours en direct sur l'écran verrouillé."],
+        "wnWelcome3": [.en: "Widgets for your Home and Lock Screens, in your own colors.", .ar: "ودجت لشاشتي البداية والقفل، بألوانك الخاصة.", .fr: "Des widgets pour vos écrans d'accueil et de verrouillage, dans vos couleurs."],
+        "wnWelcome4": [.en: "The full Quran with audio, lyrics and downloads, in the Quran tab.", .ar: "القرآن الكريم كاملاً بالصوت والنص والتنزيلات، في تبويب القرآن.", .fr: "Le Coran complet avec audio, texte et téléchargements, dans l'onglet Coran."],
+        "wnTest230": [.en: "Send a test alert from Settings and hear your adhan exactly as a real prayer alert will sound.", .ar: "أرسل تنبيهًا تجريبيًا من الإعدادات واسمع الأذان كما سيصلك في تنبيه الصلاة الحقيقي.", .fr: "Envoyez une alerte test depuis les Réglages et entendez votre adhan exactement comme une vraie alerte de prière."],
+        "wnHealth230": [.en: "A new alerts health check confirms your notifications are on and your alerts are scheduled.", .ar: "فحص جديد لصحة التنبيهات يؤكد أن الإشعارات مفعّلة وأن تنبيهاتك مجدولة.", .fr: "Une nouvelle vérification des alertes confirme que vos notifications sont activées et vos alertes programmées."],
+        "wnHadith230": [.en: "A hadith of the day now sits under the daily verse on the Home screen.", .ar: "حديث اليوم أصبح الآن تحت آية اليوم في الشاشة الرئيسية.", .fr: "Un hadith du jour se trouve maintenant sous le verset du jour sur l'écran d'accueil."],
+        "wnNames230": [.en: "The 99 Names of Allah, with meanings, one tap from the Home screen.", .ar: "أسماء الله الحسنى بمعانيها، بضغطة واحدة من الشاشة الرئيسية.", .fr: "Les 99 noms d'Allah, avec leurs significations, à un toucher de l'écran d'accueil."],
+        "wnHijri230": [.en: "Countdowns to Ramadan, the Eids and the other Islamic dates, on the Home screen.", .ar: "عدّ تنازلي لرمضان والعيدين وبقية المناسبات الإسلامية، في الشاشة الرئيسية.", .fr: "Des comptes à rebours vers Ramadan, les Aïds et les autres dates islamiques, sur l'écran d'accueil."],
+        "wnWidget230": [.en: "A new Continue Listening widget resumes your Quran right where you left off.", .ar: "ودجت جديد لمتابعة الاستماع يستأنف القرآن من حيث توقفت.", .fr: "Un nouveau widget Continuer l'écoute reprend votre Coran là où vous l'aviez laissé."],
     ]
 }
 

@@ -21,9 +21,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 import 'alerts.dart';
 import 'app_settings.dart';
+import 'hijri_calendar.dart';
+import 'names_of_allah.dart';
 import 'prayer_models.dart';
 import 'settings_page.dart';
 import 'daily_verse.dart';
@@ -331,6 +334,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           const SizedBox(height: 20),
           const DailyVerseCard(),
           const SizedBox(height: 20),
+          const HijriCountdownCard(),
+          const SizedBox(height: 20),
+          const NamesEntryCard(),
+          const SizedBox(height: 20),
           const QiblaCard(),
           const SizedBox(height: 20),
           const FooterSection(),
@@ -359,6 +366,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   NextPrayerCard(snapshot: snapshot),
                   const SizedBox(height: 20),
                   const DailyVerseCard(),
+                  const SizedBox(height: 20),
+                  const HijriCountdownCard(),
+                  const SizedBox(height: 20),
+                  const NamesEntryCard(),
                   const SizedBox(height: 20),
                   const QiblaCard(),
                 ],
@@ -407,6 +418,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       NextPrayerCard(snapshot: snapshot),
                       const SizedBox(height: 24),
                       const DailyVerseCard(),
+                      const SizedBox(height: 24),
+                      const HijriCountdownCard(),
+                      const SizedBox(height: 24),
+                      const NamesEntryCard(),
                       const SizedBox(height: 24),
                       const QiblaCard(),
                       const SizedBox(height: 24),
@@ -1415,6 +1430,8 @@ class DailyVerseCard extends StatelessWidget {
     final language = LanguageState.current;
     final verse = verseOfTheDay();
     final translation = verse.translation(language);
+    final hadith = hadithOfTheDay();
+    final hadithTranslation = hadith.translation(language);
     return AdaptiveCard(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -1470,9 +1487,74 @@ class DailyVerseCard extends StatelessWidget {
               color: c.accent,
             ),
           ),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          // Hadith of the day (v2.3.0), under the verse like iOS.
+          Row(
+            children: [
+              Icon(Icons.forum, size: 20, color: c.accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  S.t('dailyHadith'),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: c.primary,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.share, size: 20, color: c.accent),
+                tooltip: S.t('share'),
+                onPressed: () =>
+                    _shareHadith(hadith, hadithTranslation, language),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            hadith.arabic,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              height: 1.6,
+              color: c.primary,
+            ),
+          ),
+          if (hadithTranslation != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              hadithTranslation,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: c.secondary),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            hadith.source(language),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: c.accent,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  void _shareHadith(
+      DailyHadith hadith, String? translation, AppLanguage language) {
+    final lines = <String>[
+      hadith.arabic,
+      if (translation != null) translation,
+      '${hadith.source(language)} — ${MosqueInfo.name}',
+    ];
+    _shareChannel.invokeMethod('share', {'text': lines.join('\n')});
   }
 
   /// Shares the verse as one block of text (v1.5, mirroring iOS):
@@ -1488,6 +1570,132 @@ class DailyVerseCard extends StatelessWidget {
       '${verse.reference(language)} — ${MosqueInfo.name}',
     ];
     _shareChannel.invokeMethod('share', {'text': lines.join('\n')});
+  }
+}
+
+/// Upcoming Islamic dates card (v2.3.0): the next event large with
+/// its countdown, then the following two — mirroring the iOS
+/// HijriCountdownCard.
+class HijriCountdownCard extends StatelessWidget {
+  const HijriCountdownCard({super.key});
+
+  String _relativeLabel(int days) => switch (days) {
+        0 => S.t('today'),
+        1 => S.t('tomorrow'),
+        _ => S.f('eventInDaysFmt', {'days': '$days'}),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final c = SurfaceColors.of(context);
+    final upcoming = HijriEvents.upcoming(DateTime.now(), count: 3);
+    final locale = LanguageState.current.name;
+    return AdaptiveCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.nightlight_round, size: 20, color: c.accent),
+              const SizedBox(width: 8),
+              Text(
+                S.t('upcomingEvents'),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: c.primary,
+                ),
+              ),
+            ],
+          ),
+          if (upcoming.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(
+                  child: Text(
+                    S.t(upcoming.first.event.key),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: c.primary,
+                    ),
+                  ),
+                ),
+                Text(
+                  _relativeLabel(upcoming.first.days),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: c.accent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('EEEE, MMMM d', locale).format(upcoming.first.date),
+              style: TextStyle(fontSize: 12, color: c.secondary),
+            ),
+            for (final item in upcoming.skip(1)) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      S.t(item.event.key),
+                      style: TextStyle(fontSize: 14, color: c.primary),
+                    ),
+                  ),
+                  Text(
+                    _relativeLabel(item.days),
+                    style: TextStyle(fontSize: 14, color: c.secondary),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Home entry row for the 99 Names list (v2.3.0).
+class NamesEntryCard extends StatelessWidget {
+  const NamesEntryCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = SurfaceColors.of(context);
+    return AdaptiveCard(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const NamesOfAllahPage()),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome, size: 20, color: c.accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                S.t('namesOfAllah'),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: c.primary,
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right, color: c.secondary),
+          ],
+        ),
+      ),
+    );
   }
 }
 

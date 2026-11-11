@@ -20,6 +20,7 @@ import AVFoundation
 import Foundation
 import MediaPlayer
 import UIKit
+import WidgetKit
 
 final class QuranPlayer: ObservableObject {
 
@@ -284,6 +285,7 @@ final class QuranPlayer: ObservableObject {
         isPlaying = false
         flushListenStats()
         persistPosition()
+        writeWidgetSnapshot(force: true)
         updateNowPlaying()
     }
 
@@ -678,6 +680,31 @@ final class QuranPlayer: ObservableObject {
     private func persistPosition() {
         defaults.set(currentTime, forKey: Keys.lastPosition)
         lastSavedSecond = Int(currentTime)
+        writeWidgetSnapshot(force: false)
+    }
+
+    // MARK: - Continue Listening widget snapshot (v2.3.0)
+
+    private var lastWidgetSnapshotReload = Date.distantPast
+
+    /// Mirrors the session into the App Group suite for the
+    /// Continue Listening widget (the extension cannot read
+    /// UserDefaults.standard). The suite write is cheap and rides
+    /// along with every position save; timeline reloads are
+    /// throttled to one per 30 seconds, with pause forcing one.
+    private func writeWidgetSnapshot(force: Bool) {
+        guard let surah = currentSurah else { return }
+        let suite = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+        suite.set(surah.english, forKey: "quran.widget.surah")
+        suite.set(surah.arabic, forKey: "quran.widget.arabic")
+        suite.set(currentReciter?.name ?? "", forKey: "quran.widget.reciter")
+        suite.set(currentTime, forKey: "quran.widget.position")
+        suite.set(duration, forKey: "quran.widget.duration")
+        suite.set(true, forKey: "quran.widget.has")
+        if force || Date.now.timeIntervalSince(lastWidgetSnapshotReload) > 30 {
+            lastWidgetSnapshotReload = .now
+            WidgetCenter.shared.reloadTimelines(ofKind: "ContinueListeningWidget")
+        }
     }
 
     // MARK: - Observers & system integration

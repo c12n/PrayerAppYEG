@@ -10,6 +10,7 @@ import AVFoundation
 import CoreMotion
 import SwiftUI
 import UniformTypeIdentifiers
+import UserNotifications
 import UIKit
 import WidgetKit
 
@@ -79,6 +80,10 @@ struct ContentView: View {
     /// What's New sheet (v1.8.0): shown once after an update, never
     /// on a fresh install.
     @State private var showWhatsNew = false
+    /// Welcome sheet (v2.3.0): shown once on first install.
+    @State private var showWelcome = false
+    /// The 99 Names sheet (v2.3.0).
+    @State private var showNames = false
     /// In-app update reminder (v1.7.0): checks the version note hosted
     /// in the c12nfeather source and prompts toward TestFlight when a
     /// newer public build than the installed one is advertised.
@@ -130,6 +135,12 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showWhatsNew) {
                 WhatsNewView()
+            }
+            .sheet(isPresented: $showWelcome) {
+                WhatsNewView(welcome: true)
+            }
+            .sheet(isPresented: $showNames) {
+                NamesOfAllahView()
             }
             .fullScreenCover(isPresented: $showStandBy) {
                 StandByView(snapshot: snapshot)
@@ -184,6 +195,13 @@ struct ContentView: View {
         }
         .fullScreenCover(isPresented: $showNowPlayingFull) {
             NowPlayingView()
+        }
+        .onOpenURL { url in
+            // Continue Listening widget (v2.3.0): resume the restored
+            // Quran session and open the full player.
+            guard url.scheme == "alrashid", url.host == "resume-quran" else { return }
+            quranPlayer.resume()
+            showNowPlayingFull = true
         }
     }
 
@@ -281,6 +299,10 @@ struct ContentView: View {
                     phoneTab = .quran
                 }
                 DailyVerseCard()
+                HijriCountdownCard()
+                DuoChip(title: L10n.t("namesOfAllah"), detail: "") {
+                    showNames = true
+                }
                 QiblaCard()
                 FooterView()
             }
@@ -344,6 +366,10 @@ struct ContentView: View {
                     DuoNowHeader(today: today, now: now)
                     NextPrayerCard(snapshot: snapshot)
                     DailyVerseCard()
+                    HijriCountdownCard()
+                    DuoChip(title: L10n.t("namesOfAllah"), detail: "") {
+                        showNames = true
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -436,8 +462,12 @@ DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),
                     }
                     NextPrayerCard(snapshot: snapshot)
                     DailyVerseCard()
+                    HijriCountdownCard()
                     DuoChip(title: "Quran", detail: "Listen") {
                         showQuran = true
+                    }
+                    DuoChip(title: L10n.t("namesOfAllah"), detail: "") {
+                        showNames = true
                     }
                     FooterView()
                 }
@@ -525,14 +555,16 @@ DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),
     }
 
     /// Shows the What's New sheet once per version: a fresh install
-    /// just records the current version; an update to a version with
-    /// bundled notes presents the sheet and records it as seen.
+    /// gets the one-time welcome sheet (v2.3.0); an update to a
+    /// version with bundled notes presents the sheet and records it
+    /// as seen.
     private func checkWhatsNew() {
         let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         let key = "whatsnew.lastSeenVersion"
         let lastSeen = UserDefaults.standard.string(forKey: key)
         if lastSeen == nil {
             UserDefaults.standard.set(current, forKey: key)
+            showWelcome = true
         } else if lastSeen != current, WhatsNewView.entries(for: current) != nil {
             UserDefaults.standard.set(current, forKey: key)
             showWhatsNew = true
@@ -1459,6 +1491,7 @@ private struct SettingsView: View {
                 prayerAlertsSection
                 soundSection
                 prayerSoundsSection
+                alertHealthSection
                 privacySection
                 backupSection
                 resetSection
@@ -1957,6 +1990,20 @@ private struct SettingsView: View {
             Text(L10n.t("prayerSounds"))
         } footer: {
             Text(L10n.t("prayerSoundsFooter"))
+        }
+    }
+
+    /// Alerts health check (v2.3.0): one row into the full check —
+    /// permission, scheduled alerts, and a real test alert.
+    private var alertHealthSection: some View {
+        Section {
+            NavigationLink {
+                AlertHealthView()
+            } label: {
+                Label(L10n.t("alertHealth"), systemImage: "waveform.path.ecg")
+            }
+        } footer: {
+            Text(L10n.t("alertHealthFooter"))
         }
     }
 
@@ -2611,6 +2658,7 @@ private struct DailyVerseCard: View {
     var body: some View {
         let language = AppLanguage.current
         let verse = DailyVerses.verse(for: .now)
+        let hadith = DailyHadiths.hadith(for: .now)
         VStack(spacing: 10) {
             HStack {
                 Label(L10n.t("dailyVerse"), systemImage: "book.closed.fill")
@@ -2645,6 +2693,42 @@ private struct DailyVerseCard: View {
             .accessibilityLabel(
                 "\(L10n.t("dailyVerse")): \(verse.arabic) \(verse.translation(for: language) ?? "") \(verse.reference(for: language))"
             )
+            Divider()
+            // Hadith of the day (v2.3.0): same rotation idea as the
+            // verse, offset so the pairing varies.
+            VStack(spacing: 10) {
+                HStack {
+                    Label(L10n.t("dailyHadith"), systemImage: "text.bubble.fill")
+                        .font(.headline)
+                        .foregroundStyle(Theme.onSurface)
+                    Spacer()
+                    ShareLink(item: shareText(hadith, language)) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.adaptiveGold)
+                            .frame(width: 32, height: 32)
+                    }
+                    .accessibilityLabel(L10n.t("share"))
+                }
+                Text(hadith.arabic)
+                    .font(.title3.weight(.semibold))
+                    .lineSpacing(6)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.onSurface)
+                if let translation = hadith.translation(for: language) {
+                    Text(translation)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                }
+                Text(hadith.source(for: language))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.adaptiveGold)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "\(L10n.t("dailyHadith")): \(hadith.arabic) \(hadith.translation(for: language) ?? "") \(hadith.source(for: language))"
+            )
         }
         .padding(18)
         .frame(maxWidth: .infinity)
@@ -2659,6 +2743,237 @@ private struct DailyVerseCard: View {
         }
         lines.append("\(verse.reference(for: language)) — \(MosqueInfo.name)")
         return lines.joined(separator: "\n")
+    }
+
+    /// The hadith as one shareable block of text (v2.3.0).
+    private func shareText(_ hadith: DailyHadith, _ language: AppLanguage) -> String {
+        var lines = [hadith.arabic]
+        if let translation = hadith.translation(for: language) {
+            lines.append(translation)
+        }
+        lines.append("\(hadith.source(for: language)) — \(MosqueInfo.name)")
+        return lines.joined(separator: "\n")
+    }
+}
+
+// MARK: - Upcoming Islamic dates card (v2.3.0)
+
+/// Next Islamic dates with day countdowns, from the same Umm
+/// al-Qura conversion (and Hijri offset) as the header date.
+private struct HijriCountdownCard: View {
+    var body: some View {
+        let upcoming = HijriEvents.upcoming(
+            timeZone: PrayerProvider.standard.calendar.timeZone, count: 3)
+        VStack(alignment: .leading, spacing: 10) {
+            Label(L10n.t("upcomingEvents"), systemImage: "moon.stars.fill")
+                .font(.headline)
+                .foregroundStyle(Theme.onSurface)
+            if let next = upcoming.first {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(L10n.t(next.event.key))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Theme.onSurface)
+                    Spacer()
+                    Text(relativeLabel(days: next.days))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Theme.adaptiveGold)
+                }
+                Text(gregorianLabel(next.date))
+                    .font(.caption)
+                    .foregroundStyle(Theme.onSurfaceSecondary)
+            }
+            ForEach(upcoming.dropFirst(), id: \.event.key) { item in
+                HStack(spacing: 8) {
+                    Text(L10n.t(item.event.key))
+                        .foregroundStyle(Theme.onSurface)
+                    Spacer()
+                    Text(relativeLabel(days: item.days))
+                        .foregroundStyle(Theme.onSurfaceSecondary)
+                }
+                .font(.subheadline)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .adaptiveCard(cornerRadius: 26)
+    }
+
+    private func relativeLabel(days: Int) -> String {
+        switch days {
+        case 0: return L10n.t("today")
+        case 1: return L10n.t("tomorrow")
+        default: return L10n.f("eventInDaysFmt", days)
+        }
+    }
+
+    private func gregorianLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLanguage.current.locale
+        formatter.timeZone = PrayerProvider.standard.calendar.timeZone
+        formatter.setLocalizedDateFormatFromTemplate("EEEEMMMMd")
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - The 99 Names of Allah (v2.3.0)
+
+struct NamesOfAllahView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private var filtered: [(index: Int, name: AllahName)] {
+        NamesOfAllah.all.enumerated().filter { _, name in
+            query.isEmpty
+                || name.transliteration.localizedCaseInsensitiveContains(query)
+                || name.english.localizedCaseInsensitiveContains(query)
+                || name.arabic.contains(query)
+        }.map { (index: $0.offset, name: $0.element) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List(filtered, id: \.index) { item in
+                HStack(spacing: 14) {
+                    Text("\(item.index + 1)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.adaptiveGold)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.name.transliteration)
+                            .font(.headline)
+                        Text(item.name.meaning(for: AppLanguage.current))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(item.name.arabic)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(Theme.adaptiveGold)
+                }
+                .padding(.vertical, 4)
+            }
+            .searchable(text: $query, prompt: L10n.t("namesSearch"))
+            .navigationTitle(L10n.t("namesOfAllah"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.t("done")) { dismiss() }
+                }
+            }
+        }
+        .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+        .environment(\.locale, AppLanguage.current.locale)
+    }
+}
+
+// MARK: - Alerts health check (v2.3.0)
+
+/// Verifies the alert pipeline end to end: system permission, the
+/// number of scheduled alerts and when the next one fires, and
+/// today's times. Also sends a real test alert (5 seconds out, the
+/// sound the next prayer will use) so the whole path — permission,
+/// scheduling, sound — is proven, not assumed.
+private struct AlertHealthView: View {
+    @Environment(\.openURL) private var openURL
+    @State private var authorized: Bool?
+    @State private var pendingCount = 0
+    @State private var nextFire: Date?
+    @State private var testSent = false
+
+    private static let alertPrefixes = ["adhan.", "reminder.", "jumuah.", "fasting."]
+
+    var body: some View {
+        Form {
+            Section {
+                if authorized == true {
+                    Label(L10n.t("healthNotifOn"), systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else if authorized == false {
+                    Label(L10n.t("healthNotifOff"), systemImage: "xmark.circle.fill")
+                        .foregroundStyle(.red)
+                    Text(L10n.t("healthNotifOffBody"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button(L10n.t("healthOpenSettings")) {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
+                }
+                if pendingCount > 0, let nextFire {
+                    Text(L10n.f("healthScheduledFmt", pendingCount,
+                                PrayerFormat.time(nextFire)))
+                } else if authorized == true {
+                    Text(L10n.t("healthNoScheduled"))
+                }
+                Label(L10n.t("healthTimesReady"), systemImage: "clock.badge.checkmark")
+                Button(L10n.t("healthRecheck")) {
+                    Task { await reload() }
+                }
+            }
+            Section {
+                Button {
+                    Task { await sendTestAlert() }
+                } label: {
+                    Label(L10n.t("sendTestAlert"), systemImage: "bell.and.waves.left.and.right.fill")
+                }
+                .disabled(authorized != true)
+                if testSent {
+                    Text(L10n.t("testAlertSent"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } footer: {
+                Text(L10n.t("testAlertFooter"))
+            }
+        }
+        .navigationTitle(L10n.t("alertHealth"))
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await reload() }
+        .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+        .environment(\.locale, AppLanguage.current.locale)
+    }
+
+    private func reload() async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        authorized = settings.authorizationStatus == .authorized
+            || settings.authorizationStatus == .provisional
+            || settings.authorizationStatus == .ephemeral
+        let pending = await center.pendingNotificationRequests()
+        let ours = pending.filter { request in
+            Self.alertPrefixes.contains { request.identifier.hasPrefix($0) }
+        }
+        pendingCount = ours.count
+        nextFire = ours.compactMap {
+            ($0.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()
+        }.min()
+    }
+
+    /// Fires a real notification in 5 seconds with the sound the
+    /// next prayer alert will use. Its "test." identifier is outside
+    /// every prefix the rescheduler cancels, so it cannot disturb
+    /// the real schedule (and it fires once, then is gone).
+    private func sendTestAlert() async {
+        let provider = PrayerProvider.standard
+        let now = Date.now
+        let nextPrayer = provider.computeDay(for: now).slots
+            .first(where: { $0.adhan > now })?.prayer ?? .fajr
+        let content = UNMutableNotificationContent()
+        content.title = L10n.t("testAlertTitle")
+        content.body = L10n.t("testAlertBody")
+        content.sound = PrayerSoundSettings.effectiveSound(for: nextPrayer)
+            .notificationSound
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "test.\(Int(now.timeIntervalSince1970))",
+            content: content, trigger: trigger)
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            testSent = true
+        } catch {
+            testSent = false
+        }
     }
 }
 
@@ -3135,8 +3450,28 @@ final class UpdateChecker: ObservableObject {
 struct WhatsNewView: View {
     @Environment(\.dismiss) private var dismiss
 
+    /// First-install variant (v2.3.0): a short tour instead of
+    /// per-version change notes.
+    var welcome = false
+
+    static let welcomeEntries: [(icon: String, key: String)] = [
+        ("sunrise.fill", "wnWelcome1"),
+        ("bell.and.waves.left.and.right.fill", "wnWelcome2"),
+        ("paintpalette.fill", "wnWelcome3"),
+        ("book.fill", "wnWelcome4"),
+    ]
+
     static func entries(for version: String) -> [(icon: String, key: String)]? {
         switch version {
+        case "2.3.0":
+            return [
+                ("bell.badge.fill", "wnTest230"),
+                ("checkmark.shield.fill", "wnHealth230"),
+                ("text.bubble.fill", "wnHadith230"),
+                ("sparkles", "wnNames230"),
+                ("moon.stars.fill", "wnHijri230"),
+                ("play.rectangle.fill", "wnWidget230"),
+            ]
         case "2.2.0":
             return [
                 ("square.grid.2x2.fill", "wnTabs220"),
@@ -3171,7 +3506,7 @@ struct WhatsNewView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         NavigationStack {
             List {
-                ForEach(Self.entries(for: version) ?? [], id: \.key) { entry in
+                ForEach(welcome ? Self.welcomeEntries : Self.entries(for: version) ?? [], id: \.key) { entry in
                     Label {
                         Text(L10n.t(entry.key))
                     } icon: {
@@ -3181,7 +3516,7 @@ struct WhatsNewView: View {
                     .padding(.vertical, 4)
                 }
             }
-            .navigationTitle(L10n.t("whatsNew"))
+            .navigationTitle(welcome ? L10n.t("welcomeTitle") : L10n.t("whatsNew"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t("continue")) { dismiss() }

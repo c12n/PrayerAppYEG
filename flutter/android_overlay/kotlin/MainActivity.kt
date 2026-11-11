@@ -1,14 +1,20 @@
 package com.c12n.alrashidwidget
 
 import android.Manifest
+import android.app.AlarmManager
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -70,6 +76,49 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                         result.success(null)
                     }
                     "requestPermission" -> requestNotificationPermission(result)
+                    // Alerts health check (v2.3.0): status snapshot,
+                    // an immediate test alert on the real channel,
+                    // and the two system screens that fix the
+                    // Android-only failure modes (exact alarms,
+                    // battery optimization).
+                    "alertStatus" -> result.success(alertStatus())
+                    "testAlert" -> {
+                        AdhanNotifier.post(
+                            this,
+                            AlertItem(
+                                id = (System.currentTimeMillis() / 1000).toInt(),
+                                epochMillis = System.currentTimeMillis(),
+                                title = call.argument<String>("title") ?: "",
+                                body = call.argument<String>("body") ?: "",
+                                sound = call.argument<String>("sound") ?: "default"
+                            )
+                        )
+                        result.success(null)
+                    }
+                    "openExactAlarmSettings" -> {
+                        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            Intent(
+                                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                Uri.parse("package:$packageName")
+                            )
+                        } else {
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:$packageName")
+                            )
+                        }
+                        startActivity(intent)
+                        result.success(null)
+                    }
+                    "openBatterySettings" -> {
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:$packageName")
+                            )
+                        )
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -109,6 +158,33 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// Alerts health check snapshot (v2.3.0): everything the Dart
+    /// health page shows, read live from the system. nextEpochMillis
+    /// is 0 when nothing is armed.
+    private fun alertStatus(): Map<String, Any> {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationsOn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+        } else {
+            nm.areNotificationsEnabled()
+        }
+        val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val exactAlarms = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            am.canScheduleExactAlarms()
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val batteryExempt = pm.isIgnoringBatteryOptimizations(packageName)
+        val now = System.currentTimeMillis()
+        val pending = AlertStore.load(this).filter { it.epochMillis > now }
+        return mapOf(
+            "notificationsOn" to notificationsOn,
+            "exactAlarms" to exactAlarms,
+            "batteryExempt" to batteryExempt,
+            "scheduledCount" to pending.size,
+            "nextEpochMillis" to (pending.minByOrNull { it.epochMillis }?.epochMillis ?: 0L)
+        )
     }
 
     /// POST_NOTIFICATIONS runtime permission (Android 13+). The Dart

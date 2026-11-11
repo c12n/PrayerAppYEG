@@ -72,6 +72,12 @@ object WidgetPrefs {
     fun minimalMode(context: Context): Boolean =
         prefs(context).getBoolean("flutter.appearance.minimalMode", false)
 
+    /// Iqamah-first countdown (Settings → Iqamah countdown, default
+    /// on): in the window between a prayer's Adhan and its Iqamah
+    /// the hero counts down to the Iqamah (v2.3.0, iOS parity).
+    fun iqamahFirst(context: Context): Boolean =
+        prefs(context).getBoolean("flutter.countdown.iqamahFirst", true)
+
     private fun rawHex(context: Context, separateKey: String, appKey: String, default: Long): Long {
         val key = if (widgetColorSeparate(context)) separateKey else appKey
         val v = prefs(context).getLong(key, -1L)
@@ -211,6 +217,14 @@ object WidgetStrings {
         else -> "Iqamah"
     }
 
+    /// Hero caption while the iqamah-first phase runs (v2.3.0):
+    /// the iOS small widget shows its "Iqamah" string uppercased.
+    fun iqamahCaption(language: String): String = when (language) {
+        "ar" -> "الإقامة"
+        "fr" -> "IQAMAH"
+        else -> "IQAMAH"
+    }
+
     fun at(language: String): String = when (language) {
         "ar" -> "في"; "fr" -> "à"; else -> "at"
     }
@@ -270,7 +284,14 @@ object WidgetData {
         val rows: List<Row>,
         val isFriday: Boolean,
         /// Epoch millis of the next Adhan — the rollover alarm target.
-        val nextAdhanMillis: Long
+        val nextAdhanMillis: Long,
+        /// Progress through the current countdown interval, 0..1
+        /// (v2.3.0, iOS parity): previous Adhan → next Adhan, or
+        /// Adhan → Iqamah while the iqamah-first phase runs.
+        val progress: Double = 0.0,
+        /// Non-null while the iqamah-first phase runs: replaces the
+        /// "next prayer" caption (v2.3.0).
+        val heroCaption: String? = null
     )
 
     private fun timeFmt(language: String) =
@@ -356,23 +377,82 @@ object WidgetData {
         }
 
         val isJumuahNext = nextDay.isFriday && nextName == "Dhuhr"
-        // Ramadan (v1.9.0): widgets label Maghrib "Iftar" and Fajr
-        // "Suhoor" in the hero line during Hijri month 9 (with the
-        // user's Hijri offset applied, like the date line below).
-        val ramadanGregorian =
-            nextDay.date.plusDays(WidgetPrefs.hijriOffsetDays(context).toLong())
-        val isRamadan = UmmAlQuraCalendar.hijri(
-            ramadanGregorian.year, ramadanGregorian.monthValue,
-            ramadanGregorian.dayOfMonth
-        )?.month == 9
-        val displayName =
-            if (isJumuahNext) WidgetStrings.jumuah(language)
-            else if (isRamadan && !WidgetPrefs.minimalMode(context) && nextName == "Maghrib") WidgetStrings.iftar(language)
-            else if (isRamadan && !WidgetPrefs.minimalMode(context) && nextName == "Fajr") WidgetStrings.suhoor(language)
-            else WidgetStrings.prayerName(nextName, language)
         val nextAdhan = nextDay.adhan(nextName)
         val nextIqamah = nextDay.iqamah(nextName)
         val iqamahLabel = WidgetStrings.iqamahLabel(isJumuahNext, language)
+
+        // Hero naming (v1.9.0 Ramadan labels, factored out in
+        // v2.3.0 so the iqamah-phase hero names itself the same
+        // way): Jumu'ah on Friday, Iftar/Suhoor in Ramadan unless
+        // Minimal Mode is on.
+        fun displayNameFor(day: DaySchedule, name: String): String {
+            val ramadanGregorian =
+                day.date.plusDays(WidgetPrefs.hijriOffsetDays(context).toLong())
+            val isRamadan = UmmAlQuraCalendar.hijri(
+                ramadanGregorian.year, ramadanGregorian.monthValue,
+                ramadanGregorian.dayOfMonth
+            )?.month == 9
+            return when {
+                day.isFriday && name == "Dhuhr" -> WidgetStrings.jumuah(language)
+                isRamadan && !WidgetPrefs.minimalMode(context) && name == "Maghrib" ->
+                    WidgetStrings.iftar(language)
+                isRamadan && !WidgetPrefs.minimalMode(context) && name == "Fajr" ->
+                    WidgetStrings.suhoor(language)
+                else -> WidgetStrings.prayerName(name, language)
+            }
+        }
+
+        // Iqamah-first phase (v2.3.0, iOS parity): between a
+        // prayer's Adhan and its Iqamah, the hero counts down to
+        // the Iqamah instead of the next Adhan. Same gates as iOS —
+        // the iqamahFirst setting on, Minimal Mode off. Yesterday
+        // is checked too, matching the iOS provider.
+        var phaseDay: DaySchedule? = null
+        var phaseName: String? = null
+        if (!WidgetPrefs.minimalMode(context) && WidgetPrefs.iqamahFirst(context)) {
+            outer@ for (day in days.subList(0, 2)) {
+                for (name in prayerNames) {
+                    val iqamah = day.iqamah(name) ?: continue
+                    if (!day.adhan(name).isAfter(now) && now.isBefore(iqamah)) {
+                        phaseDay = day
+                        phaseName = name
+                        break@outer
+                    }
+                }
+            }
+        }
+        val inPhase = phaseName != null
+        val heroDay = phaseDay ?: nextDay
+        val heroName = phaseName ?: nextName
+        val heroTarget = if (inPhase) heroDay.iqamah(heroName)!! else nextAdhan
+        val heroIqamahText = if (inPhase) null else nextIqamah?.let {
+            "$iqamahLabel ${WidgetStrings.at(language)} ${formatTime(it, language)}"
+        }
+
+        // Progress through the current interval (v2.3.0): Adhan →
+        // Iqamah in the phase; otherwise previous Adhan → next
+        // Adhan, the start falling back to next − 1h when there is
+        // no previous boundary (mirrors iOS's progressRange).
+        fun fraction(start: ZonedDateTime, end: ZonedDateTime): Double {
+            val total = Duration.between(start, end).toMillis()
+            if (total <= 0) return 0.0
+            val elapsed = Duration.between(start, now).toMillis()
+            return (elapsed.toDouble() / total.toDouble()).coerceIn(0.0, 1.0)
+        }
+        val progress = if (inPhase) {
+            fraction(heroDay.adhan(heroName), heroTarget)
+        } else {
+            var prev: ZonedDateTime? = null
+            for (day in days) {
+                for (name in rotation) {
+                    val a = day.adhan(name)
+                    if (!a.isAfter(now) && (prev == null || a.isAfter(prev))) prev = a
+                }
+            }
+            val start = if (prev != null && prev.isBefore(nextAdhan)) prev
+                        else nextAdhan.minusHours(1)
+            fraction(start, nextAdhan)
+        }
 
         val rows = allNames.map { name ->
             val jumuah = nextDay.isFriday && name == "Dhuhr"
@@ -397,16 +477,16 @@ object WidgetData {
                 hijriGregorian.dayOfMonth, language
             ),
             dateText = dateFmt(language).format(nextDay.date),
-            nextName = displayName,
-            nextTime = formatTime(nextAdhan, language),
-            nextIqamahText = nextIqamah?.let {
-                "$iqamahLabel ${WidgetStrings.at(language)} ${formatTime(it, language)}"
-            },
-            countdownText = countdownText(now, nextAdhan, language),
+            nextName = displayNameFor(heroDay, heroName),
+            nextTime = formatTime(heroTarget, language),
+            nextIqamahText = heroIqamahText,
+            countdownText = countdownText(now, heroTarget, language),
             showingTomorrow = nextDay.date.isAfter(today),
             rows = rows,
             isFriday = nextDay.isFriday,
-            nextAdhanMillis = nextAdhan.toInstant().toEpochMilli()
+            nextAdhanMillis = nextAdhan.toInstant().toEpochMilli(),
+            progress = progress,
+            heroCaption = if (inPhase) WidgetStrings.iqamahCaption(language) else null
         )
     }
 
@@ -504,12 +584,14 @@ class NextPrayerWidgetProvider : BaseWidgetProvider() {
     override fun buildViews(context: Context, model: WidgetData.Model): RemoteViews {
         val views = RemoteViews(context.packageName, layoutId())
         views.setTextViewText(R.id.widget_caption,
-            WidgetStrings.nextCaption(model.showingTomorrow, true, WidgetPrefs.language(context)))
+            model.heroCaption ?: WidgetStrings.nextCaption(model.showingTomorrow, true, WidgetPrefs.language(context)))
         views.setTextViewText(R.id.widget_date, model.dateText)
         views.setTextViewText(R.id.widget_next_name, model.nextName)
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_iqamah, model.nextIqamahText ?: "")
+        views.setProgressBar(R.id.widget_progress, 1000,
+            (model.progress * 1000).toInt(), false)
         paintWidget(context, views,
             accentIds = intArrayOf(R.id.widget_caption, R.id.widget_countdown),
             textIds = intArrayOf(R.id.widget_next_name),
@@ -533,6 +615,8 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
             "${model.nextName} · ${model.nextTime}")
         views.setTextViewText(R.id.widget_header_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_date, model.dateText)
+        views.setProgressBar(R.id.widget_progress, 1000,
+            (model.progress * 1000).toInt(), false)
         paintWidget(context, views,
             accentIds = intArrayOf(R.id.widget_header_countdown),
             textIds = intArrayOf(R.id.widget_header_next),
@@ -619,11 +703,13 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
         val views = RemoteViews(context.packageName, layoutId())
         views.setTextViewText(R.id.widget_hijri, "${model.dateText} · ${model.hijri}")
         views.setTextViewText(R.id.widget_next_label,
-            WidgetStrings.nextCaption(model.showingTomorrow, false, WidgetPrefs.language(context)))
+            model.heroCaption ?: WidgetStrings.nextCaption(model.showingTomorrow, false, WidgetPrefs.language(context)))
         views.setTextViewText(R.id.widget_next_name, model.nextName)
         views.setTextViewText(R.id.widget_next_time, model.nextTime)
         views.setTextViewText(R.id.widget_countdown, model.countdownText)
         views.setTextViewText(R.id.widget_iqamah, model.nextIqamahText ?: "")
+        views.setProgressBar(R.id.widget_progress, 1000,
+            (model.progress * 1000).toInt(), false)
         paintWidget(context, views,
             accentIds = intArrayOf(R.id.widget_countdown, R.id.widget_next_label,
                 R.id.widget_mosque),

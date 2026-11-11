@@ -666,10 +666,137 @@ struct PrayerWidget: Widget {
     }
 }
 
+// MARK: - Continue Listening widget (v2.3.0)
+
+/// Reads the session snapshot the app mirrors into the App Group
+/// (QuranPlayer.writeWidgetSnapshot). Tapping opens the app via
+/// the alrashid://resume-quran deep link, which resumes playback
+/// and presents the full player.
+struct ContinueListeningEntry: TimelineEntry {
+    let date: Date
+    let has: Bool
+    let surah: String
+    let arabic: String
+    let reciter: String
+    let fraction: Double
+}
+
+struct ContinueListeningProvider: TimelineProvider {
+    private func readEntry() -> ContinueListeningEntry {
+        let suite = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier)
+        let has = suite?.bool(forKey: "quran.widget.has") ?? false
+        let position = suite?.double(forKey: "quran.widget.position") ?? 0
+        let duration = suite?.double(forKey: "quran.widget.duration") ?? 0
+        return ContinueListeningEntry(
+            date: .now,
+            has: has,
+            surah: suite?.string(forKey: "quran.widget.surah") ?? "",
+            arabic: suite?.string(forKey: "quran.widget.arabic") ?? "",
+            reciter: suite?.string(forKey: "quran.widget.reciter") ?? "",
+            fraction: duration > 0 ? min(1, max(0, position / duration)) : 0)
+    }
+
+    func placeholder(in context: Context) -> ContinueListeningEntry {
+        ContinueListeningEntry(date: .now, has: true, surah: "An-Nisaa",
+                               arabic: "النساء",
+                               reciter: "Mishary Rashid Alafasy", fraction: 0.35)
+    }
+
+    func getSnapshot(in context: Context,
+                     completion: @escaping (ContinueListeningEntry) -> Void) {
+        completion(readEntry())
+    }
+
+    func getTimeline(in context: Context,
+                     completion: @escaping (Timeline<ContinueListeningEntry>) -> Void) {
+        // Reloads are driven by the app (WidgetCenter.reloadTimelines
+        // on pause / position saves), so the policy is .never.
+        completion(Timeline(entries: [readEntry()], policy: .never))
+    }
+}
+
+struct ContinueListeningWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: ContinueListeningEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(entry.arabic.isEmpty ? "﷽" : entry.arabic)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(Color(red: 0.04, green: 0.24, blue: 0.18))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        LinearGradient(colors: [Color(red: 0.93, green: 0.80, blue: 0.47),
+                                                Color(red: 0.79, green: 0.64, blue: 0.15)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing),
+                        in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(L10n.t("continueListening"))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color(red: 0.93, green: 0.80, blue: 0.47))
+                    Text(entry.has ? entry.surah : "Quran")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "play.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.white)
+            }
+            if entry.has {
+                if !entry.reciter.isEmpty {
+                    Text(entry.reciter)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(1)
+                }
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.22))
+                        Capsule()
+                            .fill(Color(red: 0.93, green: 0.80, blue: 0.47))
+                            .frame(width: proxy.size.width * entry.fraction)
+                    }
+                }
+                .frame(height: 3)
+                Text(L10n.t("tapToResume"))
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .containerBackground(for: .widget) {
+            LinearGradient(colors: [Color(red: 0.05, green: 0.30, blue: 0.22),
+                                    Color(red: 0.03, green: 0.20, blue: 0.15)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+        .widgetURL(URL(string: "alrashid://resume-quran"))
+    }
+}
+
+struct ContinueListeningWidget: Widget {
+    let kind: String = "ContinueListeningWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: ContinueListeningProvider()) { entry in
+            ContinueListeningWidgetView(entry: entry)
+        }
+        .configurationDisplayName(L10n.t("continueListening"))
+        .description(L10n.t("tapToResume"))
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
 @main
 struct PrayerWidgetBundle: WidgetBundle {
     var body: some Widget {
         PrayerWidget()
+        ContinueListeningWidget()
         PrayerLiveActivity()
         if #available(iOS 18.0, *) {
             SilenceNextAlertControl()

@@ -240,3 +240,74 @@ DailyVerse verseOfTheDay([DateTime? now]) {
       .inDays;
   return dailyVerses[days % dailyVerses.length];
 }
+
+// Hadith of the day (v2.3.0): an embedded list mirroring the iOS
+// app's DailyHadiths — keep the two lists in sync.
+
+class DailyHadith {
+  final String arabic;
+  final String english;
+  final String french;
+  final String sourceEnglish;
+  final String sourceArabic;
+
+  const DailyHadith({
+    required this.arabic,
+    required this.english,
+    required this.french,
+    required this.sourceEnglish,
+    required this.sourceArabic,
+  });
+
+  String? translation(AppLanguage language) => switch (language) {
+        AppLanguage.en => english,
+        AppLanguage.fr => french,
+        AppLanguage.ar => null,
+      };
+
+  String source(AppLanguage language) =>
+      language == AppLanguage.ar ? sourceArabic : sourceEnglish;
+}
+
+const List<DailyHadith> dailyHadiths = [
+  DailyHadith(arabic: 'إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَىٰ', english: 'Actions are but by intentions, and every person shall have only that which he intended.', french: 'Les actes ne valent que par leurs intentions, et chacun n\'aura que ce qu\'il a eu l\'intention de faire.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ', english: 'The most beloved deeds to Allah are the most consistent, even if they are small.', french: 'Les œuvres les plus aimées d\'Allah sont les plus constantes, même si elles sont petites.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'الطُّهُورُ شَطْرُ الإِيمَانِ', english: 'Purity is half of faith.', french: 'La pureté est la moitié de la foi.', sourceEnglish: 'Muslim', sourceArabic: 'مسلم'),
+  DailyHadith(arabic: 'خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ', english: 'The best among you are those who learn the Quran and teach it.', french: 'Les meilleurs d\'entre vous sont ceux qui apprennent le Coran et l\'enseignent.', sourceEnglish: 'Bukhari', sourceArabic: 'البخاري'),
+  DailyHadith(arabic: 'يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا', english: 'Make things easy and do not make them difficult; give glad tidings and do not repel people.', french: 'Facilitez les choses et ne les rendez pas difficiles ; annoncez la bonne nouvelle et ne repoussez pas les gens.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'لَا يَرْحَمُ اللَّهُ مَنْ لَا يَرْحَمُ النَّاسَ', english: 'Allah will not show mercy to one who does not show mercy to people.', french: 'Allah ne fera pas miséricorde à celui qui ne fait pas miséricorde aux gens.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ', english: 'The strong is not the one who overcomes people by wrestling; the strong is the one who controls himself in anger.', french: 'Le fort n\'est pas celui qui terrasse les gens à la lutte ; le fort est celui qui se maîtrise dans la colère.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'لَا يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لِأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ', english: 'None of you truly believes until he loves for his brother what he loves for himself.', french: 'Aucun de vous ne croit vraiment tant qu\'il n\'aime pas pour son frère ce qu\'il aime pour lui-même.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ', english: 'Whoever believes in Allah and the Last Day, let him speak good or remain silent.', french: 'Que celui qui croit en Allah et au Jour dernier dise du bien ou se taise.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'أَحَبُّ الْبِلَادِ إِلَى اللَّهِ مَسَاجِدُهَا', english: 'The most beloved places to Allah are the mosques.', french: 'Les lieux les plus aimés d\'Allah sont les mosquées.', sourceEnglish: 'Muslim', sourceArabic: 'مسلم'),
+  DailyHadith(arabic: 'الْيَدُ الْعُلْيَا خَيْرٌ مِنَ الْيَدِ السُّفْلَىٰ', english: 'The upper hand is better than the lower hand.', french: 'La main qui donne est meilleure que la main qui reçoit.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'أَطْعِمُوا الْجَائِعَ، وَعُودُوا الْمَرِيضَ، وَفُكُّوا الْعَانِيَ', english: 'Feed the hungry, visit the sick, and free the captive.', french: 'Nourrissez l\'affamé, visitez le malade et libérez le captif.', sourceEnglish: 'Bukhari', sourceArabic: 'البخاري'),
+  DailyHadith(arabic: 'إِنَّ اللَّهَ رَفِيقٌ يُحِبُّ الرِّفْقَ فِي الْأَمْرِ كُلِّهِ', english: 'Allah is Gentle and loves gentleness in all things.', french: 'Allah est Doux et Il aime la douceur en toute chose.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'خَيْرُكُمْ خَيْرُكُمْ لِأَهْلِهِ', english: 'The best of you is the one who is best to his family.', french: 'Le meilleur d\'entre vous est celui qui est le meilleur envers sa famille.', sourceEnglish: 'Tirmidhi', sourceArabic: 'الترمذي'),
+  DailyHadith(arabic: 'الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ', english: 'A Muslim is one from whose tongue and hand other Muslims are safe.', french: 'Le musulman est celui dont les autres musulmans sont à l\'abri de la langue et de la main.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'لَا تَحَاسَدُوا وَلَا تَبَاغَضُوا، وَكُونُوا عِبَادَ اللَّهِ إِخْوَانًا', english: 'Do not envy one another and do not hate one another; be, O servants of Allah, brothers.', french: 'Ne vous enviez pas et ne vous haïssez pas ; soyez, serviteurs d\'Allah, des frères.', sourceEnglish: 'Muslim', sourceArabic: 'مسلم'),
+  DailyHadith(arabic: 'لَيْسَ الْغِنَىٰ عَنْ كَثْرَةِ الْعَرَضِ، وَلَكِنَّ الْغِنَىٰ غِنَى النَّفْسِ', english: 'Richness is not having many possessions; richness is the contentment of the soul.', french: 'La richesse n\'est pas l\'abondance des biens ; la richesse est celle de l\'âme.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'مَنْ غَدَا إِلَى الْمَسْجِدِ أَوْ رَاحَ، أَعَدَّ اللَّهُ لَهُ فِي الْجَنَّةِ نُزُلًا', english: 'Whoever goes to the mosque in the morning or the evening, Allah prepares for him a place in Paradise.', french: 'Celui qui se rend à la mosquée matin ou soir, Allah lui prépare une demeure au Paradis.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'الصَّلَوَاتُ الْخَمْسُ كَفَّارَةٌ لِمَا بَيْنَهُنَّ', english: 'The five daily prayers expiate what is committed between them.', french: 'Les cinq prières quotidiennes effacent ce qui est commis entre elles.', sourceEnglish: 'Muslim', sourceArabic: 'مسلم'),
+  DailyHadith(arabic: 'إِذَا مَاتَ الْإِنْسَانُ انْقَطَعَ عَمَلُهُ إِلَّا مِنْ ثَلَاثٍ: صَدَقَةٍ جَارِيَةٍ، أَوْ عِلْمٍ يُنْتَفَعُ بِهِ، أَوْ وَلَدٍ صَالِحٍ يَدْعُو لَهُ', english: 'When a person dies, his deeds end except three: ongoing charity, knowledge that benefits others, or a righteous child who prays for him.', french: 'Quand une personne meurt, ses œuvres s\'arrêtent sauf trois : une aumône continue, un savoir utile aux autres, ou un enfant vertueux qui prie pour elle.', sourceEnglish: 'Muslim', sourceArabic: 'مسلم'),
+  DailyHadith(arabic: 'إِنَّ اللَّهَ كَتَبَ الْإِحْسَانَ عَلَىٰ كُلِّ شَيْءٍ', english: 'Verily Allah has prescribed excellence in all things.', french: 'Allah a prescrit l\'excellence en toute chose.', sourceEnglish: 'Muslim', sourceArabic: 'مسلم'),
+  DailyHadith(arabic: 'مَنْ بَنَىٰ مَسْجِدًا لِلَّهِ، بَنَى اللَّهُ لَهُ بَيْتًا فِي الْجَنَّةِ', english: 'Whoever builds a mosque for Allah, Allah builds for him a house in Paradise.', french: 'Celui qui construit une mosquée pour Allah, Allah lui construit une maison au Paradis.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'صَلَاةُ الْجَمَاعَةِ تَفْضُلُ صَلَاةَ الْفَذِّ بِسَبْعٍ وَعِشْرِينَ دَرَجَةً', english: 'Prayer in congregation is twenty-seven degrees better than prayer prayed alone.', french: 'La prière en groupe vaut vingt-sept degrés de plus que la prière accomplie seul.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'كُلُّ بَنِي آدَمَ خَطَّاءٌ، وَخَيْرُ الْخَطَّائِينَ التَّوَّابُونَ', english: 'Every child of Adam errs, and the best of those who err are those who repent.', french: 'Tout fils d\'Adam commet des erreurs, et les meilleurs de ceux qui errent sont ceux qui se repentent.', sourceEnglish: 'Tirmidhi', sourceArabic: 'الترمذي'),
+  DailyHadith(arabic: 'أَفْضَلُ الذِّكْرِ لَا إِلَهَ إِلَّا اللَّهُ', english: 'The best remembrance is: there is no god but Allah.', french: 'La meilleure invocation est : il n\'y a de dieu qu\'Allah.', sourceEnglish: 'Tirmidhi', sourceArabic: 'الترمذي'),
+  DailyHadith(arabic: 'كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ', english: 'Two words light on the tongue and heavy in the scale: Glory be to Allah and His praise; Glory be to Allah, the Magnificent.', french: 'Deux paroles légères sur la langue et lourdes dans la balance : Gloire à Allah et louange à Lui ; Gloire à Allah, le Magnifique.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'مَثَلُ الَّذِي يَذْكُرُ رَبَّهُ وَالَّذِي لَا يَذْكُرُ رَبَّهُ مَثَلُ الْحَيِّ وَالْمَيِّتِ', english: 'The example of the one who remembers his Lord and the one who does not is like the living and the dead.', french: 'L\'exemple de celui qui invoque son Seigneur et de celui qui ne l\'invoque pas est comme le vivant et le mort.', sourceEnglish: 'Bukhari & Muslim', sourceArabic: 'البخاري ومسلم'),
+  DailyHadith(arabic: 'أَكْمَلُ الْمُؤْمِنِينَ إِيمَانًا أَحْسَنُهُمْ خُلُقًا', english: 'The most complete of the believers in faith are those with the best character.', french: 'Les croyants dont la foi est la plus complète sont ceux qui ont le meilleur caractère.', sourceEnglish: 'Tirmidhi', sourceArabic: 'الترمذي'),
+  DailyHadith(arabic: 'اتَّقِ اللَّهَ حَيْثُمَا كُنْتَ، وَأَتْبِعِ السَّيِّئَةَ الْحَسَنَةَ تَمْحُهَا، وَخَالِقِ النَّاسَ بِخُلُقٍ حَسَنٍ', english: 'Fear Allah wherever you are; follow a bad deed with a good one and it will erase it; and treat people with good character.', french: 'Crains Allah où que tu sois ; fais suivre la mauvaise action d\'une bonne et elle l\'effacera ; et comporte-toi envers les gens avec un bon caractère.', sourceEnglish: 'Tirmidhi', sourceArabic: 'الترمذي'),
+  DailyHadith(arabic: 'دَعْ مَا يَرِيبُكَ إِلَىٰ مَا لَا يَرِيبُكَ', english: 'Leave what makes you doubt for what does not make you doubt.', french: 'Laisse ce qui te fait douter pour ce qui ne te fait pas douter.', sourceEnglish: 'Tirmidhi', sourceArabic: 'الترمذي'),
+];
+
+/// The same hadith all day, offset from the verse pick so the
+/// pairing varies (mirrors the iOS +11 offset in spirit).
+DailyHadith hadithOfTheDay([DateTime? now]) {
+  final d = now ?? DateTime.now();
+  final days = DateTime.utc(d.year, d.month, d.day)
+      .difference(DateTime.utc(2024, 1, 1))
+      .inDays;
+  return dailyHadiths[(days + 11) % dailyHadiths.length];
+}
