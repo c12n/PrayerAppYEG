@@ -258,6 +258,16 @@ class AlertScheduler {
   /// [sound] (v2.3.0 test alert) — the same channel a real adhan
   /// alert for that sound uses, so permission, channel and sound
   /// are all proven at once.
+  /// Plays a bundled alert sound from the picker (build 34) without
+  /// selecting it or scheduling anything.
+  static Future<void> previewSound(String sound) async {
+    try {
+      await _channel.invokeMethod('previewSound', {'sound': sound});
+    } catch (_) {
+      // Preview is a convenience; a platform hiccup stays silent.
+    }
+  }
+
   static Future<void> testAlert({
     required String title,
     required String body,

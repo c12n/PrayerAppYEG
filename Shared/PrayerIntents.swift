@@ -1,5 +1,6 @@
 import AppIntents
 import Foundation
+import UserNotifications
 
 // MARK: - App Intents (v2.0.0, feature 7 — iOS leg)
 //
@@ -92,6 +93,16 @@ struct SilenceNextAlertIntent: AppIntent {
         let provider = PrayerProvider.standard
         let next = provider.snapshot().next
         SilenceNextAlert.silence(adhan: next.adhan)
+        // Build 34: also cancel the already-scheduled notification
+        // right now. The scheduler's identifiers are deterministic
+        // ("adhan." + the Adhan epoch, AdhanNotifications), so this
+        // works even if the app is never opened before the prayer —
+        // previously the suite flag alone was only honoured on the
+        // app's next schedule rebuild. The flag stays set as well, so
+        // a later rebuild cannot re-add the alert.
+        let identifier = "adhan.\(Int(next.adhan.timeIntervalSince1970))"
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [identifier])
         return .result(dialog: "The \(next.name) alert at \(PrayerFormat.time(next.adhan)) will be silent. Later alerts are unchanged.")
     }
 }

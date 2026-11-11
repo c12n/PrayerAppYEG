@@ -82,6 +82,12 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                     // Android-only failure modes (exact alarms,
                     // battery optimization).
                     "alertStatus" -> result.success(alertStatus())
+                    // Sound picker preview (build 34): hear a sound
+                    // without selecting it or scheduling anything.
+                    "previewSound" -> {
+                        previewSound(call.argument<String>("sound") ?: "")
+                        result.success(null)
+                    }
                     "testAlert" -> {
                         AdhanNotifier.post(
                             this,
@@ -158,6 +164,30 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// The sound picker's preview player (build 34): one at a time,
+    /// released on completion or when another preview starts.
+    private var previewPlayer: android.media.MediaPlayer? = null
+
+    private fun previewSound(sound: String) {
+        previewPlayer?.release()
+        previewPlayer = null
+        val resId = when (sound) {
+            "chime" -> R.raw.adhan_chime
+            "bell" -> R.raw.adhan_bell
+            "makkah" -> R.raw.adhan_makkah
+            "fajr" -> R.raw.adhan_fajr
+            "classic" -> R.raw.adhan_classic
+            else -> return
+        }
+        previewPlayer = android.media.MediaPlayer.create(this, resId)?.apply {
+            setOnCompletionListener {
+                it.release()
+                if (previewPlayer === it) previewPlayer = null
+            }
+            start()
+        }
     }
 
     /// Alerts health check snapshot (v2.3.0): everything the Dart

@@ -142,7 +142,8 @@ object AlertArmer {
 object AdhanNotifier {
     const val CHANNEL_ID = "adhan_alerts"
 
-    private val SOUNDS = listOf("default", "chime", "bell", "silent")
+    private val SOUNDS = listOf(
+        "default", "chime", "bell", "silent", "makkah", "fajr", "classic")
 
     fun channelId(sound: String): String =
         if (sound == "default") CHANNEL_ID else "adhan_alerts_$sound"
@@ -157,6 +158,14 @@ object AdhanNotifier {
                 "android.resource://${context.packageName}/${R.raw.adhan_chime}")
             "bell" -> android.net.Uri.parse(
                 "android.resource://${context.packageName}/${R.raw.adhan_bell}")
+            // The three Adhan recordings, ported from iOS for parity
+            // (build 34): same 29-second trims, one channel each.
+            "makkah" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_makkah}")
+            "fajr" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_fajr}")
+            "classic" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_classic}")
             else -> null // silent
         }
 
@@ -164,6 +173,9 @@ object AdhanNotifier {
         "chime" -> "Adhan Alerts · Gentle Chime"
         "bell" -> "Adhan Alerts · Soft Bell"
         "silent" -> "Adhan Alerts · Silent"
+        "makkah" -> "Adhan Alerts · Makkah Adhan"
+        "fajr" -> "Adhan Alerts · Fajr Adhan"
+        "classic" -> "Adhan Alerts · Classic Adhan"
         else -> "Adhan Alerts"
     }
 

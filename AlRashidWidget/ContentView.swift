@@ -80,6 +80,9 @@ struct ContentView: View {
     /// What's New sheet (v1.8.0): shown once after an update, never
     /// on a fresh install.
     @State private var showWhatsNew = false
+    /// Live Activity opt-in prompt (build 34): asked once per version
+    /// after a first install or an update, with a Lock Screen preview.
+    @State private var showLiveActivityPrompt = false
     /// Welcome sheet (v2.3.0): shown once on first install.
     @State private var showWelcome = false
     /// The 99 Names sheet (v2.3.0).
@@ -89,14 +92,14 @@ struct ContentView: View {
     /// newer public build than the installed one is advertised.
     @StateObject private var updateChecker = UpdateChecker()
     @Environment(\.openURL) private var openURL
-    /// Bumped by Settings on every change — and again when the sheet
-    /// closes — to force this screen to rebuild with the new values
-    /// (v1.1.1). Cross-view @AppStorage observation of the App Group
-    /// suite proved unreliable on device: Settings wrote the new theme,
-    /// but this screen kept the old one until the app was relaunched.
-    /// A @State change in THIS view always re-renders it, and the stamp
-    /// below rebuilds the timeline with colors re-read from the suite.
-    @State private var appearanceGeneration = 0
+    /// (Build 34) The v1.1.1 appearanceGeneration counter is gone.
+    /// Bumping it changed the ROOT view's identity (.id below), which
+    /// rebuilt every tab — including the Settings Form, whose scroll
+    /// position snapped back to the top on every toggle or theme tap.
+    /// Theme changes now reach this screen through its own @AppStorage
+    /// re-renders (and the imperative WindowStyleApplier for the color
+    /// scheme); the appearance stamp survives only on the prayer tab,
+    /// which holds no scroll state worth preserving.
     /// True once the home list is scrolled: the status bar hides so
     /// it never floats over the prayer cards mid-scroll (v1.5.1), and
     /// screenshots taken while scrolled come out clean.
@@ -133,11 +136,14 @@ struct ContentView: View {
                     phoneTabShell(snapshot: snapshot, today: todaySchedule, now: context.date)
                 }
             }
-            .sheet(isPresented: $showWhatsNew) {
+            .sheet(isPresented: $showWhatsNew, onDismiss: maybeShowLiveActivityPrompt) {
                 WhatsNewView()
             }
-            .sheet(isPresented: $showWelcome) {
+            .sheet(isPresented: $showWelcome, onDismiss: maybeShowLiveActivityPrompt) {
                 WhatsNewView(welcome: true)
+            }
+            .sheet(isPresented: $showLiveActivityPrompt) {
+                LiveActivityPromptView(snapshot: snapshot)
             }
             .sheet(isPresented: $showNames) {
                 NamesOfAllahView()
@@ -146,17 +152,17 @@ struct ContentView: View {
                 StandByView(snapshot: snapshot)
             }
         }
-        .id("\(appearanceStamp)#\(appearanceGeneration)")
         .environmentObject(trackerStore)
         .background { AppBackground() }
+        .background { WindowStyleHook() }
         // Color scheme is applied once at the WindowGroup root by
         // AlRashidWidgetApp's AppearanceModeObserver (v2.2.0-alpha fix);
         // a second modifier here could pin a stale mode.
         .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
         .environment(\.locale, AppLanguage.current.locale)
         .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
-        .sheet(isPresented: $showSettings, onDismiss: { appearanceGeneration += 1 }) {
-            SettingsView { appearanceGeneration += 1 }
+        .sheet(isPresented: $showSettings) {
+            SettingsView {}
                 .environmentObject(updateChecker)
         }
         .alert(L10n.t("updateAvailable"), isPresented: $updateChecker.showAlert) {
@@ -180,10 +186,10 @@ struct ContentView: View {
                 updateChecker.checkIfNeeded()
                 checkWhatsNew()
             }
+            maybeShowLiveActivityPrompt()
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                appearanceGeneration += 1
                 refreshWidgets()
                 if !MinimalMode.enabled {
                     updateChecker.checkIfNeeded()
@@ -238,6 +244,11 @@ struct ContentView: View {
             // each tab's scroll position and toolbars stable.
             TabView(selection: $phoneTab) {
                 phoneLayout(snapshot: snapshot, today: today, now: now)
+                    // The appearance stamp lives here now (build 34):
+                    // the prayer tab rebuilds with fresh theme colors
+                    // on any appearance change, without touching the
+                    // Settings tab's identity or scroll position.
+                    .id(appearanceStamp)
                     .tag(PhoneTab.prayer)
                 QuranLibraryView(embeddedInTab: true)
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
@@ -245,7 +256,7 @@ struct ContentView: View {
                 QiblaTabView()
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
                     .tag(PhoneTab.qibla)
-                SettingsView { appearanceGeneration += 1 }
+                SettingsView {}
                     .environmentObject(updateChecker)
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
                     .tag(PhoneTab.settings)
@@ -569,6 +580,22 @@ DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),
             UserDefaults.standard.set(current, forKey: key)
             showWhatsNew = true
         }
+    }
+
+    /// Live Activities are OFF by default (build 34). Once per
+    /// version — on a first install or after an update — ask whether
+    /// to turn them on, with a preview of the Lock Screen card. The
+    /// What's New / welcome sheets take precedence: this runs again
+    /// from their onDismiss. A stored answer, or a Live Activity the
+    /// user already enabled in Settings, suppresses the prompt.
+    private func maybeShowLiveActivityPrompt() {
+        guard !showWhatsNew, !showWelcome else { return }
+        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        guard !current.isEmpty else { return }
+        let defaults = UserDefaults.standard
+        guard defaults.string(forKey: "liveactivity.promptVersion") != current,
+              !AlertSettings.liveActivityEnabled else { return }
+        showLiveActivityPrompt = true
     }
 }
 
@@ -1016,15 +1043,22 @@ private struct HeaderView: View {
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: 0)
-            Button(action: onSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-                    .background(Color(uiColor: .secondarySystemBackground), in: Circle())
+            // The header gear is redundant wherever the pill tab bar
+            // (or the Duo rail) already offers Settings, so it only
+            // stays where it is the way in: Minimal Mode (no tab
+            // bar) and iPad (no pill bar; the gear is its Settings
+            // route). Youssef's rule, build 34.
+            if MinimalMode.enabled || UIDevice.current.userInterfaceIdiom == .pad {
+                Button(action: onSettings) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .background(Color(uiColor: .secondarySystemBackground), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L10n.t("settings"))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L10n.t("settings"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1438,12 +1472,15 @@ private struct SettingsView: View {
     private var textSizeRaw: String = AppTextSize.standard.rawValue
     @AppStorage(AdhanSound.storageKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var soundRaw: String = AdhanSound.default.rawValue
+    /// Sound previews (build 34): observable so each row's small
+    /// play button can show play/stop state.
+    @StateObject private var soundPreview = SoundPreviewPlayer()
 
     /// The master alert switches, moved here from the Home screen's
     /// Alerts card in v1.4. They live in UserDefaults.standard (the
     /// store AlertSettings reads), NOT the App Group suite.
     @AppStorage(AlertSettings.notificationsKey) private var notificationsOn = true
-    @AppStorage(AlertSettings.liveActivityKey) private var liveActivityOn = true
+    @AppStorage(AlertSettings.liveActivityKey) private var liveActivityOn = false
     @AppStorage(AlertSettings.reminderKey) private var reminderOn = true
     @AppStorage(AlertSettings.reminderLeadKey) private var reminderLead = 10
     @AppStorage(AlertSettings.jumuahReminderKey) private var jumuahReminderOn = true
@@ -1952,29 +1989,44 @@ private struct SettingsView: View {
     private var soundSection: some View {
         Section {
             ForEach(AdhanSound.allCases) { sound in
-                Button {
-                    soundRaw = sound.rawValue
-                    AdhanSoundPreview.play(sound)
-                } label: {
-                    HStack {
+                HStack(spacing: 10) {
+                    Button {
+                        soundRaw = sound.rawValue
+                        soundPreview.play(sound)
+                    } label: {
                         Text(L10n.t(sound.l10nKey))
                             .foregroundStyle(.primary)
-                        Spacer()
-                        if soundRaw == sound.rawValue {
-                            Image(systemName: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    // Build 34: a small play button on each row hears
+                    // the sound WITHOUT selecting it (tapping the row
+                    // still selects and previews, as before). Default
+                    // and Silent have no bundled file to preview.
+                    if sound != .default, sound != .silent {
+                        Button {
+                            soundPreview.toggle(sound)
+                        } label: {
+                            Image(systemName: soundPreview.playing == sound
+                                  ? "stop.circle.fill" : "play.circle.fill")
+                                .font(.title3)
                                 .foregroundStyle(Theme.adaptiveGold)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .contentShape(Rectangle())
+                    if soundRaw == sound.rawValue {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Theme.adaptiveGold)
+                    }
                 }
-                .buttonStyle(.plain)
             }
         } header: {
             Text(L10n.t("alertSound"))
         } footer: {
             Text(L10n.t("alertSoundFooter"))
         }
+        .onDisappear { soundPreview.stop() }
     }
 
     /// Per-prayer sound overrides (v1.8.0): each prayer can follow
@@ -3342,12 +3394,20 @@ private struct QiblaTabView: View {
     }
 }
 
-/// Plays the bundled file for an Adhan sound when it is picked in
-/// Settings (v2.2.0-alpha). Default and Silent have no file.
-private enum AdhanSoundPreview {
-    private static var player: AVAudioPlayer?
+/// Plays the bundled file for an Adhan sound (v2.2.0-alpha; an
+/// observable player since build 34 so the Settings rows' play
+/// buttons can toggle and show state). Default and Silent have no
+/// bundled file.
+@MainActor
+final class SoundPreviewPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
+    @Published private(set) var playing: AdhanSound?
+    private var player: AVAudioPlayer?
 
-    static func play(_ sound: AdhanSound) {
+    func toggle(_ sound: AdhanSound) {
+        if playing == sound { stop() } else { play(sound) }
+    }
+
+    func play(_ sound: AdhanSound) {
         let fileName: String
         switch sound {
         case .chime: fileName = "adhan_chime"
@@ -3356,14 +3416,31 @@ private enum AdhanSoundPreview {
         case .fajr: fileName = "adhan_fajr"
         case .classic: fileName = "adhan_classic"
         case .default, .silent:
-            player?.stop()
-            player = nil
+            stop()
             return
         }
         guard let url = Bundle.main.url(forResource: fileName, withExtension: "wav")
         else { return }
+        stop()
         player = try? AVAudioPlayer(contentsOf: url)
-        player?.play()
+        player?.delegate = self
+        if player?.play() == true { playing = sound }
+    }
+
+    func stop() {
+        player?.stop()
+        player = nil
+        playing = nil
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ finishedPlayer: AVAudioPlayer,
+                                                 successfully flag: Bool) {
+        Task { @MainActor in
+            if player === finishedPlayer {
+                player = nil
+                playing = nil
+            }
+        }
     }
 }
 
@@ -3447,6 +3524,173 @@ final class UpdateChecker: ObservableObject {
 /// Shown once after an update: what changed in this version, in the
 /// user's language. Notes are bundled per version; a version with no
 /// entry never presents the sheet.
+// MARK: - Live Activity opt-in prompt (build 34)
+
+/// Live Activities are off by default. Once per version — a first
+/// install or an update — this sheet asks whether to turn them on,
+/// showing a faithful preview of the real Lock Screen card (same
+/// rows, fonts and Live Activity palette, built from the live
+/// snapshot) inside a simple lock-screen frame.
+struct LiveActivityPromptView: View {
+    let snapshot: PrayerSnapshot
+    @Environment(\.dismiss) private var dismiss
+
+    private var palette: PartPalette {
+        PartPalette(theme: AppAppearance.effectiveTheme(for: .liveActivity))
+    }
+
+    private var following: PrayerSlot? {
+        snapshot.day.slots.first { $0.adhan > snapshot.next.adhan }
+    }
+
+    private var countdownText: String {
+        let total = max(0, Int(snapshot.next.adhan.timeIntervalSinceNow))
+        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s)
+                     : String(format: "%d:%02d", m, s)
+    }
+
+    private func recordAnswer() {
+        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        UserDefaults.standard.set(current, forKey: "liveactivity.promptVersion")
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 22) {
+                lockScreenPreview
+                VStack(spacing: 10) {
+                    Text(L10n.t("laPromptTitle"))
+                        .font(.title3.weight(.bold))
+                        .multilineTextAlignment(.center)
+                    Text(L10n.t("laPromptBody"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                Button {
+                    AlertSettings.liveActivityEnabled = true
+                    AppServices.liveActivityToggled(on: true)
+                    recordAnswer()
+                    dismiss()
+                } label: {
+                    Text(L10n.t("laEnable"))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.adaptiveGold)
+                Button {
+                    recordAnswer()
+                    dismiss()
+                } label: {
+                    Text(L10n.t("laNotNow"))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+            .padding(24)
+        }
+        .background { AppBackground() }
+    }
+
+    /// Dark wallpaper, the current time, then the activity card.
+    private var lockScreenPreview: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 2) {
+                Text(Date.now, format: .dateTime.weekday(.wide).day().month(.wide))
+                    .font(.subheadline.weight(.semibold))
+                Text(Date.now, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute())
+                    .font(.system(size: 62, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            activityCard
+            Text(L10n.t("laPreviewLabel"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.6))
+        }
+        .padding(.vertical, 26)
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity)
+        .background {
+            RoundedRectangle(cornerRadius: 36, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.05, green: 0.14, blue: 0.11),
+                             Color(red: 0.01, green: 0.05, blue: 0.04)],
+                    startPoint: .top, endPoint: .bottom))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 36, style: .continuous)
+                .strokeBorder(.white.opacity(0.15))
+        }
+    }
+
+    /// The card itself, replicating LiveActivityLockScreenView with
+    /// a static countdown (the real one ticks live).
+    private var activityCard: some View {
+        let next = snapshot.next
+        return ZStack {
+            ColoredSurfaceBackground(palette: palette)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.stars.fill")
+                        .foregroundStyle(palette.accent)
+                    Text(MosqueInfo.name)
+                        .font(.caption.weight(.bold))
+                        .tracking(0.6)
+                        .foregroundStyle(palette.textSecondary)
+                    Spacer()
+                    Text("\(PrayerFormat.shortDate(next.adhan)) · \(PrayerProvider.hijriString(for: next.adhan, timeZone: PrayerProvider.standard.calendar.timeZone))")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(palette.textMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: next.symbolName)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(palette.accent)
+                    Text(snapshot.isShowingTomorrow ? L10n.f("nameTomorrow", next.name) : next.name)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(palette.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Spacer(minLength: 8)
+                    Text(PrayerFormat.time(next.adhan))
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(palette.text)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(countdownText)
+                        .font(.system(size: 36, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(palette.accent)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Spacer(minLength: 8)
+                    if let iqamah = next.iqamah {
+                        Text("\(next.iqamahLabel) \(PrayerFormat.time(iqamah))")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(palette.textSecondary)
+                    }
+                }
+                if let following {
+                    Text(L10n.f("thenPattern", following.name, PrayerFormat.time(following.adhan)))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(palette.textMuted)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+}
+
 struct WhatsNewView: View {
     @Environment(\.dismiss) private var dismiss
 

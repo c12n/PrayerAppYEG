@@ -9,6 +9,7 @@
 //
 
 import ActivityKit
+import AppIntents
 import BackgroundTasks
 import SwiftUI
 import UIKit
@@ -34,6 +35,61 @@ final class AppearanceModeObserver: ObservableObject {
             guard let self else { return }
             let current = AppAppearance.mode
             if current != self.mode { self.mode = current }
+            WindowStyleApplier.apply()
+        }
+    }
+}
+
+/// Imperative window appearance (build 34): on Youssef's phone the
+/// scene-root preferredColorScheme(nil) did not re-follow the device
+/// in System mode — flipping iPhone Dark Mode from Control Center
+/// left the app in its launch appearance until relaunch, while the
+/// explicit Light/Dark picks (non-nil schemes) worked. Setting each
+/// window's overrideUserInterfaceStyle directly is authoritative:
+/// System clears the override (.unspecified) so windows track the
+/// device live; Light/Dark pin it. Re-applied on mode writes (via
+/// the observer above), on device trait flips (WindowStyleHook),
+/// and on every activation (AppDelegate).
+enum WindowStyleApplier {
+    static func apply() {
+        let style: UIUserInterfaceStyle
+        switch AppAppearance.mode {
+        case .system: style = .unspecified
+        case .light: style = .light
+        case .dark: style = .dark
+        }
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows
+            where window.overrideUserInterfaceStyle != style {
+                window.overrideUserInterfaceStyle = style
+            }
+        }
+    }
+}
+
+/// Zero-footprint hook that re-applies the window style when the
+/// device's own appearance flips while the app is alive.
+struct WindowStyleHook: UIViewRepresentable {
+    func makeUIView(context: Context) -> StyleHookView {
+        let view = StyleHookView()
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: StyleHookView, context: Context) {}
+
+    final class StyleHookView: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            WindowStyleApplier.apply()
+        }
+
+        override func traitCollectionDidChange(_ previous: UITraitCollection?) {
+            super.traitCollectionDidChange(previous)
+            if traitCollection.userInterfaceStyle != previous?.userInterfaceStyle {
+                WindowStyleApplier.apply()
+            }
         }
     }
 }
@@ -45,6 +101,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                      supportedInterfaceOrientationsFor window: UIWindow?)
         -> UIInterfaceOrientationMask {
         OrientationLock.mask
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // Covers device appearance flips made while the app sat in
+        // the background (e.g. the Control Center Dark Mode toggle).
+        WindowStyleApplier.apply()
+    }
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Re-register the Siri / Shortcuts phrases on every launch so
+        // they survive updates and the build-34 bundle rebrand without
+        // waiting for iOS to re-index the app on its own schedule.
+        PrayerShortcuts.updateAppShortcutParameters()
+        return true
     }
 }
 
@@ -110,7 +181,10 @@ struct AlRashidWidgetApp: App {
 // MARK: - Alert settings
 
 /// User-facing alert preferences, shared by ContentView (toggles) and
-/// AppServices (scheduling). Both default ON.
+/// AppServices (scheduling). Notifications and reminders default ON;
+/// the Live Activity defaults OFF (build 34) — on a first install or
+/// an update the app asks once, with a Lock Screen preview, whether
+/// to turn it on (LiveActivityPromptView in ContentView).
 enum AlertSettings {
     static let notificationsKey = "alerts.notificationsEnabled"
     static let liveActivityKey = "alerts.liveActivityEnabled"
@@ -126,7 +200,7 @@ enum AlertSettings {
     }
 
     static var liveActivityEnabled: Bool {
-        get { defaults.object(forKey: liveActivityKey) as? Bool ?? true }
+        get { defaults.object(forKey: liveActivityKey) as? Bool ?? false }
         set { defaults.set(newValue, forKey: liveActivityKey) }
     }
 
