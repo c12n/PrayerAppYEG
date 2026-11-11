@@ -76,6 +76,12 @@ struct ContentView: View {
     /// the shell itself rebuilt. The mini player overlay is now
     /// attached per layout branch instead — deterministic.)
     @State private var phoneTab: PhoneTab = .prayer
+    /// Tab bar scroll collapse (build 40): while a tab's content is
+    /// scrolling, the phone tab bar shrinks to just Prayer and
+    /// Settings (the Spotify-style behaviour from Youssef's video);
+    /// it re-expands shortly after the scroll stops.
+    @State private var tabBarCollapsed = false
+    @State private var tabBarExpandTask: Task<Void, Never>?
     @State private var showNowPlayingFull = false
     @StateObject private var trackerStore = TrackerStore()
 
@@ -229,6 +235,33 @@ struct ContentView: View {
         }
     }
 
+    /// Collapse the phone tab bar while content scrolls (build 40).
+    /// Called from the shell's scroll-watch gesture as a
+    /// vertical-dominant drag moves; cancels any pending re-expand.
+    private func noteTabScrolling() {
+        tabBarExpandTask?.cancel()
+        tabBarExpandTask = nil
+        if !tabBarCollapsed {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                tabBarCollapsed = true
+            }
+        }
+    }
+
+    /// Schedule the tab bar's re-expand shortly after a scroll
+    /// gesture ends; the delay lets momentum scrolling finish
+    /// before the full bar returns.
+    private func noteTabScrollEnded() {
+        tabBarExpandTask?.cancel()
+        tabBarExpandTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                tabBarCollapsed = false
+            }
+        }
+    }
+
     // MARK: Phone tab shell (v2.2.0-alpha)
 
     /// The portrait phone layout's new root: Prayer (the original
@@ -260,16 +293,40 @@ struct ContentView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Scroll watch (build 40): a simultaneous drag gesture
+            // over the paged content. Only vertical-dominant drags
+            // count as scrolling — horizontal drags are page swipes
+            // between tabs and must not collapse the bar. The pages'
+            // own ScrollViews keep handling the scroll itself.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 12)
+                    .onChanged { value in
+                        if abs(value.translation.height) > abs(value.translation.width) * 1.2 {
+                            noteTabScrolling()
+                        }
+                    }
+                    .onEnded { _ in
+                        noteTabScrollEnded()
+                    }
+            )
             // The Qibla tab is a compass: portrait only (build 31).
+            // A tab switch always restores the full bar (build 40).
             .onChange(of: phoneTab) { _, tab in
                 OrientationLock.setPortraitOnly(tab == .qibla)
+                tabBarExpandTask?.cancel()
+                tabBarExpandTask = nil
+                if tabBarCollapsed {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                        tabBarCollapsed = false
+                    }
+                }
             }
 
             VStack(spacing: 8) {
                 if quranPlayer.currentSurah != nil {
                     MiniPlayerView { showNowPlayingFull = true }
                 }
-                PhoneTabBar(selection: $phoneTab)
+                PhoneTabBar(selection: $phoneTab, collapsed: tabBarCollapsed)
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 2)
@@ -3298,6 +3355,10 @@ private struct QiblaCard: View {
 /// tabs; the selected tab gets a filled deep-green pill of its own.
 private struct PhoneTabBar: View {
     @Binding var selection: ContentView.PhoneTab
+    /// Scroll collapse (build 40): while the tab content scrolls,
+    /// the bar shrinks to just Prayer and Settings and narrows to
+    /// fit them; at rest it is the full four-tab bar.
+    var collapsed: Bool = false
     /// The selected tab's green capsule is ONE view that glides
     /// between tabs (matched geometry), so a tap or a page swipe
     /// slides it instead of jumping (build 29).
@@ -3316,6 +3377,13 @@ private struct PhoneTabBar: View {
         ]
     }
 
+    /// The tabs currently shown (build 40): all four at rest; while
+    /// collapsed, just Prayer and Settings.
+    private var visibleItems: [TabItem] {
+        guard collapsed else { return items }
+        return items.filter { $0.tab == .prayer || $0.tab == .settings }
+    }
+
     /// Drag state for the glass slider (build 38): while the finger
     /// is down, the glass thumb follows it 1:1 instead of sitting on
     /// the selected tab; on release the nearest tab is selected and
@@ -3323,17 +3391,21 @@ private struct PhoneTabBar: View {
     @State private var dragX: CGFloat? = nil
     @State private var barWidth: CGFloat = 0
 
-    private var selectedIndex: Int {
-        items.firstIndex { $0.tab == selection } ?? 0
+    /// Index of the selected tab among the VISIBLE tabs (build 40):
+    /// nil while collapsed on the Quran or Qibla tab, whose tab is
+    /// not shown; the thumb hides then instead of pointing at the
+    /// wrong tab.
+    private var selectedVisibleIndex: Int? {
+        visibleItems.firstIndex { $0.tab == selection }
     }
 
     var body: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
-            let slot = width / CGFloat(max(items.count, 1))
+            let slot = width / CGFloat(max(visibleItems.count, 1))
             // The thumb's center: the finger while dragging, the
             // selected tab's center otherwise.
-            let thumbCenter = dragX ?? (slot * (CGFloat(selectedIndex) + 0.5))
+            let thumbCenter = dragX ?? (slot * (CGFloat(selectedVisibleIndex ?? 0) + 0.5))
             ZStack(alignment: .leading) {
                 // Glass thumb (build 38): translucent material with a
                 // bright rim and a soft shadow, sized to one slot
@@ -3351,8 +3423,11 @@ private struct PhoneTabBar: View {
                     .shadow(color: .black.opacity(0.28), radius: 8, y: 3)
                     .frame(width: max(slot - 10, 0), height: 46)
                     .offset(x: thumbCenter - max(slot - 10, 0) / 2)
+                    // Collapsed on Quran/Qibla (build 40): the
+                    // selected tab is not in the bar, so no thumb.
+                    .opacity(selectedVisibleIndex == nil && dragX == nil ? 0 : 1)
                 HStack(spacing: 2) {
-                    ForEach(items, id: \.tab) { item in
+                    ForEach(visibleItems, id: \.tab) { item in
                         Button {
                             selection = item.tab
                         } label: {
@@ -3381,8 +3456,8 @@ private struct PhoneTabBar: View {
                     }
                     .onEnded { value in
                         let x = min(max(value.location.x, 0), width - 0.001)
-                        let index = min(max(Int(x / slot), 0), items.count - 1)
-                        selection = items[index].tab
+                        let index = min(max(Int(x / slot), 0), visibleItems.count - 1)
+                        selection = visibleItems[index].tab
                         dragX = nil
                     }
             )
@@ -3398,6 +3473,10 @@ private struct PhoneTabBar: View {
             Capsule().strokeBorder(Color.primary.opacity(0.09), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.22), radius: 14, y: 6)
+        // Collapsed width (build 40): two slots at the expanded
+        // bar's slot size, centered by the shell's stack.
+        .frame(maxWidth: collapsed ? 200 : .infinity)
+        .animation(.spring(response: 0.38, dampingFraction: 0.85), value: collapsed)
     }
 }
 
