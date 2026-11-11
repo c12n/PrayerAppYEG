@@ -48,7 +48,7 @@ enum PrayerChoice: String, AppEnum {
 struct NextPrayerIntent: AppIntent {
     static var title: LocalizedStringResource = "Next Prayer"
     static var description = IntentDescription(
-        "Find out which prayer is next at Al Rashid Mosque and when it is.")
+        "Find out which prayer is next in Edmonton and when it is.")
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let provider = PrayerProvider.standard
@@ -56,7 +56,7 @@ struct NextPrayerIntent: AppIntent {
         let next = snapshot.next
         let when = PrayerFormat.time(next.adhan)
         let day = snapshot.isShowingTomorrow ? "tomorrow" : "today"
-        return .result(dialog: "\(next.name) is next, \(day) at \(when) at Al Rashid Mosque.")
+        return .result(dialog: "\(next.name) is next, \(day) at \(when).")
     }
 }
 
@@ -64,7 +64,7 @@ struct NextPrayerIntent: AppIntent {
 struct PrayerTimeIntent: AppIntent {
     static var title: LocalizedStringResource = "Prayer Time"
     static var description = IntentDescription(
-        "Find out today's time for a specific prayer at Al Rashid Mosque.")
+        "Find out today's time for a specific prayer in Edmonton.")
 
     @Parameter(title: "Prayer")
     var prayer: PrayerChoice
@@ -74,7 +74,7 @@ struct PrayerTimeIntent: AppIntent {
         let day = provider.computeDay(for: Date.now)
         let time = day.adhan(for: prayer.prayer)
         let name = prayer.prayer.displayName
-        return .result(dialog: "\(name) is at \(PrayerFormat.time(time)) today at Al Rashid Mosque.")
+        return .result(dialog: "\(name) is at \(PrayerFormat.time(time)) today.")
     }
 }
 

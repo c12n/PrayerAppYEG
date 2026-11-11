@@ -20,7 +20,7 @@ import UIKit
 // MARK: - Mosque constants
 
 enum MosqueInfo {
-    static let name = "Al Rashid Mosque"
+    static let name = "Edmonton Prayer Times"
     static let address = "13070 113 St NW, Edmonton, AB"
     static let directionsAddress = "13070 113 St NW, Edmonton, AB, Canada"
     static let latitude = 53.591189
@@ -2382,7 +2382,7 @@ enum L10n {
         "pushLocalOnly": [.en: "Local only", .ar: "محلي فقط", .fr: "Local uniquement"],
         // In-app update reminder (v1.7.0)
         "updateAvailable": [.en: "Update available", .ar: "يتوفر تحديث", .fr: "Mise à jour disponible"],
-        "updateAvailableBody": [.en: "Version %@ of Al Rashid Prayer is ready in TestFlight.", .ar: "الإصدار %@ من تطبيق الراشد جاهز في TestFlight.", .fr: "La version %@ d'Al Rashid Prayer est prête dans TestFlight."],
+        "updateAvailableBody": [.en: "Version %@ of Edmonton Prayer Times is ready in TestFlight.", .ar: "الإصدار %@ من تطبيق مواقيت صلاة إدمونتون جاهز في TestFlight.", .fr: "La version %@ d'Edmonton Prayer Times est prête dans TestFlight."],
         "updateNow": [.en: "Update in TestFlight", .ar: "التحديث في TestFlight", .fr: "Mettre à jour dans TestFlight"],
         "updateLater": [.en: "Later", .ar: "لاحقًا", .fr: "Plus tard"],
         "version": [.en: "Version", .ar: "الإصدار", .fr: "Version"],
@@ -2413,7 +2413,7 @@ enum L10n {
         "haptics": [.en: "Haptic feedback", .ar: "الاهتزاز", .fr: "Retour haptique"],
         "hapticsBody": [.en: "Vibrate when you face the Qibla in the full-screen compass.", .ar: "الاهتزاز عند مواجهة القبلة في البوصلة بملء الشاشة.", .fr: "Vibrer lorsque vous faites face à la Qibla dans la boussole plein écran."],
         "footerPrivacy": [.en: "Privacy first — no external links, no tracking, nothing leaves this device.", .ar: "الخصوصية أولًا — لا روابط خارجية، لا تتبّع، لا شيء يغادر هذا الجهاز.", .fr: "La confidentialité d'abord — aucun lien externe, aucun suivi, rien ne quitte cet appareil."],
-        "footerCalc": [.en: "Adhan times are calculated on-device and calibrated to Al Rashid Mosque's published timetable. Iqamah times are fixed offsets from Adhan — please confirm with the mosque's official timetable.", .ar: "تُحسب أوقات الأذان على الجهاز وتُعايَر وفق الجدول المنشور لمسجد الراشد. أوقات الإقامة إزاحات ثابتة من الأذان — يُرجى التأكد من الجدول الرسمي للمسجد.", .fr: "Les heures de l'Adhan sont calculées sur l'appareil et calibrées sur le calendrier publié par la mosquée Al Rashid. Les heures d'Iqamah sont des décalages fixes après l'Adhan — veuillez les confirmer avec le calendrier officiel de la mosquée."],
+        "footerCalc": [.en: "Prayer time data is publicly accessible from the Al Rashid Mosque website.", .ar: "بيانات أوقات الصلاة متاحة للعامة من موقع مسجد الراشد الإلكتروني.", .fr: "Les données des heures de prière sont accessibles publiquement sur le site web de la mosquée Al Rashid."],
         // Settings chrome
         "settings": [.en: "Settings", .ar: "الإعدادات", .fr: "Réglages"],
         "done": [.en: "Done", .ar: "تم", .fr: "Terminé"],
@@ -2558,7 +2558,7 @@ enum L10n {
         "tapToResume": [.en: "Tap to resume", .ar: "اضغط للمتابعة", .fr: "Touchez pour reprendre"],
         // v2.3.0: welcome + What's New
         "welcomeTitle": [.en: "Welcome", .ar: "مرحبًا بك", .fr: "Bienvenue"],
-        "wnWelcome1": [.en: "Prayer times for Al Rashid Mosque, calculated on your device.", .ar: "مواقيت الصلاة لمسجد الراشد، تُحسب على جهازك.", .fr: "Les heures de prière de la mosquée Al Rashid, calculées sur votre appareil."],
+        "wnWelcome1": [.en: "Prayer times for Edmonton, calculated on your device.", .ar: "مواقيت الصلاة لإدمونتون، تُحسب على جهازك.", .fr: "Les heures de prière pour Edmonton, calculées sur votre appareil."],
         "wnWelcome2": [.en: "An alert at every prayer with your choice of adhan sounds, plus a Live Activity countdown on your Lock Screen.", .ar: "تنبيه عند كل صلاة بصوت الأذان الذي تختاره، مع عدّاد مباشر على شاشة القفل.", .fr: "Une alerte à chaque prière avec le son d'adhan de votre choix, et un compte à rebours en direct sur l'écran verrouillé."],
         "wnWelcome3": [.en: "Widgets for your Home and Lock Screens, in your own colors.", .ar: "ودجت لشاشتي البداية والقفل، بألوانك الخاصة.", .fr: "Des widgets pour vos écrans d'accueil et de verrouillage, dans vos couleurs."],
         "wnWelcome4": [.en: "The full Quran with audio, lyrics and downloads, in the Quran tab.", .ar: "القرآن الكريم كاملاً بالصوت والنص والتنزيلات، في تبويب القرآن.", .fr: "Le Coran complet avec audio, texte et téléchargements, dans l'onglet Coran."],
@@ -2584,7 +2584,7 @@ extension L10n {
         "alertSound": [.en: "Alert Sound", .ar: "صوت التنبيه", .fr: "Son d'alerte"],
         "sound.default": [.en: "Default", .ar: "الافتراضي", .fr: "Par défaut"],
         "sound.silent": [.en: "Silent", .ar: "صامت", .fr: "Silencieux"],
-        "sound.alrashid": [.en: "Al Rashid Adhan", .ar: "أذان الراشد", .fr: "Adhan Al Rashid"],
+        "sound.alrashid": [.en: "Mosque Adhan", .ar: "أذان المسجد", .fr: "Adhan de la mosquée"],
         "sound.classic": [.en: "Classic Adhan", .ar: "الأذان الكلاسيكي", .fr: "Adhan classique"],
         "laPromptTitle": [.en: "See the next prayer on your Lock Screen?", .ar: "هل تريد رؤية الصلاة التالية على شاشة القفل؟", .fr: "Voir la prochaine prière sur votre écran verrouillé ?"],
         "laPromptBody": [.en: "Live Activities put a live countdown to the next prayer on your Lock Screen and Dynamic Island. They are off by default, and you can turn them on or off anytime in Settings.", .ar: "تضع الأنشطة المباشرة عدّادًا مباشرًا للصلاة التالية على شاشة القفل وDynamic Island. وهي متوقفة افتراضيًا، ويمكنك تشغيلها أو إيقافها في أي وقت من الإعدادات.", .fr: "Les activités en direct placent un compte à rebours vers la prochaine prière sur l'écran verrouillé et la Dynamic Island. Elles sont désactivées par défaut, et vous pouvez les activer ou les désactiver à tout moment dans les Réglages."],
@@ -2596,15 +2596,15 @@ extension L10n {
         "qibla": [.en: "Qibla", .ar: "القبلة", .fr: "Qibla"],
         "dailyVerse": [.en: "Quran Quote of the Day", .ar: "آية اليوم", .fr: "Verset du jour"],
         "surah": [.en: "Surah", .ar: "سورة", .fr: "Sourate"],
-        "qiblaFromMosque": [.en: "Direction from Al Rashid Mosque", .ar: "الاتجاه من مسجد الراشد", .fr: "Direction depuis la mosquée Al Rashid"],
+        "qiblaFromMosque": [.en: "Qibla direction from Edmonton", .ar: "اتجاه القبلة من إدمونتون", .fr: "Direction de la Qibla depuis Edmonton"],
         "facingQibla": [.en: "You are facing the Qibla", .ar: "أنت تواجه القبلة", .fr: "Vous faites face à la Qibla"],
         "qiblaHint": [.en: "Hold the phone flat and turn slowly. Compass accuracy improves away from metal and electronics.", .ar: "أمسك الهاتف مستويًا وأدِره ببطء. تتحسن دقة البوصلة بعيدًا عن المعادن والإلكترونيات.", .fr: "Tenez le téléphone à plat et tournez lentement. La boussole est plus précise loin du métal et des appareils électroniques."],
         "fromNorth": [.en: "from North", .ar: "من الشمال", .fr: "du Nord"],
         // Widgets & Live Activity
         "nextPrayerCaps": [.en: "NEXT PRAYER", .ar: "الصلاة التالية", .fr: "PROCHAINE PRIÈRE"],
         "nextPrayerTomorrowCaps": [.en: "NEXT PRAYER · TOMORROW", .ar: "الصلاة التالية · غدًا", .fr: "PROCHAINE PRIÈRE · DEMAIN"],
-        "widgetName": [.en: "Al Rashid Prayer Times", .ar: "مواقيت صلاة الراشد", .fr: "Heures de prière Al Rashid"],
-        "widgetDescription": [.en: "Next prayer with a live countdown, plus today's Adhan and Iqamah times for Al Rashid Mosque.", .ar: "الصلاة التالية مع عدّاد مباشر، بالإضافة إلى أوقات الأذان والإقامة اليوم لمسجد الراشد.", .fr: "Prochaine prière avec compte à rebours en direct, plus les heures d'Adhan et d'Iqamah du jour pour la mosquée Al Rashid."],
+        "widgetName": [.en: "Edmonton Prayer Times", .ar: "مواقيت صلاة إدمونتون", .fr: "Edmonton Prayer Times"],
+        "widgetDescription": [.en: "Next prayer with a live countdown, plus today's Adhan and Iqamah times for Edmonton.", .ar: "الصلاة التالية مع عدّاد مباشر، بالإضافة إلى أوقات الأذان والإقامة اليوم لإدمونتون.", .fr: "Prochaine prière avec compte à rebours en direct, plus les heures d'Adhan et d'Iqamah du jour pour Edmonton."],
         "jumuahToday": [.en: "Jumu'ah today", .ar: "الجمعة اليوم", .fr: "Jumu'ah aujourd'hui"],
         "jumuahWeekly": [.en: "Jumu'ah every Friday", .ar: "الجمعة كل يوم جمعة", .fr: "Jumu'ah chaque vendredi"],
         // Notifications

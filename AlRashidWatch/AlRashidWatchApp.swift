@@ -57,7 +57,7 @@ struct WatchHomeView: View {
                     }
                 }
             }
-            .navigationTitle("Al Rashid")
+            .navigationTitle("Edmonton Prayer Times")
         }
     }
 }

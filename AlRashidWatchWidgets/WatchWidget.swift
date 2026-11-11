@@ -27,7 +27,7 @@ struct NextPrayerComplication: Widget {
             ComplicationView(snapshot: entry.snapshot)
         }
         .configurationDisplayName("Next Prayer")
-        .description("The next prayer at Al Rashid Mosque, with its time.")
+        .description("The next prayer in Edmonton, with its time.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
