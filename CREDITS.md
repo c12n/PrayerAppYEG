@@ -4,7 +4,7 @@ This file records where everything used in Prayer YEG came from: the texts, the 
 
 ## This app
 
-- Prayer YEG, designed and developed by c12n Apps. Copyright (c) 2026 c12n Apps. Released under the MIT License (see LICENSE). Earlier builds were published under the names Al Rashid Prayer and Edmonton Prayer Times.
+- Prayer YEG, designed and developed by c12n Apps. Copyright (c) 2026 c12n Apps. Released under the MIT License (see LICENSE). Prayer YEG is an independent third-party project, made entirely on the developer's own initiative: it was not asked for, commissioned, or endorsed by Al Rashid Mosque. Earlier builds were published under the names Al Rashid Prayer and Edmonton Prayer Times.
 - The app itself is original work by c12n Apps, including: the on-device prayer time calculator and its mosque timetable calibration, the widget suite and Live Activity system, the Quran player engine and its interfaces, Minimal Mode, the iPhone Duo and iPad layouts, the settings backup format, and the Android edition. Evidence: the source code in this repository (AlRashidWidget/, Shared/, PrayerWidgetExtension/, flutter/).
 - App icon artwork: original artwork drawn for this app by c12n Apps, generated programmatically with make_icon.py using Pillow (the Python imaging library, imported as PIL). Evidence: make_icon.py header and imports.
 - No third-party fonts are bundled; the apps use the system fonts and SF Symbols of the platforms they run on.

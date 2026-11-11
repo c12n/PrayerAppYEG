@@ -20,7 +20,7 @@
 `v2.0.0` · Our biggest update yet | colored widgets, Ramadan mode, a monthly calendar, Minimal Mode, and more.
 
 > [!NOTE]
-> **Unofficial.** Prayer YEG is an independent app, completely separate from the mosque. It is not affiliated with or endorsed by Al Rashid Mosque | it simply follows the mosque's published timetable (13070 113 St NW, Edmonton, Canada · [alrashidmosque.ca](https://alrashidmosque.ca)).
+> **Unofficial.** Prayer YEG is an independent app, completely separate from the mosque. It is a third-party project made entirely on the developer's own initiative: Al Rashid Mosque did not ask for, commission, or endorse this app. It simply follows the prayer timetable the mosque publishes publicly on its website (13070 113 St NW, Edmonton, Canada - [alrashidmosque.ca](https://alrashidmosque.ca)).
 
 ---
 
