@@ -302,10 +302,14 @@ enum AppServices {
 // MARK: - Adhan alert sound (v1.1.0)
 
 /// The sound played with Adhan notifications, chosen in Settings and
-/// stored in the App Group. The two tones are small synthesized files
-/// bundled with the app (no downloads, per the privacy promise).
+/// stored in the App Group. Build 35 replaced every earlier bundled
+/// sound (the chime, bell and the three 2.2.0 recordings) with the
+/// single adhan from the mosque's MadinaAPPS app, at the user's
+/// direction: the picker is now Default / Silent / Al Rashid Adhan.
+/// A stored value naming a removed sound resolves to the Al Rashid
+/// Adhan, so an existing selection is replaced rather than lost.
 enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
-    case `default`, silent, chime, bell, makkah, fajr, classic
+    case `default`, silent, alrashid
 
     var id: String { rawValue }
     static let storageKey = "alerts.sound"
@@ -313,7 +317,8 @@ enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
     static var current: AdhanSound {
         let raw = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier)?
             .string(forKey: storageKey)
-        return AdhanSound(rawValue: raw ?? "") ?? .default
+        guard let raw, !raw.isEmpty else { return .default }
+        return AdhanSound(rawValue: raw) ?? .alrashid
     }
 
     var l10nKey: String { "sound.\(rawValue)" }
@@ -322,13 +327,7 @@ enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
         switch self {
         case .default: .default
         case .silent: nil
-        case .chime: UNNotificationSound(named: UNNotificationSoundName("adhan_chime.wav"))
-        case .bell: UNNotificationSound(named: UNNotificationSoundName("adhan_bell.wav"))
-        // v2.2.0-alpha: real Adhan recordings (public sources),
-        // trimmed to the 30-second notification limit.
-        case .makkah: UNNotificationSound(named: UNNotificationSoundName("adhan_makkah.wav"))
-        case .fajr: UNNotificationSound(named: UNNotificationSoundName("adhan_fajr.wav"))
-        case .classic: UNNotificationSound(named: UNNotificationSoundName("adhan_classic.wav"))
+        case .alrashid: UNNotificationSound(named: UNNotificationSoundName("adhan_alrashid.wav"))
         }
     }
 }

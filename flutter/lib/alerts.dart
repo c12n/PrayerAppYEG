@@ -25,8 +25,8 @@ class PlannedNotification {
   final String title;
   final String body;
 
-  /// Alert sound name (v1.8.0): 'default', 'silent', 'chime' or
-  /// 'bell'. The native side posts on the notification channel for
+  /// Alert sound name (v1.8.0): 'default', 'silent' or 'alrashid'
+  /// (build 35). The native side posts on the notification channel for
   /// this sound. Reminders keep the default sound, like iOS.
   final String sound;
 

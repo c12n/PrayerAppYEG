@@ -25,7 +25,7 @@ import org.json.JSONObject
 
 /// One item of the alert plan computed by the Dart scheduler.
 /// `sound` (v1.8.0) is the effective alert sound for the item —
-/// 'default', 'silent', 'chime' or 'bell' — and selects the
+/// 'default', 'silent' or 'alrashid' (build 35) — and selects the
 /// notification channel the item posts on.
 data class AlertItem(
     val id: Int,
@@ -136,14 +136,13 @@ object AlertArmer {
 /// (v1.8.0): a channel's sound is fixed at creation on Android, so
 /// each sound gets its own IMPORTANCE_HIGH channel — 'adhan_alerts'
 /// (the original channel, kept so existing users keep their system
-/// settings for it) for the default sound, plus _chime / _bell /
-/// _silent variants. The bundled chime and bell are the same WAV
-/// files the iOS app ships, in res/raw.
+/// settings for it) for the default sound, plus _silent and
+/// _alrashid variants (build 35: one bundled sound, the same WAV
+/// the iOS app ships, in res/raw).
 object AdhanNotifier {
     const val CHANNEL_ID = "adhan_alerts"
 
-    private val SOUNDS = listOf(
-        "default", "chime", "bell", "silent", "makkah", "fajr", "classic")
+    private val SOUNDS = listOf("default", "silent", "alrashid")
 
     fun channelId(sound: String): String =
         if (sound == "default") CHANNEL_ID else "adhan_alerts_$sound"
@@ -152,30 +151,18 @@ object AdhanNotifier {
         when (sound) {
             "default" ->
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            // R.raw references (not string-built URIs) so aapt's
-            // resource shrinker keeps the bundled sounds in the APK.
-            "chime" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/${R.raw.adhan_chime}")
-            "bell" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/${R.raw.adhan_bell}")
-            // The three Adhan recordings, ported from iOS for parity
-            // (build 34): same 29-second trims, one channel each.
-            "makkah" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/${R.raw.adhan_makkah}")
-            "fajr" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/${R.raw.adhan_fajr}")
-            "classic" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/${R.raw.adhan_classic}")
+            // R.raw reference (not a string-built URI) so aapt's
+            // resource shrinker keeps the bundled sound in the APK.
+            // Build 35: the one remaining bundled sound, the adhan
+            // from the mosque's MadinaAPPS app.
+            "alrashid" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_alrashid}")
             else -> null // silent
         }
 
     private fun channelName(sound: String): String = when (sound) {
-        "chime" -> "Adhan Alerts · Gentle Chime"
-        "bell" -> "Adhan Alerts · Soft Bell"
         "silent" -> "Adhan Alerts · Silent"
-        "makkah" -> "Adhan Alerts · Makkah Adhan"
-        "fajr" -> "Adhan Alerts · Fajr Adhan"
-        "classic" -> "Adhan Alerts · Classic Adhan"
+        "alrashid" -> "Adhan Alerts · Al Rashid Adhan"
         else -> "Adhan Alerts"
     }
 

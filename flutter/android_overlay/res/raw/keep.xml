@@ -3,4 +3,4 @@
      referenced by notification channels at runtime, and aapt's
      resource shrinker would otherwise strip them as unused. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@raw/adhan_chime,@raw/adhan_bell,@raw/adhan_makkah,@raw/adhan_fajr,@raw/adhan_classic" />
+    tools:keep="@raw/adhan_alrashid" />

@@ -3410,11 +3410,7 @@ final class SoundPreviewPlayer: NSObject, ObservableObject, AVAudioPlayerDelegat
     func play(_ sound: AdhanSound) {
         let fileName: String
         switch sound {
-        case .chime: fileName = "adhan_chime"
-        case .bell: fileName = "adhan_bell"
-        case .makkah: fileName = "adhan_makkah"
-        case .fajr: fileName = "adhan_fajr"
-        case .classic: fileName = "adhan_classic"
+        case .alrashid: fileName = "adhan_alrashid"
         case .default, .silent:
             stop()
             return

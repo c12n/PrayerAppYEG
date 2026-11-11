@@ -20,20 +20,15 @@ import 'prayer_models.dart';
 /// version (2.0.0+16). Shown in the Settings footer and used by the
 /// What's New sheet to decide whether to appear.
 const kAppVersion = '2.3.0';
-const kAppBuildNumber = '19';
+const kAppBuildNumber = '20';
 
 /// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
 /// what travel over the alerts MethodChannel and name the Android
 /// notification channels.
-const alertSoundNames = [
-  'default',
-  'silent',
-  'chime',
-  'bell',
-  'makkah',
-  'fajr',
-  'classic'
-];
+/// Build 35: every earlier bundled sound was replaced by the single
+/// adhan from the mosque's MadinaAPPS app — Default / Silent /
+/// Al Rashid Adhan, same as iOS.
+const alertSoundNames = ['default', 'silent', 'alrashid'];
 
 class SavedTheme {
   final String id;
@@ -225,6 +220,10 @@ class AppSettings extends ChangeNotifier {
     final storedSound = prefs.getString(alertSoundKey);
     if (storedSound != null && alertSoundNames.contains(storedSound)) {
       s.alertSound = storedSound;
+    } else if (storedSound != null && storedSound.isNotEmpty) {
+      // A sound removed in build 35: replaced by the Al Rashid
+      // Adhan, not silently reset to the system default.
+      s.alertSound = 'alrashid';
     }
     for (final p in Prayer.values) {
       final override = prefs.getString(prayerSoundKey(p));
@@ -559,4 +558,10 @@ const presetThemes = <SavedTheme>[
   SavedTheme(id: 'preset-desert', name: 'Desert Dunes', primaryHex: 0x6B4420, accentHex: 0xF2C14E, textHex: 0xFFF8E7, mode: ThemeMode.system),
   SavedTheme(id: 'preset-forest', name: 'Forest Canopy', primaryHex: 0x14532D, accentHex: 0xFDE68A, textHex: 0xF0FDF4, mode: ThemeMode.system),
   SavedTheme(id: 'preset-charcoal', name: 'Charcoal Mono', primaryHex: 0x171717, accentHex: 0xE7E5E4, textHex: 0xFAFAF9, mode: ThemeMode.dark),
+  // Five more presets (build 35), led by a true high-contrast theme.
+  SavedTheme(id: 'preset-contrast', name: 'High Contrast', primaryHex: 0x000000, accentHex: 0xFFD60A, textHex: 0xFFFFFF, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-emerald', name: 'Emerald Night', primaryHex: 0x052E22, accentHex: 0x34D399, textHex: 0xECFDF5, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-crimson', name: 'Crimson Dusk', primaryHex: 0x450A0A, accentHex: 0xFCA5A5, textHex: 0xFEF2F2, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-sapphire', name: 'Sapphire Noor', primaryHex: 0x172554, accentHex: 0x93C5FD, textHex: 0xEFF6FF, mode: ThemeMode.dark),
+  SavedTheme(id: 'preset-plum', name: 'Plum Velvet', primaryHex: 0x3B0764, accentHex: 0xF0ABFC, textHex: 0xFAF5FF, mode: ThemeMode.dark),
 ];

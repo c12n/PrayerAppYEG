@@ -1799,6 +1799,19 @@ enum AppAppearance {
                     primaryHex: 0x14532D, accentHex: 0xFDE68A, textHex: 0xF0FDF4, modeRaw: "system"),
         ThemeChoice(id: "preset-charcoal", name: "Charcoal Mono",
                     primaryHex: 0x171717, accentHex: 0xE7E5E4, textHex: 0xFAFAF9, modeRaw: "dark"),
+        // Five more presets (build 35), led by a true high-contrast
+        // theme for low-vision users: pure black surfaces, a bright
+        // yellow accent and pure white text, always dark.
+        ThemeChoice(id: "preset-contrast", name: "High Contrast",
+                    primaryHex: 0x000000, accentHex: 0xFFD60A, textHex: 0xFFFFFF, modeRaw: "dark"),
+        ThemeChoice(id: "preset-emerald", name: "Emerald Night",
+                    primaryHex: 0x052E22, accentHex: 0x34D399, textHex: 0xECFDF5, modeRaw: "dark"),
+        ThemeChoice(id: "preset-crimson", name: "Crimson Dusk",
+                    primaryHex: 0x450A0A, accentHex: 0xFCA5A5, textHex: 0xFEF2F2, modeRaw: "dark"),
+        ThemeChoice(id: "preset-sapphire", name: "Sapphire Noor",
+                    primaryHex: 0x172554, accentHex: 0x93C5FD, textHex: 0xEFF6FF, modeRaw: "dark"),
+        ThemeChoice(id: "preset-plum", name: "Plum Velvet",
+                    primaryHex: 0x3B0764, accentHex: 0xF0ABFC, textHex: 0xFAF5FF, modeRaw: "dark"),
     ]
 
     /// The user's own saved themes (JSON in the App Group).
@@ -2544,11 +2557,7 @@ extension L10n {
         "alertSound": [.en: "Alert Sound", .ar: "صوت التنبيه", .fr: "Son d'alerte"],
         "sound.default": [.en: "Default", .ar: "الافتراضي", .fr: "Par défaut"],
         "sound.silent": [.en: "Silent", .ar: "صامت", .fr: "Silencieux"],
-        "sound.chime": [.en: "Gentle Chime", .ar: "رنين لطيف", .fr: "Carillon doux"],
-        "sound.bell": [.en: "Soft Bell", .ar: "جرس خفيف", .fr: "Cloche douce"],
-        "sound.makkah": [.en: "Makkah Adhan", .ar: "أذان مكة المكرمة", .fr: "Adhan de La Mecque"],
-        "sound.fajr": [.en: "Fajr Adhan", .ar: "أذان الفجر", .fr: "Adhan du Fajr"],
-        "sound.classic": [.en: "Classic Adhan", .ar: "الأذان الكلاسيكي", .fr: "Adhan classique"],
+        "sound.alrashid": [.en: "Al Rashid Adhan", .ar: "أذان الراشد", .fr: "Adhan Al Rashid"],
         "laPromptTitle": [.en: "See the next prayer on your Lock Screen?", .ar: "هل تريد رؤية الصلاة التالية على شاشة القفل؟", .fr: "Voir la prochaine prière sur votre écran verrouillé ?"],
         "laPromptBody": [.en: "Live Activities put a live countdown to the next prayer on your Lock Screen and Dynamic Island. They are off by default, and you can turn them on or off anytime in Settings.", .ar: "تضع الأنشطة المباشرة عدّادًا مباشرًا للصلاة التالية على شاشة القفل وDynamic Island. وهي متوقفة افتراضيًا، ويمكنك تشغيلها أو إيقافها في أي وقت من الإعدادات.", .fr: "Les activités en direct placent un compte à rebours vers la prochaine prière sur l'écran verrouillé et la Dynamic Island. Elles sont désactivées par défaut, et vous pouvez les activer ou les désactiver à tout moment dans les Réglages."],
         "laEnable": [.en: "Turn On Live Activities", .ar: "تشغيل الأنشطة المباشرة", .fr: "Activer les activités en direct"],

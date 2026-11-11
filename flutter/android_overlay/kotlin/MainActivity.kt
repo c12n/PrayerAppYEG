@@ -174,11 +174,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         previewPlayer?.release()
         previewPlayer = null
         val resId = when (sound) {
-            "chime" -> R.raw.adhan_chime
-            "bell" -> R.raw.adhan_bell
-            "makkah" -> R.raw.adhan_makkah
-            "fajr" -> R.raw.adhan_fajr
-            "classic" -> R.raw.adhan_classic
+            "alrashid" -> R.raw.adhan_alrashid
             else -> return
         }
         previewPlayer = android.media.MediaPlayer.create(this, resId)?.apply {
