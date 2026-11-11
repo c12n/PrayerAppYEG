@@ -490,17 +490,6 @@ struct QuranLibraryView: View {
     private var libraryOptionsSheet: some View {
         NavigationStack {
             Form {
-                Section("Player style") {
-                    Picker("Player style", selection: Binding(
-                        get: { player.playerStyle },
-                        set: { player.playerStyle = $0 }
-                    )) {
-                        Text("Spotify").tag(QuranPlayer.PlayerStyle.spotify)
-                        Text("Apple Music").tag(QuranPlayer.PlayerStyle.appleMusic)
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                }
                 Section("Audio language") {
                     Picker("Audio language", selection: Binding(
                         get: { player.audioLanguage },

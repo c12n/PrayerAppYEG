@@ -19,6 +19,7 @@
 import AVFoundation
 import Foundation
 import MediaPlayer
+import SwiftUI
 import UIKit
 import WidgetKit
 
@@ -34,12 +35,13 @@ final class QuranPlayer: ObservableObject {
         case endOfSurah
     }
 
-    /// Now Playing appearance (v2.2.0-alpha), switchable in the
-    /// player and in the library menu. Raw values are the persisted
-    /// `quran.playerStyle` strings.
+    /// Now Playing appearance. Build 39 removed the Apple Music
+    /// layout at Youssef's direction; Spotify is the only style. The
+    /// enum and its persisted `quran.playerStyle` value stay so old
+    /// installs keep decoding (a stored "applemusic" no longer
+    /// matches a case and falls back to .spotify at restore).
     enum PlayerStyle: String, CaseIterable {
         case spotify = "spotify"
-        case appleMusic = "applemusic"
     }
 
     /// Recitation language (v2.2.0-alpha): the Arabic reciters, or
@@ -217,6 +219,12 @@ final class QuranPlayer: ObservableObject {
     /// order) under a context label ("All Surahs", "Favorites", ...).
     func play(surahNumber: Int, queue newQueue: [Int], contextLabel newContext: String) {
         guard let surah = QuranLibrary.surah(surahNumber) else { return }
+        // Build 39: a fresh queue starts in its own order. Shuffle is
+        // persisted, so without this a Play All (e.g. Favorites)
+        // inherited the shuffled traversal left over from an earlier
+        // All Surahs session and "next" jumped around the master
+        // list instead of walking the queue the user just started.
+        shuffle = false
         queue = newQueue.isEmpty ? [surahNumber] : newQueue
         contextLabel = newContext
         rebuildTraversal(keepingCurrentFirst: false)
@@ -812,10 +820,42 @@ final class QuranPlayer: ObservableObject {
         info[MPMediaItemPropertyTitle] = surah.english
         info[MPMediaItemPropertyArtist] = currentReciter?.name ?? ""
         info[MPMediaItemPropertyAlbumTitle] = "Quran"
+        // Build 39: artwork for the Lock Screen / Control Center
+        // Now Playing card (it was blank before). The same tile the
+        // player shows, rendered once per surah and cached.
+        if let image = Self.artworkImage(for: surah) {
+            info[MPMediaItemPropertyArtwork] =
+                MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        }
         info[MPMediaItemPropertyPlaybackDuration] = duration
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? rate : 0.0
         center.nowPlayingInfo = info
+    }
+
+
+    // MARK: - Now Playing artwork (build 39)
+
+    private nonisolated(unsafe) static var artworkCache: [Int: UIImage] = [:]
+
+    /// Renders the player's artwork tile (per-surah gradient, Arabic
+    /// name, surah number) to a 600 pt square image for the system
+    /// Now Playing surfaces. Nil only if rendering fails, in which
+    /// case the system keeps its placeholder.
+    private static func artworkImage(for surah: QuranSurah) -> UIImage? {
+        if let cached = artworkCache[surah.number] { return cached }
+        // ImageRenderer is main-actor bound; callers of the Now
+        // Playing update are all main-thread in practice.
+        let image = MainActor.assumeIsolated { () -> UIImage? in
+            let side: CGFloat = 600
+            let tile = SurahArtworkView(surah: surah, cornerRadius: 0)
+                .frame(width: side, height: side)
+            let renderer = ImageRenderer(content: tile)
+            renderer.scale = 1
+            return renderer.uiImage
+        }
+        if let image { artworkCache[surah.number] = image }
+        return image
     }
 
     private func onMain(_ work: @escaping () -> Void) {

@@ -16,29 +16,22 @@ import UIKit
 import UserNotifications
 import WidgetKit
 
-/// Live appearance mode (v2.2.0-alpha fix): the in-app Light/Dark/System
-/// choice lives in the App Group suite and is written by Settings'
-/// @AppStorage. Cross-instance @AppStorage observation proved unreliable
-/// for driving preferredColorScheme (the app kept the launch appearance
-/// until relaunched), so the App observes UserDefaults changes directly
-/// and re-applies the scheme at the WindowGroup root. System = nil =
-/// follows the device's own Dark Mode, live.
+/// Live appearance state (v2.2.0-alpha, rebuilt build 39): the
+/// in-app Light/Dark/System choice lives in the App Group suite and
+/// is written by Settings' @AppStorage. Cross-instance @AppStorage
+/// observation proved unreliable (the app kept the launch
+/// appearance until relaunched), so the App observes UserDefaults
+/// changes directly and publishes mode, language and Minimal Mode
+/// for the root. The mode itself is applied to the scene by
+/// AppearanceController below; this observer never writes an
+/// appearance itself.
 final class AppearanceModeObserver: ObservableObject {
     @Published private(set) var mode: AppAppearance.Mode
-    /// Bumped on every system appearance flip observed by the main
-    /// window's AppearanceWatchController (build 37). AlRashidWidgetApp
-    /// feeds it into ContentView's identity so a Control Center Dark
-    /// Mode flip re-renders the tree with the new traits immediately.
-    @Published private(set) var systemFlipToken = 0
     /// The in-app language, observed the same way as the mode
     /// (build 37). Views that used to read AppLanguage.current at
     /// render time kept the Arabic session's layoutDirection traits
-    /// after switching back to English or French — the environment
-    /// said left-to-right again, but the UIKit-backed controls inside
-    /// the hosting controller had already resolved their direction
-    /// and never re-asked. The App root now publishes the direction
-    /// from this observer and re-keys the tree on a real flip, the
-    /// same pattern the appearance mode uses.
+    /// after switching back to English or French, so the App root
+    /// publishes the direction from this observer.
     @Published private(set) var language: AppLanguage
     /// Minimal Mode, likewise published (build 37): the layout
     /// router read MinimalMode.enabled statically, so toggling the
@@ -61,63 +54,51 @@ final class AppearanceModeObserver: ObservableObject {
             if currentLanguage != self.language { self.language = currentLanguage }
             let currentMinimal = MinimalMode.enabled
             if currentMinimal != self.minimalMode { self.minimalMode = currentMinimal }
-            WindowStyleApplier.apply()
-        }
-        WindowStyleApplier.onSystemAppearanceFlip = { [weak self] in
-            self?.systemFlipToken += 1
+            // Build 39 (Claude consult): the mode is handed to the
+            // ONE appearance writer. Nothing else in the app sets an
+            // override or a preferred color scheme any more.
+            AppearanceController.applyCurrent()
         }
     }
 }
 
-/// Root wrapper (build 37) that puts the SwiftUI content inside
-/// AppearanceWatchController so the window's hosting controller can
-/// notice system appearance flips while the app runs — WindowGroup
-/// creates its hosting controller internally with no subclass hook,
-/// so the controller is hosted through a representable instead. The
-/// representable sits at the scene root; sheets and covers presented
-/// from inside the content get their own system controllers, which
-/// is fine: only the main window needs the watch.
-struct AppearanceWatchRoot<Content: View>: UIViewControllerRepresentable {
-    let content: Content
-
-    func makeUIViewController(context: Context) -> AppearanceWatchController<Content> {
-        AppearanceWatchController(rootView: content)
-    }
-
-    func updateUIViewController(_ controller: AppearanceWatchController<Content>, context: Context) {
-        controller.rootView = content
-    }
-}
-
-/// Imperative window appearance (build 34; simplified in build 36):
-/// on Youssef's phone the scene-root preferredColorScheme(nil) did
-/// not re-follow the device in System mode — flipping iPhone Dark
-/// Mode from Control Center left the app in its launch appearance
-/// until relaunch, while the explicit Light/Dark picks (non-nil
-/// schemes) worked. Setting each window's overrideUserInterfaceStyle
-/// directly is authoritative: System clears the override
-/// (.unspecified) so windows track the device live; Light/Dark pin
-/// it. Applied on mode writes (the observer above) and on every
-/// activation (AppDelegate).
+/// THE single appearance writer (build 39, rebuilt on the
+/// architecture Claude Opus prescribed after builds 34 to 38 all
+/// failed on device). The stored System / Light / Dark choice is
+/// turned into a trait override on the window SCENE, and that is
+/// the ONLY appearance write in the app:
 ///
-/// Build 36 removed the WindowStyleHook UIViewRepresentable that
-/// build 34 added (didMoveToWindow / traitCollectionDidChange hooks
-/// inside ContentView's background) together with the prayer tab's
-/// .id(appearanceStamp): on build 34, tapping Light or Dark in
-/// Settings crashed the app immediately, and those two were the only
-/// new moving parts on that path — a UIView hook mutating window
-/// state from inside the SwiftUI view lifecycle, and an identity
-/// change on a page of the paged TabView while the Settings tab was
-/// alive. Theme freshness without them flows from ContentView's own
-/// @AppStorage re-renders, as it did before build 34.
-enum WindowStyleApplier {
-    /// Fires once per real userInterfaceStyle flip while the app is
-    /// alive (build 37): the main window's root view controller
-    /// reports the new style from its trait hook, so System mode can
-    /// react during THIS session instead of on the next activation.
-    static var onSystemAppearanceFlip: (() -> Void)?
-
-    static func apply() {
+/// - No `.preferredColorScheme` anywhere (it was a second writer
+///   racing the window overrides; whichever wrote last won, which
+///   is how the app ended up in mixed states).
+/// - No `.id(flipToken)` tree rebuilds: a rebuild creates a fresh
+///   hosting controller whose first pass runs before it is in the
+///   hierarchy, so it reads pre-flip traits.
+/// - No nested UIHostingController wrapper and no
+///   traitCollectionDidChange hook (deprecated since iOS 17;
+///   trait updates are top-down, so nested controllers can be
+///   acting on the previous pass).
+/// - In System mode the scene override is REMOVED, not pinned to
+///   `.unspecified`, so the scene falls through to the device's
+///   own appearance and follows Control Center flips live through
+///   the normal trait system. Every color in the app is a dynamic
+///   color (a UIColor trait-provider closure) or an
+///   @Environment(\.colorScheme) read inside a view, so once the
+///   traits move, the surfaces re-resolve at draw time with no
+///   poking from here.
+/// - Explicit Light / Dark also clear any legacy per-window
+///   override left by builds 34 to 38, so nothing stale survives.
+///
+/// The stored key has dots ("appearance.mode"), so UserDefaults
+/// KVO cannot observe it by property name; the observer above
+/// watches didChangeNotification (which demonstrably fires for
+/// in-app writes, since explicit Light/Dark always applied
+/// instantly) and calls applyCurrent(). Scene activation also
+/// re-applies once, as a backstop for flips made while the app
+/// was backgrounded.
+@MainActor
+enum AppearanceController {
+    static func applyCurrent() {
         let style: UIUserInterfaceStyle
         switch AppAppearance.mode {
         case .system: style = .unspecified
@@ -126,79 +107,17 @@ enum WindowStyleApplier {
         }
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
+            // Scene-level override: the trait source for every
+            // window, sheet and alert in the scene.
+            windowScene.traitOverrides.userInterfaceStyle = style
+            // Clear (System) or pin (Light/Dark) any legacy
+            // per-window overrides from the old applier, so the
+            // scene value is the only one in play.
             for window in windowScene.windows
             where window.overrideUserInterfaceStyle != style {
                 window.overrideUserInterfaceStyle = style
             }
         }
-    }
-}
-
-/// Hosting-controller subclass whose only job is noticing the
-/// system appearance flipping while the app runs (build 37). In
-/// System mode the first Control Center Dark Mode flip after launch
-/// never re-rendered the app on Youssef's phone: the window's style
-/// stayed where the launch appearance had put it, and only the NEXT
-/// launch (or the didBecomeActive apply, which then read a stale
-/// resolved style) caught up. The SwiftUI tree adapts by itself once
-/// a flip is known to have happened, so this controller watches the
-/// window's RESOLVED style: on a real change it asks the app to
-/// re-assert the window overrides via WindowStyleApplier.apply()
-/// (whose loop re-triggers this hook — the lastStyle guard is what
-/// keeps that from cycling) and pokes AppearanceModeObserver via
-/// onSystemAppearanceFlip so SwiftUI re-renders with fresh traits.
-/// Explicit Light/Dark pins are unaffected: a pinned window's style
-/// never changes underneath it.
-final class AppearanceWatchController<Content: View>: UIHostingController<Content> {
-    private var lastStyle: UIUserInterfaceStyle?
-    private var sceneTokens: [NSObjectProtocol] = []
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        lastStyle = traitCollection.userInterfaceStyle
-        // Build 38: also catch the flip at the scene level. A
-        // Control Center appearance flip lands while the scene is
-        // INACTIVE, and on device neither the trait hook above nor
-        // the foreground apply reliably re-rendered the app —
-        // builds 36 and 37 both passed the simulator and still
-        // failed on the phone. The scene activation notifications
-        // fire for this window's own scene on every return to the
-        // foreground, which is the moment the new style must be
-        // picked up.
-        guard sceneTokens.isEmpty, let scene = view.window?.windowScene else { return }
-        let center = NotificationCenter.default
-        for name in [UIScene.didActivateNotification, UIScene.willEnterForegroundNotification] {
-            sceneTokens.append(center.addObserver(
-                forName: name, object: scene, queue: .main
-            ) { [weak self] _ in
-                self?.noteAppearanceChange(force: true)
-            })
-        }
-    }
-
-    override func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-        sceneTokens.forEach { NotificationCenter.default.removeObserver($0) }
-        sceneTokens.removeAll()
-    }
-
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        noteAppearanceChange(force: false)
-    }
-
-    /// Compares the window's currently resolved style against the
-    /// last one this controller acted on; on a real change it
-    /// re-asserts the window overrides and pokes the observer so the
-    /// SwiftUI tree re-renders with fresh traits. `force` re-checks
-    /// even when the trait hook already ran for the same flip (the
-    /// scene-activation path after a background flip).
-    private func noteAppearanceChange(force: Bool) {
-        let style = traitCollection.userInterfaceStyle
-        guard style != lastStyle else { return }
-        lastStyle = style
-        WindowStyleApplier.apply()
-        WindowStyleApplier.onSystemAppearanceFlip?()
     }
 }
 
@@ -212,9 +131,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Covers device appearance flips made while the app sat in
-        // the background (e.g. the Control Center Dark Mode toggle).
-        WindowStyleApplier.apply()
+        // Backstop (build 39): re-assert the stored mode on the
+        // scene after any appearance flip made while the app sat
+        // in the background (e.g. the Control Center Dark Mode
+        // toggle). In System mode this simply re-removes the
+        // override; the live follow itself comes from the trait
+        // system, not from this call.
+        AppearanceController.applyCurrent()
     }
 
     func application(_ application: UIApplication,
@@ -276,28 +199,30 @@ struct AlRashidWidgetApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppearanceWatchRoot(content: rootContent)
+            rootContent
         }
     }
 
-    /// The SwiftUI root, shared by the scene and the watch hosting
-    /// controller. Layout direction and locale come from the
-    /// observer (build 37) so Arabic's right-to-left and a switch
-    /// back apply live to the whole tree, including its UIKit-backed
-    /// controls; the flip token re-keys the tree when the system
-    /// appearance flips underneath it.
+    /// The SwiftUI root (build 39): a plain WindowGroup root. The
+    /// old AppearanceWatchRoot hosting-controller wrapper is gone,
+    /// and with it the preferredColorScheme + flip-token rebuilds:
+    /// appearance is owned by AppearanceController at the scene
+    /// level, and views follow it through their own traits.
+    /// Layout direction and locale still come from the observer
+    /// (build 37) so Arabic's right-to-left and a switch back
+    /// apply live to the whole tree, including its UIKit-backed
+    /// controls.
     private var rootContent: some View {
         ContentView()
             .environmentObject(quranPlayer)
             .environmentObject(quranDownloads)
             .environmentObject(quranBookmarks)
             .environmentObject(appearanceObserver)
-            .preferredColorScheme(appearanceObserver.mode.colorScheme)
             .environment(\.layoutDirection,
                          appearanceObserver.language.isRTL ? .rightToLeft : .leftToRight)
             .environment(\.locale, appearanceObserver.language.locale)
-            .id(appearanceObserver.systemFlipToken)
             .tint(Theme.adaptiveGold)
+            .onAppear { AppearanceController.applyCurrent() }
     }
 }
 

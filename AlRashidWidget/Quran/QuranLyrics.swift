@@ -271,12 +271,10 @@ struct QuranLyricsView: View {
                                            duration: player.duration))
     }
 
-    /// The two player styles get their own lyrics look (build 29):
-    /// Spotify = a vivid surah-colored card, big bold lines, the
-    /// current ayah bright white, upcoming ayahs dark on the card;
-    /// Apple Music = plain background, the current ayah sharp and
-    /// every other ayah blurred and dimmed, karaoke style.
-    private var isSpotifyStyle: Bool { player.playerStyle == .spotify }
+    /// Lyrics look (build 29, Spotify style kept as the only style
+    /// in build 39): a vivid surah-colored card, big bold lines, the
+    /// current ayah bright white, upcoming ayahs dark on the card.
+    private var isSpotifyStyle: Bool { true }
 
     private enum RowState {
         case previous, current, upcoming
@@ -450,8 +448,8 @@ struct QuranLyricsView: View {
     @ViewBuilder
     private func appleRow(_ ayah: QuranAyahText, state: RowState,
                           englishPrimary: Bool) -> some View {
-        // Apple Music karaoke: current ayah sharp; all others
-        // blurred and dimmed.
+        // Karaoke row (unused since build 39 removed the Apple
+        // Music layout): current ayah sharp; all others blurred.
         let isCurrent = state == .current
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {

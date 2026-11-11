@@ -25,9 +25,10 @@ private struct HomeScrollOffsetKey: PreferenceKey {
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
-    /// The user's Light/Dark choice from Settings (App Group, shared with
-    /// the widgets). Applied with preferredColorScheme below — this is
-    /// what makes the whole UI actually follow the in-app setting.
+    /// The user's Light/Dark choice from Settings (App Group, shared
+    /// with the widgets). Observed so mode changes re-render this
+    /// view; the mode itself is applied at the scene level by
+    /// AppearanceController (build 39) — no preferredColorScheme.
     @AppStorage(AppAppearance.modeKey, store: UserDefaults(suiteName: PrayerProvider.appGroupIdentifier))
     private var modeRaw: String = AppAppearance.Mode.system.rawValue
     /// The theme colors, observed here as well as in Settings (v1.0.9).
@@ -101,9 +102,10 @@ struct ContentView: View {
     /// rebuilt every tab — including the Settings Form, whose scroll
     /// position snapped back to the top on every toggle or theme tap.
     /// Theme changes now reach this screen through its own @AppStorage
-    /// re-renders (and the imperative WindowStyleApplier for the color
-    /// scheme); the appearance stamp survives only on the prayer tab,
-    /// which holds no scroll state worth preserving.
+    /// re-renders, and the color scheme through the scene trait
+    /// override (AppearanceController, build 39); the appearance
+    /// stamp survives only on the prayer tab, which holds no scroll
+    /// state worth preserving.
     /// True once the home list is scrolled: the status bar hides so
     /// it never floats over the prayer cards mid-scroll (v1.5.1), and
     /// screenshots taken while scrolled come out clean.
@@ -1552,7 +1554,18 @@ private struct SettingsView: View {
             // (build 37); sheets inherit them from the presenter.
             .environment(\.locale, AppLanguage.current.locale)
             .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
-            .onAppear { currentIconName = UIApplication.shared.alternateIconName }
+                        .onAppear {
+                // Build 39: the system alternateIconName readback is
+                // nil for Feather (re)signed installs even after a
+                // successful change, so the remembered in-app pick
+                // (kept in the app-group suite) drives the ring; the
+                // system value wins whenever it actually reports one.
+                if let system = UIApplication.shared.alternateIconName {
+                    currentIconName = system
+                } else {
+                    currentIconName = IconChoice.remembered
+                }
+            }
             .onChange(of: modeRaw) { _, _ in settingsChanged() }
             .onChange(of: primaryHex) { _, _ in settingsChanged() }
             .onChange(of: accentHex) { _, _ in settingsChanged() }
@@ -2461,6 +2474,7 @@ private struct SettingsView: View {
                 iconError = L10n.f("iconError", error.localizedDescription)
             } else {
                 currentIconName = option.alternateName
+                IconChoice.remember(option.alternateName)
             }
         }
     }
@@ -2476,6 +2490,7 @@ private struct SettingsView: View {
         PrayerSoundSettings.reset()
         UIApplication.shared.setAlternateIconName(nil)
         currentIconName = nil
+        IconChoice.remember(nil)
         modeRaw = AppAppearance.Mode.system.rawValue
         widgetColorModeRaw = AppAppearance.WidgetColorMode.match.rawValue
         partThemesRevision += 1

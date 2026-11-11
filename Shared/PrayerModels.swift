@@ -1623,6 +1623,28 @@ enum Theme {
 /// - Text color: the main text color on colored surfaces (contrast-guarded).
 /// - Saved themes: the user's own named combinations of the above.
 /// Colors are stored as sRGB hex ints.
+/// The user's app-icon pick (build 39). iOS reports the change
+/// through UIApplication.alternateIconName, but that readback comes
+/// back nil on Feather-signed installs even when the change itself
+/// succeeded (the system shows its confirmation alert and the home
+/// screen icon updates), which made Settings fall back to showing
+/// Classic as selected after a relaunch. The pick is therefore also
+/// remembered in the app-group suite.
+enum IconChoice {
+    static let defaultsKey = "appearance.iconName"
+
+    private static var suite: UserDefaults {
+        UserDefaults(suiteName: PrayerProvider.appGroupIdentifier) ?? .standard
+    }
+
+    static var remembered: String? { suite.string(forKey: defaultsKey) }
+
+    static func remember(_ name: String?) {
+        if let name { suite.set(name, forKey: defaultsKey) }
+        else { suite.removeObject(forKey: defaultsKey) }
+    }
+}
+
 enum AppAppearance {
     static let modeKey = "appearance.mode"
     static let accentKey = "appearance.accentHex"
