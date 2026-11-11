@@ -1408,12 +1408,8 @@ private struct ScheduleRow: View {
 private struct FooterView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(MosqueInfo.address, systemImage: "mappin.and.ellipse")
             Label(L10n.f("jumuahWeeklyAt", PrayerFormat.khutbahTime(on: .now)), systemImage: "building.columns")
             Label(L10n.t("footerPrivacy"), systemImage: "lock.shield.fill")
-            Text(L10n.t("footerCalc"))
-                .font(.caption)
-                .padding(.top, 4)
         }
         .font(.footnote)
         .foregroundStyle(.secondary)
@@ -1613,6 +1609,7 @@ private struct SettingsView: View {
                 alertHealthSection
                 resetSection
                 versionSection
+                dataNoteSection
             }
             .id(resetGeneration)
             .onDisappear { soundPreview.stop() }
@@ -2383,6 +2380,14 @@ private struct SettingsView: View {
             Text(L10n.t("prayerAlerts"))
         } footer: {
             Text(L10n.t("prayerAlertsFooter"))
+        }
+    }
+
+    private var dataNoteSection: some View {
+        Section {
+            Text(L10n.t("footerCalc"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 

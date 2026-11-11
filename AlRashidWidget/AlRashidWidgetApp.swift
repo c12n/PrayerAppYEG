@@ -1304,7 +1304,7 @@ enum SettingsBackup {
             }
         }
         let document: [String: Any] = [
-            "app": "AlRashidPrayer",
+            "app": "PrayerYEG",
             "kind": "settings-backup",
             "version": formatVersion,
             "values": values,

@@ -20,7 +20,7 @@ import UIKit
 // MARK: - Mosque constants
 
 enum MosqueInfo {
-    static let name = "Edmonton Prayer Times"
+    static let name = "Prayer YEG"
     static let address = "13070 113 St NW, Edmonton, AB"
     static let directionsAddress = "13070 113 St NW, Edmonton, AB, Canada"
     static let latitude = 53.591189
@@ -2382,7 +2382,7 @@ enum L10n {
         "pushLocalOnly": [.en: "Local only", .ar: "محلي فقط", .fr: "Local uniquement"],
         // In-app update reminder (v1.7.0)
         "updateAvailable": [.en: "Update available", .ar: "يتوفر تحديث", .fr: "Mise à jour disponible"],
-        "updateAvailableBody": [.en: "Version %@ of Edmonton Prayer Times is ready in TestFlight.", .ar: "الإصدار %@ من تطبيق مواقيت صلاة إدمونتون جاهز في TestFlight.", .fr: "La version %@ d'Edmonton Prayer Times est prête dans TestFlight."],
+        "updateAvailableBody": [.en: "Version %@ of Prayer YEG is ready in TestFlight.", .ar: "الإصدار %@ من تطبيق Prayer YEG جاهز في TestFlight.", .fr: "La version %@ de Prayer YEG est prête dans TestFlight."],
         "updateNow": [.en: "Update in TestFlight", .ar: "التحديث في TestFlight", .fr: "Mettre à jour dans TestFlight"],
         "updateLater": [.en: "Later", .ar: "لاحقًا", .fr: "Plus tard"],
         "version": [.en: "Version", .ar: "الإصدار", .fr: "Version"],
@@ -2450,7 +2450,7 @@ enum L10n {
         "estimate": [.en: "estimate", .ar: "تقديري", .fr: "estimation"],
         "taraweehAfterIsha": [.en: "Taraweeh starts", .ar: "تبدأ التراويح", .fr: "Début de Tarawih"],
         "taraweehOffset": [.en: "%lld min after Isha Iqamah", .ar: "بعد إقامة العشاء بـ %lld دقيقة", .fr: "%lld min après l'Iqamah d'Isha"],
-        "ramadanFooter": [.en: "Ramadan mode turns on by itself during Ramadan (Hijri month 9): Maghrib is labelled Iftar, Fajr is Suhoor, and a Taraweeh row joins the schedule. The mosque publishes no fixed Taraweeh time, so it is shown as an estimate after the Isha Iqamah.", .ar: "يعمل وضع رمضان تلقائيًا خلال رمضان (الشهر التاسع الهجري): يُسمّى المغرب إفطارًا والفجر سحورًا، وتنضم التراويح إلى الجدول. لا ينشر المسجد وقتًا ثابتًا للتراويح، لذا يُعرض كتقدير بعد إقامة العشاء.", .fr: "Le mode Ramadan s'active tout seul pendant le Ramadan (9e mois de l'Hégire) : Maghrib devient Iftar, Fajr devient Suhoor, et un rang Tarawih rejoint l'horaire. La mosquée ne publie pas d'heure fixe pour Tarawih, elle est donc affichée comme estimation après l'Iqamah d'Isha."],
+        "ramadanFooter": [.en: "Ramadan mode turns on by itself during Ramadan (Hijri month 9): Maghrib is labelled Iftar, Fajr is Suhoor, and a Taraweeh row joins the schedule. No fixed Taraweeh time is published, so it is shown as an estimate after the Isha Iqamah.", .ar: "يعمل وضع رمضان تلقائيًا خلال رمضان (الشهر التاسع الهجري): يُسمّى المغرب إفطارًا والفجر سحورًا، وتنضم التراويح إلى الجدول. لا يوجد وقت ثابت منشور للتراويح، لذا يُعرض كتقدير بعد إقامة العشاء.", .fr: "Le mode Ramadan s'active tout seul pendant le Ramadan (9e mois de l'Hégire) : Maghrib devient Iftar, Fajr devient Suhoor, et un rang Tarawih rejoint l'horaire. Aucune heure fixe de Tarawih n'est publiée, elle est donc affichée comme estimation après l'Iqamah d'Isha."],
         "shareMonth": [.en: "Share / Print Month", .ar: "مشاركة / طباعة الشهر", .fr: "Partager / Imprimer le mois"],
         "wnWidgets200": [.en: "Colored widgets: match your theme everywhere, or give the Home widgets, Lock Screen and Live Activity separate colors", .ar: "أدوات ملوّنة: طابِق سمتك في كل مكان، أو امنح أدوات الشاشة الرئيسية وشاشة القفل والنشاط المباشر ألوانًا منفصلة", .fr: "Widgets en couleur : suivez votre thème partout, ou donnez des couleurs séparées aux widgets d'accueil, à l'écran de verrouillage et à l'activité en direct"],
         "wnDuo200": [.en: "iPhone Duo: turn a big iPhone sideways for the two-pane Now + full-day view", .ar: "ثنائي iPhone: أدر هاتفًا كبيرًا أفقيًا لعرض الجزأين: الآن + اليوم كاملًا", .fr: "iPhone Duo : tournez un grand iPhone à l'horizontale pour la vue en deux volets Maintenant + journée complète"],
@@ -2603,7 +2603,7 @@ extension L10n {
         // Widgets & Live Activity
         "nextPrayerCaps": [.en: "NEXT PRAYER", .ar: "الصلاة التالية", .fr: "PROCHAINE PRIÈRE"],
         "nextPrayerTomorrowCaps": [.en: "NEXT PRAYER · TOMORROW", .ar: "الصلاة التالية · غدًا", .fr: "PROCHAINE PRIÈRE · DEMAIN"],
-        "widgetName": [.en: "Edmonton Prayer Times", .ar: "مواقيت صلاة إدمونتون", .fr: "Edmonton Prayer Times"],
+        "widgetName": [.en: "Prayer YEG", .ar: "Prayer YEG", .fr: "Prayer YEG"],
         "widgetDescription": [.en: "Next prayer with a live countdown, plus today's Adhan and Iqamah times for Edmonton.", .ar: "الصلاة التالية مع عدّاد مباشر، بالإضافة إلى أوقات الأذان والإقامة اليوم لإدمونتون.", .fr: "Prochaine prière avec compte à rebours en direct, plus les heures d'Adhan et d'Iqamah du jour pour Edmonton."],
         "jumuahToday": [.en: "Jumu'ah today", .ar: "الجمعة اليوم", .fr: "Jumu'ah aujourd'hui"],
         "jumuahWeekly": [.en: "Jumu'ah every Friday", .ar: "الجمعة كل يوم جمعة", .fr: "Jumu'ah chaque vendredi"],

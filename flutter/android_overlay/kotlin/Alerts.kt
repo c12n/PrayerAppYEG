@@ -162,7 +162,7 @@ object AdhanNotifier {
 
     private fun channelName(sound: String): String = when (sound) {
         "silent" -> "Adhan Alerts · Silent"
-        "alrashid" -> "Adhan Alerts · Al Rashid Adhan"
+        "alrashid" -> "Adhan Alerts · Mosque Adhan"
         else -> "Adhan Alerts"
     }
 

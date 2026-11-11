@@ -38,7 +38,7 @@ struct PrayerCalculator: Sendable, Equatable {
         /// AlRashid Mosque profile, fitted to the mosque's published timetable:
         /// Fajr depression 18.25°, Isha depression 17.5° (used as the base for
         /// the calibrated Isha interval), Maghrib 5 minutes after sunset.
-        static let alRashidMosque = Method(name: "AlRashid Mosque", fajrAngle: 18.25, ishaAngle: 17.5, maghribMinutes: 5)
+        static let alRashidMosque = Method(name: "Edmonton", fajrAngle: 18.25, ishaAngle: 17.5, maghribMinutes: 5)
     }
 
     enum AsrMethod: String, Sendable, Equatable {

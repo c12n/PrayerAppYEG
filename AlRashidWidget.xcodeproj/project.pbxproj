@@ -542,7 +542,7 @@
 		F10000000000000000000013 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_DISPLAY_NAME = "Edmonton Prayer Times";
+				APP_DISPLAY_NAME = "Prayer YEG";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconMidnight AppIconDesert AppIconRose AppIconRoyal AppIconEmerald AppIconOcean AppIconCrimson AppIconPlum AppIconTeal";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -550,7 +550,7 @@
 				CODE_SIGN_ENTITLEMENTS = AlRashidWidget/AlRashidWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -572,7 +572,7 @@
 		F10000000000000000000014 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_DISPLAY_NAME = "Edmonton Prayer Times";
+				APP_DISPLAY_NAME = "Prayer YEG";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconMidnight AppIconDesert AppIconRose AppIconRoyal AppIconEmerald AppIconOcean AppIconCrimson AppIconPlum AppIconTeal";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -582,7 +582,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid App Store";
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -608,7 +608,7 @@
 				CODE_SIGN_ENTITLEMENTS = PrayerWidgetExtension/PrayerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -637,7 +637,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Widget App Store";
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -663,7 +663,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatch/Info.plist;
@@ -691,7 +691,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch App Store";
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatch/Info.plist;
@@ -717,7 +717,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;
@@ -746,7 +746,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch Widgets App Store";
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 42;
+				CURRENT_PROJECT_VERSION = 43;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;

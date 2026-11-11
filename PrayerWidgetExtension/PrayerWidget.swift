@@ -851,7 +851,7 @@ struct SilenceNextAlertControl: ControlWidget {
             }
         }
         .displayName("Silence Next Alert")
-        .description("Silence only the next Adhan alert from Edmonton Prayer Times.")
+        .description("Silence only the next Adhan alert from Prayer YEG.")
     }
 }
 

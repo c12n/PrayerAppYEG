@@ -57,7 +57,7 @@ struct WatchHomeView: View {
                     }
                 }
             }
-            .navigationTitle("Edmonton Prayer Times")
+            .navigationTitle("Prayer YEG")
         }
     }
 }

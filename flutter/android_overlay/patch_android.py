@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Patch the flutter-create generated Android scaffold for Al Rashid Prayer:
-- app label -> "Al Rashid Prayer"
+- app label -> "Prayer YEG"
 - register the three home-screen widget providers in AndroidManifest.xml
 - minSdk -> 26 (the widget providers use java.time)
 - v1.5 notification engine: POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM
@@ -24,7 +24,7 @@ PERMISSIONS = """    <uses-permission android:name="android.permission.POST_NOTI
 RECEIVERS = """        <receiver
             android:name=".NextPrayerWidgetProvider"
             android:exported="false"
-            android:label="Al Rashid - Next Prayer">
+            android:label="Prayer YEG - Next Prayer">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -35,7 +35,7 @@ RECEIVERS = """        <receiver
         <receiver
             android:name=".ScheduleWidgetProvider"
             android:exported="false"
-            android:label="Al Rashid - Schedule">
+            android:label="Prayer YEG - Schedule">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -46,7 +46,7 @@ RECEIVERS = """        <receiver
         <receiver
             android:name=".LargeScheduleWidgetProvider"
             android:exported="false"
-            android:label="Al Rashid - Full Schedule">
+            android:label="Prayer YEG - Full Schedule">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -71,7 +71,7 @@ RECEIVERS = """        <receiver
         <service
             android:name=".PrayerCarService"
             android:exported="true"
-            android:label="Al Rashid Prayer">
+            android:label="Prayer YEG">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
                 <category android:name="androidx.car.app.category.POI" />
@@ -95,7 +95,7 @@ def main() -> None:
 
     manifest_path = android / "app/src/main/AndroidManifest.xml"
     text = manifest_path.read_text()
-    text, n = re.subn(r'android:label="[^"]*"', 'android:label="Al Rashid Prayer"', text, count=1)
+    text, n = re.subn(r'android:label="[^"]*"', 'android:label="Prayer YEG"', text, count=1)
     if n != 1:
         raise SystemExit("could not patch app label in AndroidManifest.xml")
     # Settings backup (v1.8.0): opt the app into Auto Backup with the

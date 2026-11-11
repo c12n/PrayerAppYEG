@@ -88,7 +88,7 @@ class AlRashidApp extends StatelessWidget {
       builder: (context, _) => SettingsScope(
         settings: settings,
         child: MaterialApp(
-          title: 'Al Rashid Prayer',
+          title: 'Prayer YEG',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(settings),
           darkTheme: AppTheme.dark(settings),
@@ -1354,8 +1354,6 @@ class FooterSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FooterLine(icon: Icons.location_on, text: MosqueInfo.address, style: style),
-        const SizedBox(height: 8),
         _FooterLine(
           icon: Icons.mosque,
           text: S.f('jumuahWeeklyAt', {'time': PrayerFormat.khutbahTime()}),
