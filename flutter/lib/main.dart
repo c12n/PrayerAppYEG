@@ -28,8 +28,14 @@ import 'package:intl/intl.dart' show DateFormat;
 import 'alerts.dart';
 import 'app_settings.dart';
 import 'hijri_calendar.dart';
+import 'live_notification.dart';
 import 'names_of_allah.dart';
 import 'prayer_models.dart';
+import 'prayer_tracker.dart';
+import 'quran_downloads.dart';
+import 'quran_models.dart';
+import 'quran_pages.dart';
+import 'quran_player.dart';
 import 'settings_page.dart';
 import 'daily_verse.dart';
 import 'strings.dart';
@@ -40,7 +46,28 @@ Future<void> main() async {
   tz_data.initializeTimeZones();
   await initializeDateFormatting();
   final settings = await AppSettings.load();
-  runApp(AlRashidApp(settings: settings));
+  // Quran layer (v3.0.0): catalogue, downloads, player session,
+  // bookmarks and the prayer tracker, all restored before the
+  // first frame like iOS restores its player.
+  await QuranLibrary.load();
+  unawaited(QuranTextData.load());
+  final prefs = await SharedPreferences.getInstance();
+  await QuranDownloads.ensureInit();
+  final downloads = QuranDownloads();
+  final bookmarks = QuranBookmarks();
+  await bookmarks.load(prefs);
+  final player = QuranPlayer();
+  await player.init(prefs);
+  final tracker = TrackerStore();
+  await tracker.load(prefs);
+  unawaited(OngoingNotification.sync(settings.ongoingEnabled));
+  runApp(AlRashidApp(
+    settings: settings,
+    player: player,
+    downloads: downloads,
+    bookmarks: bookmarks,
+    tracker: tracker,
+  ));
 }
 
 // MARK: - Theme
@@ -79,7 +106,18 @@ class AppTheme {
 
 class AlRashidApp extends StatelessWidget {
   final AppSettings settings;
-  const AlRashidApp({super.key, required this.settings});
+  final QuranPlayer player;
+  final QuranDownloads downloads;
+  final QuranBookmarks bookmarks;
+  final TrackerStore tracker;
+  const AlRashidApp({
+    super.key,
+    required this.settings,
+    required this.player,
+    required this.downloads,
+    required this.bookmarks,
+    required this.tracker,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +125,13 @@ class AlRashidApp extends StatelessWidget {
       animation: settings,
       builder: (context, _) => SettingsScope(
         settings: settings,
-        child: MaterialApp(
+        child: TrackerScope(
+          tracker: tracker,
+          child: QuranScope(
+            player: player,
+            downloads: downloads,
+            bookmarks: bookmarks,
+            child: MaterialApp(
           title: 'Prayer YEG',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(settings),
@@ -105,7 +149,9 @@ class AlRashidApp extends StatelessWidget {
               child: child!,
             ),
           ),
-          home: const HomePage(),
+              home: const HomePage(),
+            ),
+          ),
         ),
       ),
     );
@@ -147,7 +193,40 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         WhatsNew.maybeShow(context);
       }
       _checkAssistantQuery();
+      _maybePromptOngoing();
     });
+  }
+
+  /// Ongoing countdown notification (v3.0.0): offered once per
+  /// version, default OFF — the same opt-in shape as the iOS Live
+  /// Activity. Shown after the What's New dialog has had its turn.
+  Future<void> _maybePromptOngoing() async {
+    final settings = SettingsScope.of(context);
+    if (settings.ongoingEnabled) return;
+    if (settings.ongoingPromptedVersion == kAppVersion) return;
+    settings.update(() => settings.ongoingPromptedVersion = kAppVersion);
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    final enable = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(S.t('ongoingPromptTitle')),
+        content: Text(S.t('ongoingPromptBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(S.t('notNow')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(S.t('turnOn')),
+          ),
+        ],
+      ),
+    );
+    if (enable != true || !mounted) return;
+    settings.update(() => settings.ongoingEnabled = true);
+    unawaited(OngoingNotification.sync(true));
   }
 
   /// iOS v1.5.1 parity: once the home list scrolls past ~24px, hide
@@ -225,6 +304,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       AlertScheduler.refresh(SettingsScope.of(context));
       _checkAssistantQuery();
+      unawaited(OngoingNotification.refresh());
     }
   }
 
@@ -253,6 +333,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final tomorrow = PrayerProvider.computeDay(tomorrowStart);
 
     return Scaffold(
+      // The Quran mini player rides above the home content while a
+      // surah is loaded (v3.0.0, iOS mini player parity).
+      bottomNavigationBar: const MiniPlayerBar(),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -334,7 +417,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           const SizedBox(height: 20),
           ScheduleCard(snapshot: snapshot),
           const SizedBox(height: 20),
+          PrayerTrackerCard(player: QuranScope.of(context).player),
+          const SizedBox(height: 20),
           const DailyVerseCard(),
+          const SizedBox(height: 20),
+          const QuranEntryCard(),
           const SizedBox(height: 20),
           const HijriCountdownCard(),
           const SizedBox(height: 20),
@@ -369,6 +456,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   const SizedBox(height: 20),
                   const DailyVerseCard(),
                   const SizedBox(height: 20),
+                  const QuranEntryCard(),
+                  const SizedBox(height: 20),
                   const HijriCountdownCard(),
                   const SizedBox(height: 20),
                   const NamesEntryCard(),
@@ -386,6 +475,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               child: Column(
                 children: [
                   ScheduleCard(snapshot: snapshot),
+                  const SizedBox(height: 20),
+                  PrayerTrackerCard(player: QuranScope.of(context).player),
                   const SizedBox(height: 20),
                   const FooterSection(),
                 ],
@@ -419,7 +510,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       const SizedBox(height: 24),
                       NextPrayerCard(snapshot: snapshot),
                       const SizedBox(height: 24),
+                      PrayerTrackerCard(
+                          player: QuranScope.of(context).player),
+                      const SizedBox(height: 24),
                       const DailyVerseCard(),
+                      const SizedBox(height: 24),
+                      const QuranEntryCard(),
                       const SizedBox(height: 24),
                       const HijriCountdownCard(),
                       const SizedBox(height: 24),

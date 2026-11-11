@@ -31,6 +31,22 @@ const kAppBuildNumber = '22';
 /// a fourth choice, again matching iOS.
 const alertSoundNames = ['default', 'silent', 'alrashid', 'classic'];
 
+/// Launcher icon variants (v3.0.0), matching the iOS alternate
+/// icons: 'default' plus the nine colorways, switched on Android
+/// through activity-alias entries (see patch_android.py).
+const kAppIconNames = [
+  'default',
+  'midnight',
+  'desert',
+  'rose',
+  'royal',
+  'emerald',
+  'ocean',
+  'crimson',
+  'plum',
+  'teal',
+];
+
 class SavedTheme {
   final String id;
   final String name;
@@ -107,6 +123,13 @@ class AppSettings extends ChangeNotifier {
   static const hijriOffsetKey = 'hijri.offsetDays';
   static const hapticsEnabledKey = 'compass.hapticsEnabled';
   static const reminderLeadOptions = [5, 10, 15, 20, 30];
+  // Ongoing countdown notification (v3.0.0, the Live Activity
+  // equivalent): default OFF, offered once per version.
+  static const ongoingEnabledKey = 'ongoing.enabled';
+  static const ongoingPromptedVersionKey = 'ongoing.promptedVersion';
+  // Alternate launcher icon (v3.0.0): 'default' or a variant name
+  // from kAppIconNames, switched natively via activity-aliases.
+  static const appIconKey = 'appearance.appIcon';
 
   static const defaultPrimary = 0x0B3D2E;
   static const defaultAccent = 0xD4AF37;
@@ -190,6 +213,14 @@ class AppSettings extends ChangeNotifier {
   /// The home-screen Qibla card never buzzes.
   bool hapticsEnabled = true;
 
+  /// Ongoing countdown notification (v3.0.0): default OFF; the
+  /// once-per-version prompt records the version it was shown for.
+  bool ongoingEnabled = false;
+  String ongoingPromptedVersion = '';
+
+  /// Alternate launcher icon name (v3.0.0), from kAppIconNames.
+  String appIcon = 'default';
+
   SharedPreferences? _prefs;
 
   static Future<AppSettings> load() async {
@@ -245,6 +276,14 @@ class AppSettings extends ChangeNotifier {
         [0, 15, 30, 45, 60].contains(taraweeh) ? taraweeh! : 15;
     HijriState.offsetDays = s.hijriOffsetDays;
     s.hapticsEnabled = prefs.getBool(hapticsEnabledKey) ?? true;
+    s.ongoingEnabled = prefs.getBool(ongoingEnabledKey) ?? false;
+    s.ongoingPromptedVersion =
+        prefs.getString(ongoingPromptedVersionKey) ?? '';
+    final storedIcon = prefs.getString(appIconKey);
+    s.appIcon =
+        storedIcon != null && kAppIconNames.contains(storedIcon)
+            ? storedIcon
+            : 'default';
     s.minimalMode = prefs.getBool(minimalModeKey) ?? false;
     s.fastingMonThu = prefs.getBool(fastingMonThuKey) ?? false;
     s.fastingWhiteDays = prefs.getBool(fastingWhiteDaysKey) ?? false;
@@ -311,6 +350,9 @@ class AppSettings extends ChangeNotifier {
     await prefs.setInt(taraweehOffsetKey, taraweehOffsetMinutes);
     HijriState.offsetDays = hijriOffsetDays;
     await prefs.setBool(hapticsEnabledKey, hapticsEnabled);
+    await prefs.setBool(ongoingEnabledKey, ongoingEnabled);
+    await prefs.setString(ongoingPromptedVersionKey, ongoingPromptedVersion);
+    await prefs.setString(appIconKey, appIcon);
     await prefs.setBool(minimalModeKey, minimalMode);
     await prefs.setBool(fastingMonThuKey, fastingMonThu);
     await prefs.setBool(fastingWhiteDaysKey, fastingWhiteDays);
@@ -366,6 +408,9 @@ class AppSettings extends ChangeNotifier {
     leaveLeadMinutes = fresh.leaveLeadMinutes;
     taraweehOffsetMinutes = fresh.taraweehOffsetMinutes;
     hapticsEnabled = fresh.hapticsEnabled;
+    ongoingEnabled = fresh.ongoingEnabled;
+    ongoingPromptedVersion = fresh.ongoingPromptedVersion;
+    appIcon = fresh.appIcon;
     minimalMode = fresh.minimalMode;
     fastingMonThu = fresh.fastingMonThu;
     fastingWhiteDays = fresh.fastingWhiteDays;

@@ -12,6 +12,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'alert_health.dart';
 import 'alerts.dart';
 import 'app_settings.dart';
+import 'live_notification.dart';
 import 'prayer_models.dart';
 import 'settings_backup.dart';
 import 'strings.dart';
@@ -398,6 +399,31 @@ class SettingsPage extends StatelessWidget {
                 title: Text(S.t('noExternalLinks')),
                 subtitle: Text(S.t('noExternalLinksBody')),
               ),
+              _sectionHeader(context, S.t('ongoingTitle')),
+              SwitchListTile(
+                secondary: const Icon(Icons.notifications_outlined),
+                title: Text(S.t('ongoingTitle')),
+                subtitle: Text(S.t('ongoingBody')),
+                value: settings.ongoingEnabled,
+                onChanged: (v) {
+                  settings.update(() => settings.ongoingEnabled = v);
+                  OngoingNotification.sync(v);
+                },
+              ),
+              _sectionHeader(context, S.t('appIcon')),
+              ListTile(
+                leading: const Icon(Icons.apps),
+                title: Text(S.t('appIcon')),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(S.t('icon.${_iconLabelKey(settings.appIcon)}')),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+                onTap: () => _pickAppIcon(context),
+              ),
+              _sectionNote(context, S.t('appIconNote')),
               _sectionHeader(context, S.t('resetHeader')),
               ListTile(
                 leading: const Icon(Icons.restart_alt, color: Colors.red),
@@ -590,6 +616,37 @@ class SettingsPage extends StatelessWidget {
       }
     });
     AlertScheduler.refresh(settings);
+  }
+
+  /// The strings.dart suffix for an icon name ('midnight' -> the
+  /// 'iconMidnight' key).
+  static String _iconLabelKey(String name) =>
+      name[0].toUpperCase() + name.substring(1);
+
+  /// Launcher icon picker (v3.0.0): the same colorways as the iOS
+  /// alternate icons, switched natively through activity-aliases.
+  Future<void> _pickAppIcon(BuildContext context) async {
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(S.t('appIcon')),
+        children: [
+          for (final name in kAppIconNames)
+            ListTile(
+              title: Text(S.t('icon.${_iconLabelKey(name)}')),
+              trailing: settings.appIcon == name
+                  ? Icon(Icons.check_circle,
+                      color:
+                          accentFor(Theme.of(context).brightness, settings))
+                  : null,
+              onTap: () => Navigator.pop(context, name),
+            ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    settings.update(() => settings.appIcon = picked);
+    AppIconChanger.setIcon(picked);
   }
 }
 
