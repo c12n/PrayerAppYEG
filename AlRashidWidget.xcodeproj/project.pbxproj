@@ -44,6 +44,7 @@
 		C10000000000000000000059 /* en_durations.json in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000059 /* en_durations.json */; };
 		C10000000000000000000060 /* PrayerTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000060 /* PrayerTracker.swift */; };
 		C10000000000000000000061 /* adhan_alrashid.wav in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000061 /* adhan_alrashid.wav */; };
+		C10000000000000000000062 /* adhan_classic.wav in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000062 /* adhan_classic.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -143,6 +144,7 @@
 		B10000000000000000000059 /* en_durations.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = en_durations.json; sourceTree = "<group>"; };
 		B10000000000000000000060 /* PrayerTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTracker.swift; sourceTree = "<group>"; };
 		B10000000000000000000061 /* adhan_alrashid.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = adhan_alrashid.wav; sourceTree = "<group>"; };
+		B10000000000000000000062 /* adhan_classic.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = adhan_classic.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +203,7 @@
 				B10000000000000000000009 /* AlRashidWidget.entitlements */,
 				B10000000000000000000060 /* PrayerTracker.swift */,
 				B10000000000000000000061 /* adhan_alrashid.wav */,
+				B10000000000000000000062 /* adhan_classic.wav */,
 			);
 			path = AlRashidWidget;
 			sourceTree = "<group>";
@@ -413,6 +416,7 @@
 				C10000000000000000000058 /* quran_text.json in Resources */,
 				C10000000000000000000059 /* en_durations.json in Resources */,
 				C10000000000000000000061 /* adhan_alrashid.wav in Resources */,
+				C10000000000000000000062 /* adhan_classic.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -545,7 +549,7 @@
 				CODE_SIGN_ENTITLEMENTS = AlRashidWidget/AlRashidWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -576,7 +580,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid App Store";
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -602,7 +606,7 @@
 				CODE_SIGN_ENTITLEMENTS = PrayerWidgetExtension/PrayerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = QD29U585ZA;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -631,7 +635,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Widget App Store";
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrayerWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -657,7 +661,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatch/Info.plist;
@@ -685,7 +689,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch App Store";
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatch/AlRashidWatch.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatch/Info.plist;
@@ -711,7 +715,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;
@@ -740,7 +744,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "AlRashid Watch Widgets App Store";
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = AlRashidWatchWidgets/AlRashidWatchWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = QD29U585ZA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AlRashidWatchWidgets/Info.plist;

@@ -62,6 +62,10 @@ struct ContentView: View {
     /// the phone chip, the Duo rail, or the mini player overlay.
     @State private var showQuran = false
     @EnvironmentObject private var quranPlayer: QuranPlayer
+    /// Observed appearance/language/minimal state (build 37): the
+    /// layout router and the settings-Done hand-off read the minimal
+    /// flag from here so they react live instead of at next launch.
+    @EnvironmentObject private var appearanceObserver: AppearanceModeObserver
     /// Phone tab shell (v2.2.0-alpha): the floating pill tab bar's
     /// selected tab, the shell's Now Playing cover, and the prayer
     /// tracker. (Build 29 removed the old phoneShellActive flag: it
@@ -117,7 +121,7 @@ struct ContentView: View {
                 // iPhone Duo two-pane layout; everything else keeps the
                 // single column. Width — never text size — decides, and
                 // Dynamic Type only ever grows the panes' rows.
-                if MinimalMode.enabled {
+                if appearanceObserver.minimalMode {
                     minimalLayout(snapshot: snapshot, today: todaySchedule, now: context.date)
                         .overlay(alignment: .bottom) { appWideMiniPlayerOverlay }
                 } else if UIDevice.current.userInterfaceIdiom == .pad,
@@ -152,14 +156,13 @@ struct ContentView: View {
         // (Build 36: the WindowStyleHook background hook is gone —
         // see AlRashidWidgetApp.swift. Window appearance is applied
         // from the mode observer and on activation only.)
-        // Color scheme is applied once at the WindowGroup root by
-        // AlRashidWidgetApp's AppearanceModeObserver (v2.2.0-alpha fix);
-        // a second modifier here could pin a stale mode.
-        .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
-        .environment(\.locale, AppLanguage.current.locale)
+        // Color scheme, layout direction and locale are applied once
+        // at the scene root by AlRashidWidgetApp from the observed
+        // values (build 37); static re-reads here pinned stale values
+        // (the Arabic session's direction survived a switch back).
         .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
         .sheet(isPresented: $showSettings) {
-            SettingsView {}
+            SettingsView { phoneTab = .prayer }
                 .environmentObject(updateChecker)
         }
         .alert(L10n.t("updateAvailable"), isPresented: $updateChecker.showAlert) {
@@ -248,7 +251,7 @@ struct ContentView: View {
                 QiblaTabView()
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
                     .tag(PhoneTab.qibla)
-                SettingsView {}
+                SettingsView { phoneTab = .prayer }
                     .environmentObject(updateChecker)
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
                     .tag(PhoneTab.settings)
@@ -1531,12 +1534,15 @@ private struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.t("done")) { dismiss() }
+                    // Done leaves Settings for the prayer home
+                    // (build 37): as a sheet it dismisses, and the
+                    // caller's hand-off also selects the prayer tab
+                    // so a Settings tab underneath lands home too.
+                    Button(L10n.t("done")) { dismiss(); onSettingsChanged() }
                 }
             }
-            // Scheme comes from the WindowGroup root observer (see
-            // ContentView note); sheets inherit it from the presenter.
-            .environment(\.layoutDirection, AppLanguage.current.isRTL ? .rightToLeft : .leftToRight)
+            // Scheme and direction come from the scene-root observer
+            // (build 37); sheets inherit them from the presenter.
             .environment(\.locale, AppLanguage.current.locale)
             .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
             .onAppear { currentIconName = UIApplication.shared.alternateIconName }
@@ -2487,6 +2493,11 @@ private struct SettingsView: View {
         IconOption(alternateName: "AppIconDesert", nameKey: "icon.desert", previewImage: "IconPreviewDesert"),
         IconOption(alternateName: "AppIconRose", nameKey: "icon.rose", previewImage: "IconPreviewRose"),
         IconOption(alternateName: "AppIconRoyal", nameKey: "icon.royal", previewImage: "IconPreviewRoyal"),
+        IconOption(alternateName: "AppIconEmerald", nameKey: "icon.emerald", previewImage: "IconPreviewEmerald"),
+        IconOption(alternateName: "AppIconOcean", nameKey: "icon.ocean", previewImage: "IconPreviewOcean"),
+        IconOption(alternateName: "AppIconCrimson", nameKey: "icon.crimson", previewImage: "IconPreviewCrimson"),
+        IconOption(alternateName: "AppIconPlum", nameKey: "icon.plum", previewImage: "IconPreviewPlum"),
+        IconOption(alternateName: "AppIconTeal", nameKey: "icon.teal", previewImage: "IconPreviewTeal"),
     ]
 }
 
@@ -3403,6 +3414,7 @@ final class SoundPreviewPlayer: NSObject, ObservableObject, AVAudioPlayerDelegat
         let fileName: String
         switch sound {
         case .alrashid: fileName = "adhan_alrashid"
+        case .classic: fileName = "adhan_classic"
         case .default, .silent:
             stop()
             return

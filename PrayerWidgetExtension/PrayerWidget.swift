@@ -682,63 +682,134 @@ struct ContinueListeningWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: ContinueListeningEntry
 
+    /// Gold accent shared by the artwork, progress and play button.
+    private var gold: Color { Color(red: 0.93, green: 0.80, blue: 0.47) }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Text(entry.arabic.isEmpty ? "﷽" : entry.arabic)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(Color(red: 0.04, green: 0.24, blue: 0.18))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        LinearGradient(colors: [Color(red: 0.93, green: 0.80, blue: 0.47),
-                                                Color(red: 0.79, green: 0.64, blue: 0.15)],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing),
-                        in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(L10n.t("continueListening"))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color(red: 0.93, green: 0.80, blue: 0.47))
-                    Text(entry.has ? entry.surah : "Quran")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white)
-            }
-            if entry.has {
-                if !entry.reciter.isEmpty {
-                    Text(entry.reciter)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.75))
-                        .lineLimit(1)
-                }
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.22))
-                        Capsule()
-                            .fill(Color(red: 0.93, green: 0.80, blue: 0.47))
-                            .frame(width: proxy.size.width * entry.fraction)
-                    }
-                }
-                .frame(height: 3)
-                Text(L10n.t("tapToResume"))
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.6))
+        Group {
+            if family == .systemMedium {
+                mediumBody
+            } else {
+                smallBody
             }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .containerBackground(for: .widget) {
             LinearGradient(colors: [Color(red: 0.05, green: 0.30, blue: 0.22),
                                     Color(red: 0.03, green: 0.20, blue: 0.15)],
                            startPoint: .topLeading, endPoint: .bottomTrailing)
         }
         .widgetURL(URL(string: "alrashid://resume-quran"))
+    }
+
+    /// Spotify-style small card (build 37, Youssef's reference): big
+    /// artwork on top, then the surah name and reciter, a large white
+    /// play disc at the bottom right, and the progress hairline along
+    /// the card's bottom edge. Everything lives in one vertical stack
+    /// with fixed heights — the build-36 layout squeezed its texts
+    /// into a horizontal row whose title wrapped one letter per line
+    /// in the widget gallery.
+    private var smallBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                artwork(size: 74)
+                Spacer(minLength: 4)
+                Text("﷽")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(gold)
+                    .frame(width: 30, height: 30)
+                    .background(.white.opacity(0.12), in: Circle())
+            }
+            Spacer(minLength: 6)
+            HStack(alignment: .bottom, spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(entry.has ? entry.surah : "Quran")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(entry.has && !entry.reciter.isEmpty ? entry.reciter : L10n.t("tapToResume"))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.65))
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "play.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(Color(red: 0.03, green: 0.20, blue: 0.15))
+                    .frame(width: 42, height: 42)
+                    .background(.white, in: Circle())
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .bottom) {
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Rectangle().fill(.white.opacity(0.18))
+                    Rectangle()
+                        .fill(gold)
+                        .frame(width: proxy.size.width * (entry.has ? entry.fraction : 0))
+                }
+            }
+            .frame(height: 3)
+        }
+    }
+
+    /// The same card widened: artwork left, texts and progress in the
+    /// middle column, play disc at the right edge.
+    private var mediumBody: some View {
+        HStack(spacing: 12) {
+            artwork(size: 104)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(L10n.t("continueListening"))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(gold)
+                    .lineLimit(1)
+                Text(entry.has ? entry.surah : "Quran")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                if entry.has && !entry.reciter.isEmpty {
+                    Text(entry.reciter)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.65))
+                        .lineLimit(1)
+                }
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.22))
+                        Capsule()
+                            .fill(gold)
+                            .frame(width: proxy.size.width * (entry.has ? entry.fraction : 0))
+                    }
+                }
+                .frame(height: 3)
+                .padding(.top, 3)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "play.fill")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(Color(red: 0.03, green: 0.20, blue: 0.15))
+                .frame(width: 52, height: 52)
+                .background(.white, in: Circle())
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// The surah's Arabic name on the gold tile, as before, sized to
+    /// the card instead of squeezed into a header row.
+    private func artwork(size: CGFloat) -> some View {
+        Text(entry.arabic.isEmpty ? "﷽" : entry.arabic)
+            .font(.system(size: size * 0.34, weight: .bold))
+            .foregroundStyle(Color(red: 0.04, green: 0.24, blue: 0.18))
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(width: size, height: size)
+            .background(
+                LinearGradient(colors: [Color(red: 0.93, green: 0.80, blue: 0.47),
+                                        Color(red: 0.79, green: 0.64, blue: 0.15)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: RoundedRectangle(cornerRadius: size * 0.16, style: .continuous))
     }
 }
 

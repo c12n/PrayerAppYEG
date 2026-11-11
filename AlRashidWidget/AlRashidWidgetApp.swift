@@ -25,18 +25,67 @@ import WidgetKit
 /// follows the device's own Dark Mode, live.
 final class AppearanceModeObserver: ObservableObject {
     @Published private(set) var mode: AppAppearance.Mode
+    /// Bumped on every system appearance flip observed by the main
+    /// window's AppearanceWatchController (build 37). AlRashidWidgetApp
+    /// feeds it into ContentView's identity so a Control Center Dark
+    /// Mode flip re-renders the tree with the new traits immediately.
+    @Published private(set) var systemFlipToken = 0
+    /// The in-app language, observed the same way as the mode
+    /// (build 37). Views that used to read AppLanguage.current at
+    /// render time kept the Arabic session's layoutDirection traits
+    /// after switching back to English or French — the environment
+    /// said left-to-right again, but the UIKit-backed controls inside
+    /// the hosting controller had already resolved their direction
+    /// and never re-asked. The App root now publishes the direction
+    /// from this observer and re-keys the tree on a real flip, the
+    /// same pattern the appearance mode uses.
+    @Published private(set) var language: AppLanguage
+    /// Minimal Mode, likewise published (build 37): the layout
+    /// router read MinimalMode.enabled statically, so toggling the
+    /// mode in Settings never re-ran the router and the tab shell
+    /// (or the minimal layout) only changed on the next launch.
+    @Published private(set) var minimalMode: Bool
     private var token: NSObjectProtocol?
 
     init() {
         mode = AppAppearance.mode
+        language = AppLanguage.current
+        minimalMode = MinimalMode.enabled
         token = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
             guard let self else { return }
             let current = AppAppearance.mode
             if current != self.mode { self.mode = current }
+            let currentLanguage = AppLanguage.current
+            if currentLanguage != self.language { self.language = currentLanguage }
+            let currentMinimal = MinimalMode.enabled
+            if currentMinimal != self.minimalMode { self.minimalMode = currentMinimal }
             WindowStyleApplier.apply()
         }
+        WindowStyleApplier.onSystemAppearanceFlip = { [weak self] in
+            self?.systemFlipToken += 1
+        }
+    }
+}
+
+/// Root wrapper (build 37) that puts the SwiftUI content inside
+/// AppearanceWatchController so the window's hosting controller can
+/// notice system appearance flips while the app runs — WindowGroup
+/// creates its hosting controller internally with no subclass hook,
+/// so the controller is hosted through a representable instead. The
+/// representable sits at the scene root; sheets and covers presented
+/// from inside the content get their own system controllers, which
+/// is fine: only the main window needs the watch.
+struct AppearanceWatchRoot<Content: View>: UIViewControllerRepresentable {
+    let content: Content
+
+    func makeUIViewController(context: Context) -> AppearanceWatchController<Content> {
+        AppearanceWatchController(rootView: content)
+    }
+
+    func updateUIViewController(_ controller: AppearanceWatchController<Content>, context: Context) {
+        controller.rootView = content
     }
 }
 
@@ -62,6 +111,12 @@ final class AppearanceModeObserver: ObservableObject {
 /// alive. Theme freshness without them flows from ContentView's own
 /// @AppStorage re-renders, as it did before build 34.
 enum WindowStyleApplier {
+    /// Fires once per real userInterfaceStyle flip while the app is
+    /// alive (build 37): the main window's root view controller
+    /// reports the new style from its trait hook, so System mode can
+    /// react during THIS session instead of on the next activation.
+    static var onSystemAppearanceFlip: (() -> Void)?
+
     static func apply() {
         let style: UIUserInterfaceStyle
         switch AppAppearance.mode {
@@ -76,6 +131,40 @@ enum WindowStyleApplier {
                 window.overrideUserInterfaceStyle = style
             }
         }
+    }
+}
+
+/// Hosting-controller subclass whose only job is noticing the
+/// system appearance flipping while the app runs (build 37). In
+/// System mode the first Control Center Dark Mode flip after launch
+/// never re-rendered the app on Youssef's phone: the window's style
+/// stayed where the launch appearance had put it, and only the NEXT
+/// launch (or the didBecomeActive apply, which then read a stale
+/// resolved style) caught up. The SwiftUI tree adapts by itself once
+/// a flip is known to have happened, so this controller watches the
+/// window's RESOLVED style: on a real change it asks the app to
+/// re-assert the window overrides via WindowStyleApplier.apply()
+/// (whose loop re-triggers this hook — the lastStyle guard is what
+/// keeps that from cycling) and pokes AppearanceModeObserver via
+/// onSystemAppearanceFlip so SwiftUI re-renders with fresh traits.
+/// Explicit Light/Dark pins are unaffected: a pinned window's style
+/// never changes underneath it.
+final class AppearanceWatchController<Content: View>: UIHostingController<Content> {
+    private var lastStyle: UIUserInterfaceStyle?
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        lastStyle = traitCollection.userInterfaceStyle
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        let style = traitCollection.userInterfaceStyle
+        guard style != previousTraitCollection?.userInterfaceStyle,
+              style != lastStyle else { return }
+        lastStyle = style
+        WindowStyleApplier.apply()
+        WindowStyleApplier.onSystemAppearanceFlip?()
     }
 }
 
@@ -153,13 +242,28 @@ struct AlRashidWidgetApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(quranPlayer)
-                .environmentObject(quranDownloads)
-                .environmentObject(quranBookmarks)
-                .preferredColorScheme(appearanceObserver.mode.colorScheme)
-                .tint(Theme.adaptiveGold)
+            AppearanceWatchRoot(content: rootContent)
         }
+    }
+
+    /// The SwiftUI root, shared by the scene and the watch hosting
+    /// controller. Layout direction and locale come from the
+    /// observer (build 37) so Arabic's right-to-left and a switch
+    /// back apply live to the whole tree, including its UIKit-backed
+    /// controls; the flip token re-keys the tree when the system
+    /// appearance flips underneath it.
+    private var rootContent: some View {
+        ContentView()
+            .environmentObject(quranPlayer)
+            .environmentObject(quranDownloads)
+            .environmentObject(quranBookmarks)
+            .environmentObject(appearanceObserver)
+            .preferredColorScheme(appearanceObserver.mode.colorScheme)
+            .environment(\.layoutDirection,
+                         appearanceObserver.language.isRTL ? .rightToLeft : .leftToRight)
+            .environment(\.locale, appearanceObserver.language.locale)
+            .id(appearanceObserver.systemFlipToken)
+            .tint(Theme.adaptiveGold)
     }
 }
 
@@ -294,15 +398,21 @@ enum AppServices {
 /// A stored value naming a removed sound resolves to the Al Rashid
 /// Adhan, so an existing selection is replaced rather than lost.
 enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
-    case `default`, silent, alrashid
+    case `default`, silent, alrashid, classic
 
     var id: String { rawValue }
     static let storageKey = "alerts.sound"
 
+    /// The sound every install and update lands on until the user
+    /// picks another (build 37, Youssef's order): the Al Rashid
+    /// adhan from the mosque's own app. No stored value resolves
+    /// here, and a stored value naming a sound that no longer
+    /// exists (chime/bell/makkah/fajr were removed in build 35)
+    /// resolves here too rather than to the system default.
     static var current: AdhanSound {
         let raw = UserDefaults(suiteName: PrayerProvider.appGroupIdentifier)?
             .string(forKey: storageKey)
-        guard let raw, !raw.isEmpty else { return .default }
+        guard let raw, !raw.isEmpty else { return .alrashid }
         return AdhanSound(rawValue: raw) ?? .alrashid
     }
 
@@ -313,6 +423,7 @@ enum AdhanSound: String, CaseIterable, Sendable, Identifiable {
         case .default: .default
         case .silent: nil
         case .alrashid: UNNotificationSound(named: UNNotificationSoundName("adhan_alrashid.wav"))
+        case .classic: UNNotificationSound(named: UNNotificationSoundName("adhan_classic.wav"))
         }
     }
 }
