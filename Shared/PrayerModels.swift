@@ -7,7 +7,7 @@
 //  Models, Iqamah configuration, PrayerProvider (computation, App Group cache,
 //  timeline planning), formatting helpers, theme and small shared SwiftUI components.
 //
-//  Both targets need the App Groups capability with: group.com.c12n.alrashidwidget
+//  Both targets need the App Groups capability with: group.com.c12n.prayerapp
 //
 
 #if canImport(ActivityKit)
@@ -478,7 +478,7 @@ struct PrayerTimelinePlan: Sendable {
 // MARK: - Provider
 
 struct PrayerProvider: Sendable {
-    static let appGroupIdentifier = "group.com.c12n.alrashidwidget"
+    static let appGroupIdentifier = "group.com.c12n.prayerapp"
     static let widgetKind = "AlRashidPrayerWidget"
     static let cacheKey = "alrashid.prayerDay.cache"
     static let cacheVersion = 1

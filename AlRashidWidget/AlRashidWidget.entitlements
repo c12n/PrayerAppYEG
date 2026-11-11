@@ -6,7 +6,7 @@
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.com.c12n.alrashidwidget</string>
+		<string>iCloud.com.c12n.prayerapp</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>
@@ -15,13 +15,13 @@
 	</array>
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
 	<array>
-		<string>iCloud.com.c12n.alrashidwidget</string>
+		<string>iCloud.com.c12n.prayerapp</string>
 	</array>
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
 	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.c12n.alrashidwidget</string>
+		<string>group.com.c12n.prayerapp</string>
 	</array>
 </dict>
 </plist>

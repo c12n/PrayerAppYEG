@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.c12n.alrashidwidget</string>
+		<string>group.com.c12n.prayerapp</string>
 	</array>
 </dict>
 </plist>

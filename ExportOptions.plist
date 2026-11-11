@@ -12,13 +12,13 @@
 	<string>manual</string>
 	<key>provisioningProfiles</key>
 	<dict>
-		<key>com.c12n.alrashidwidget</key>
+		<key>com.c12n.prayerapp</key>
 		<string>AlRashid App Store</string>
-		<key>com.c12n.alrashidwidget.widget</key>
+		<key>com.c12n.prayerapp.widget</key>
 		<string>AlRashid Widget App Store</string>
-		<key>com.c12n.alrashidwidget.watchkitapp</key>
+		<key>com.c12n.prayerapp.watchkitapp</key>
 		<string>AlRashid Watch App Store</string>
-		<key>com.c12n.alrashidwidget.watchkitapp.widgets</key>
+		<key>com.c12n.prayerapp.watchkitapp.widgets</key>
 		<string>AlRashid Watch Widgets App Store</string>
 	</dict>
 	<key>manageAppVersionAndBuildNumber</key>

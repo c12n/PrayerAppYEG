@@ -139,6 +139,15 @@ def main() -> None:
         gradle = gradle.replace("minSdk = flutter.minSdkVersion", "minSdk = 26")
     elif "minSdk" not in gradle:
         raise SystemExit("no minSdk line found in build.gradle.kts")
+    # v2.3.0: applicationId is com.c12n.prayerappAndroid. Only the
+    # install identity changes — the namespace and the Kotlin
+    # package stay com.c12n.alrashidwidget.
+    gradle, n = re.subn(
+        r'applicationId\s*=\s*"[^"]*"',
+        'applicationId = "com.c12n.prayerappAndroid"',
+        gradle, count=1)
+    if n != 1:
+        raise SystemExit("could not patch applicationId in build.gradle.kts")
     # v2.0.0: Android Auto (androidx.car.app) + Google sign-in for
     # the Drive settings backup (play-services-auth).
     if "androidx.car.app" not in gradle:

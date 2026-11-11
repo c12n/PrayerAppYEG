@@ -130,7 +130,7 @@
 	<true/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.c12n.alrashidwidget.refresh</string>
+		<string>com.c12n.prayerapp.refresh</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
@@ -142,7 +142,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.c12n.alrashidwidget.deeplink</string>
+			<string>com.c12n.prayerapp.deeplink</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>alrashid</string>
@@ -153,7 +153,7 @@
 	<false/>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.com.c12n.alrashidwidget</key>
+		<key>iCloud.com.c12n.prayerapp</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<false/>

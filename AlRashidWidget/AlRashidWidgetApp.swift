@@ -2,10 +2,10 @@
 //  AlRashidWidgetApp.swift
 //  AlRashid Prayer Widget
 //
-//  App target: AlRashidWidget (com.c12n.alrashidwidget), iOS 17.0+
+//  App target: AlRashidWidget (com.c12n.prayerapp), iOS 17.0+
 //  Target Membership: AlRashidWidget only.
 //  Shared files (also in this target): PrayerCalculator.swift, PrayerModels.swift
-//  Capability: App Groups -> group.com.c12n.alrashidwidget
+//  Capability: App Groups -> group.com.c12n.prayerapp
 //
 
 import ActivityKit
@@ -949,7 +949,7 @@ enum LiveActivityPushSync {
 /// call (earliestBeginDate is a floor, not a promise), and on some
 /// phones it lands far later than the requested 15 s after the Adhan.
 enum BackgroundRefresh {
-    static let identifier = "com.c12n.alrashidwidget.refresh"
+    static let identifier = "com.c12n.prayerapp.refresh"
     private static var didRegister = false
 
     /// Must run before the app finishes launching (called from App.init).

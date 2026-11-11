@@ -2,10 +2,10 @@
 //  PrayerWidget.swift
 //  PrayerWidgetExtension
 //
-//  Widget extension target: PrayerWidgetExtension (com.c12n.alrashidwidget.widget), iOS 17.0+
+//  Widget extension target: PrayerWidgetExtension (com.c12n.prayerapp.widget), iOS 17.0+
 //  Target Membership: PrayerWidgetExtension only.
 //  Shared files (also in this target): PrayerCalculator.swift, PrayerModels.swift
-//  Capability: App Groups -> group.com.c12n.alrashidwidget
+//  Capability: App Groups -> group.com.c12n.prayerapp
 //
 
 import ActivityKit
@@ -811,7 +811,7 @@ struct PrayerWidgetBundle: WidgetBundle {
 @available(iOS 18.0, *)
 struct SilenceNextAlertControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "com.c12n.alrashidwidget.silenceNextAlert") {
+        StaticControlConfiguration(kind: "com.c12n.prayerapp.silenceNextAlert") {
             ControlWidgetButton(action: SilenceNextAlertIntent()) {
                 Label("Silence Next Alert", systemImage: "bell.slash.fill")
             }

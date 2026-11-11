@@ -23,6 +23,6 @@
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>com.c12n.alrashidwidget</string>
+	<string>com.c12n.prayerapp</string>
 </dict>
 </plist>
