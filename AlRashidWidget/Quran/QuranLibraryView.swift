@@ -29,6 +29,7 @@ struct QuranLibraryView: View {
     @State private var bookmarksOnly = false
     @State private var showNowPlaying = false
     @State private var showDownloadsManager = false
+    @State private var showLibraryOptions = false
 
     private var displayedSurahs: [QuranSurah] {
         var list = QuranLibrary.surahs
@@ -95,21 +96,11 @@ struct QuranLibraryView: View {
                 ToolbarItem(placement: .primaryAction) {
                     optionsMenu
                 }
-                // Always present (build 29): inserting/removing this
-                // item as playback started and stopped made the whole
-                // top-right toolbar pill resize and flicker in and
-                // out. It now stays put and just dims/disables when
-                // nothing is loaded.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showNowPlaying = true
-                    } label: {
-                        Label("Now Playing", systemImage: "music.note")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .disabled(player.currentSurah == nil)
-                    .opacity(player.currentSurah == nil ? 0.35 : 1)
-                }
+                // (Build 38: the standalone Now Playing music-note
+                // button is gone at Youssef's call — the mini player
+                // at the bottom and tapping the surah artwork open
+                // the full player. Removing it also removes the
+                // build-29 toolbar-pill flicker concern entirely.)
             }
             .searchable(text: $searchText, prompt: "Search surahs")
             .safeAreaInset(edge: .bottom) {
@@ -125,6 +116,9 @@ struct QuranLibraryView: View {
         }
         .sheet(isPresented: $showDownloadsManager) {
             QuranDownloadsManagerView()
+        }
+        .sheet(isPresented: $showLibraryOptions) {
+            libraryOptionsSheet
         }
     }
 
@@ -479,64 +473,79 @@ struct QuranLibraryView: View {
 
     // MARK: Options (language / reciter / player style)
 
+    /// Library options (build 38): a dedicated sheet with native
+    /// pickers. This was a UIMenu before — too tall for its popover,
+    /// it refused to scroll and jittered as the player state kept
+    /// re-rendering it mid-gesture. A sheet scrolls normally and
+    /// picker selections apply live without re-laying the menu out.
     private var optionsMenu: some View {
-        Menu {
-            Section("Player style") {
-                Picker("Player style", selection: Binding(
-                    get: { player.playerStyle },
-                    set: { player.playerStyle = $0 }
-                )) {
-                    Text("Spotify").tag(QuranPlayer.PlayerStyle.spotify)
-                    Text("Apple Music").tag(QuranPlayer.PlayerStyle.appleMusic)
-                }
-            }
-            Section("Audio language") {
-                Button {
-                    player.setAudioLanguage(.arabic)
-                } label: {
-                    if player.audioLanguage == .arabic {
-                        Label("Arabic", systemImage: "checkmark")
-                    } else {
-                        Text("Arabic")
-                    }
-                }
-                Button {
-                    player.setAudioLanguage(.english)
-                } label: {
-                    if player.audioLanguage == .english {
-                        Label("English (Ibrahim Walk)", systemImage: "checkmark")
-                    } else {
-                        Text("English (Ibrahim Walk)")
-                    }
-                }
-            }
-            Section("Reciter") {
-                ForEach(QuranLibrary.reciters) { reciter in
-                    Button {
-                        if player.audioLanguage != .arabic {
-                            player.setAudioLanguage(.arabic)
-                        }
-                        player.setReciter(reciter.id)
-                    } label: {
-                        if player.audioLanguage == .arabic, reciter.id == player.reciterId {
-                            Label(reciter.name, systemImage: "checkmark")
-                        } else {
-                            Text(reciter.name)
-                        }
-                    }
-                }
-            }
-            Section {
-                Button {
-                    showDownloadsManager = true
-                } label: {
-                    Label("Manage downloads", systemImage: "arrow.down.circle")
-                }
-            }
+        Button {
+            showLibraryOptions = true
         } label: {
             Label("Options", systemImage: "ellipsis.circle")
                 .font(.subheadline.weight(.semibold))
         }
+    }
+
+    private var libraryOptionsSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Player style") {
+                    Picker("Player style", selection: Binding(
+                        get: { player.playerStyle },
+                        set: { player.playerStyle = $0 }
+                    )) {
+                        Text("Spotify").tag(QuranPlayer.PlayerStyle.spotify)
+                        Text("Apple Music").tag(QuranPlayer.PlayerStyle.appleMusic)
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+                Section("Audio language") {
+                    Picker("Audio language", selection: Binding(
+                        get: { player.audioLanguage },
+                        set: { player.setAudioLanguage($0) }
+                    )) {
+                        Text("Arabic").tag(QuranPlayer.AudioLanguage.arabic)
+                        Text("English (Ibrahim Walk)").tag(QuranPlayer.AudioLanguage.english)
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+                if player.audioLanguage == .arabic {
+                    Section("Reciter") {
+                        Picker("Reciter", selection: Binding(
+                            get: { player.reciterId },
+                            set: { player.setReciter($0) }
+                        )) {
+                            ForEach(QuranLibrary.reciters) { reciter in
+                                Text(reciter.name).tag(reciter.id)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                    }
+                }
+                Section {
+                    Button {
+                        showLibraryOptions = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            showDownloadsManager = true
+                        }
+                    } label: {
+                        Label("Manage downloads", systemImage: "arrow.down.circle")
+                    }
+                }
+            }
+            .navigationTitle("Options")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showLibraryOptions = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 

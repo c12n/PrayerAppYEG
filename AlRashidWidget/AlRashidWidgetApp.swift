@@ -151,17 +151,51 @@ enum WindowStyleApplier {
 /// never changes underneath it.
 final class AppearanceWatchController<Content: View>: UIHostingController<Content> {
     private var lastStyle: UIUserInterfaceStyle?
+    private var sceneTokens: [NSObjectProtocol] = []
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         lastStyle = traitCollection.userInterfaceStyle
+        // Build 38: also catch the flip at the scene level. A
+        // Control Center appearance flip lands while the scene is
+        // INACTIVE, and on device neither the trait hook above nor
+        // the foreground apply reliably re-rendered the app —
+        // builds 36 and 37 both passed the simulator and still
+        // failed on the phone. The scene activation notifications
+        // fire for this window's own scene on every return to the
+        // foreground, which is the moment the new style must be
+        // picked up.
+        guard sceneTokens.isEmpty, let scene = view.window?.windowScene else { return }
+        let center = NotificationCenter.default
+        for name in [UIScene.didActivateNotification, UIScene.willEnterForegroundNotification] {
+            sceneTokens.append(center.addObserver(
+                forName: name, object: scene, queue: .main
+            ) { [weak self] _ in
+                self?.noteAppearanceChange(force: true)
+            })
+        }
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        sceneTokens.forEach { NotificationCenter.default.removeObserver($0) }
+        sceneTokens.removeAll()
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
+        noteAppearanceChange(force: false)
+    }
+
+    /// Compares the window's currently resolved style against the
+    /// last one this controller acted on; on a real change it
+    /// re-asserts the window overrides and pokes the observer so the
+    /// SwiftUI tree re-renders with fresh traits. `force` re-checks
+    /// even when the trait hook already ran for the same flip (the
+    /// scene-activation path after a background flip).
+    private func noteAppearanceChange(force: Bool) {
         let style = traitCollection.userInterfaceStyle
-        guard style != previousTraitCollection?.userInterfaceStyle,
-              style != lastStyle else { return }
+        guard style != lastStyle else { return }
         lastStyle = style
         WindowStyleApplier.apply()
         WindowStyleApplier.onSystemAppearanceFlip?()

@@ -162,7 +162,7 @@ struct ContentView: View {
         // (the Arabic session's direction survived a switch back).
         .dynamicTypeSize(AppTextSize.current.dynamicTypeSize)
         .sheet(isPresented: $showSettings) {
-            SettingsView { phoneTab = .prayer }
+            SettingsView(onSettingsChanged: {}, onDone: { phoneTab = .prayer })
                 .environmentObject(updateChecker)
         }
         .alert(L10n.t("updateAvailable"), isPresented: $updateChecker.showAlert) {
@@ -251,7 +251,7 @@ struct ContentView: View {
                 QiblaTabView()
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
                     .tag(PhoneTab.qibla)
-                SettingsView { phoneTab = .prayer }
+                SettingsView(onSettingsChanged: {}, onDone: { phoneTab = .prayer })
                     .environmentObject(updateChecker)
                     .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
                     .tag(PhoneTab.settings)
@@ -270,7 +270,8 @@ struct ContentView: View {
                 PhoneTabBar(selection: $phoneTab)
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 8)
+            .padding(.bottom, 2)
+            .ignoresSafeArea(edges: .bottom)
         }
     }
 
@@ -1442,6 +1443,11 @@ private struct SettingsView: View {
     /// Called on every settings change so the main screen behind the
     /// sheet rebuilds immediately (v1.1.1 — see ContentView).
     let onSettingsChanged: () -> Void
+    /// Called ONLY by the Done button (build 38). Build 37 wired the
+    /// go-home hand-off through onSettingsChanged, which fires on
+    /// every setting tap, so any change in Settings bounced the user
+    /// to the prayer home. Done is the only path that leaves Settings.
+    var onDone: () -> Void = {}
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -1523,13 +1529,14 @@ private struct SettingsView: View {
                 prayerAlertsSection
                 soundSection
                 prayerSoundsSection
-                alertHealthSection
                 privacySection
                 backupSection
+                alertHealthSection
                 resetSection
                 versionSection
             }
             .id(resetGeneration)
+            .onDisappear { soundPreview.stop() }
             .navigationTitle(L10n.t("settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1538,7 +1545,7 @@ private struct SettingsView: View {
                     // (build 37): as a sheet it dismisses, and the
                     // caller's hand-off also selects the prayer tab
                     // so a Settings tab underneath lands home too.
-                    Button(L10n.t("done")) { dismiss(); onSettingsChanged() }
+                    Button(L10n.t("done")) { dismiss(); onDone() }
                 }
             }
             // Scheme and direction come from the scene-root observer
@@ -2024,7 +2031,6 @@ private struct SettingsView: View {
         } footer: {
             Text(L10n.t("alertSoundFooter"))
         }
-        .onDisappear { soundPreview.stop() }
     }
 
     /// Per-prayer sound overrides (v1.8.0): each prayer can follow
@@ -2342,7 +2348,9 @@ private struct SettingsView: View {
     // MARK: Actions
 
     private func settingsChanged() {
-        onSettingsChanged()
+        // (Build 38: no onSettingsChanged() call here — the callback
+        // is the Done hand-off now. The rebuild work below stays, so
+        // the main screen behind the sheet still refreshes live.)
         PrayerProvider.standard.refreshCache()
         WidgetCenter.shared.reloadAllTimelines()
         AppServices.refresh()
@@ -3278,8 +3286,6 @@ private struct PhoneTabBar: View {
     /// The selected tab's green capsule is ONE view that glides
     /// between tabs (matched geometry), so a tap or a page swipe
     /// slides it instead of jumping (build 29).
-    @Namespace private var pillNamespace
-
     private struct TabItem {
         let tab: ContentView.PhoneTab
         let icon: String
@@ -3295,35 +3301,82 @@ private struct PhoneTabBar: View {
         ]
     }
 
+    /// Drag state for the glass slider (build 38): while the finger
+    /// is down, the glass thumb follows it 1:1 instead of sitting on
+    /// the selected tab; on release the nearest tab is selected and
+    /// the thumb springs home onto it.
+    @State private var dragX: CGFloat? = nil
+    @State private var barWidth: CGFloat = 0
+
+    private var selectedIndex: Int {
+        items.firstIndex { $0.tab == selection } ?? 0
+    }
+
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(items, id: \.tab) { item in
-                Button {
-                    selection = item.tab
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: item.icon)
-                            .font(.system(size: 19, weight: .semibold))
-                        Text(item.label)
-                            .font(.caption2.weight(.semibold))
-                            .lineLimit(1)
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let slot = width / CGFloat(max(items.count, 1))
+            // The thumb's center: the finger while dragging, the
+            // selected tab's center otherwise.
+            let thumbCenter = dragX ?? (slot * (CGFloat(selectedIndex) + 0.5))
+            ZStack(alignment: .leading) {
+                // Glass thumb (build 38): translucent material with a
+                // bright rim and a soft shadow, sized to one slot
+                // minus the bar's inner padding. It glides with the
+                // selection (matched spring below) and can be dragged
+                // directly — the bar is a slider, not just buttons.
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        Capsule().fill(Theme.deepGreen.opacity(0.88))
                     }
-                    .foregroundStyle(selection == item.tab ? .white : .secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background {
-                        if selection == item.tab {
-                            Capsule()
-                                .fill(Theme.deepGreen)
-                                .matchedGeometryEffect(id: "phoneTabPill", in: pillNamespace)
+                    .overlay {
+                        Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 1)
+                    }
+                    .shadow(color: .black.opacity(0.28), radius: 8, y: 3)
+                    .frame(width: max(slot - 10, 0), height: 46)
+                    .offset(x: thumbCenter - max(slot - 10, 0) / 2)
+                HStack(spacing: 2) {
+                    ForEach(items, id: \.tab) { item in
+                        Button {
+                            selection = item.tab
+                        } label: {
+                            VStack(spacing: 2) {
+                                Image(systemName: item.icon)
+                                    .font(.system(size: 19, weight: .semibold))
+                                Text(item.label)
+                                    .font(.caption2.weight(.semibold))
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(selection == item.tab ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .contentShape(Capsule())
                         }
+                        .buttonStyle(.plain)
                     }
-                    .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
             }
+            .frame(width: width, height: 56)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 6)
+                    .onChanged { value in
+                        dragX = min(max(value.location.x, slot / 2), width - slot / 2)
+                    }
+                    .onEnded { value in
+                        let x = min(max(value.location.x, 0), width - 0.001)
+                        let index = min(max(Int(x / slot), 0), items.count - 1)
+                        selection = items[index].tab
+                        dragX = nil
+                    }
+            )
+            .onAppear { barWidth = width }
+            .onChange(of: width) { _, newWidth in barWidth = newWidth }
         }
+        .frame(height: 56)
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: selection)
+        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: dragX == nil)
         .padding(5)
         .background(.ultraThinMaterial, in: Capsule())
         .overlay {

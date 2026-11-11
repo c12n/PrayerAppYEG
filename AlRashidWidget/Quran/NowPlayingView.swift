@@ -415,15 +415,18 @@ private struct SpotifyNowPlayingView: View {
                 showLyrics = true
             } label: {
                 VStack(alignment: .leading, spacing: 3) {
+                    // Build 38: no line limits here — the strip
+                    // grows to fit the whole ayah instead of
+                    // cutting words off mid-sentence.
                     Text(ayah.ar)
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        .lineLimit(1)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(ayah.en)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(1)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
@@ -441,11 +444,13 @@ private struct SpotifyNowPlayingView: View {
                 Text(surah.english)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(onGradient)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
                 Text(player.currentReciter?.name ?? "")
                     .font(.body)
                     .foregroundStyle(onGradientMuted)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
             }
             Spacer()
             Button {
@@ -513,8 +518,11 @@ private struct SpotifyNowPlayingView: View {
             Spacer()
             extraAirPlay
             Spacer()
+            // Build 38: the number under the queue icon is the
+            // CURRENT surah's number (76 for Al-Insaan), not the
+            // queue size — "114" read as if you were on surah 114.
             extraButton(icon: "list.bullet", label: "Queue",
-                        value: "\(player.queue.count)") { showQueue = true }
+                        value: player.currentSurah.map { "\($0.number)" } ?? "\(player.queue.count)") { showQueue = true }
         }
         .padding(.top, 16)
     }
@@ -566,7 +574,8 @@ private struct SpotifyNowPlayingView: View {
                     Text(next.english)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(onGradient)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
                 }
                 Spacer()
                 Button {
@@ -661,11 +670,13 @@ private struct AppleMusicNowPlayingView: View {
             Text(surah.english)
                 .font(.title2.weight(.bold))
                 .foregroundStyle(.primary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
             Text(player.currentReciter?.name ?? "")
                 .font(.body)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
             Button {
                 player.toggleFavorite(surah.number)
             } label: {
@@ -723,7 +734,19 @@ private struct AppleMusicNowPlayingView: View {
             AirPlayButton()
                 .frame(width: 34, height: 34)
             Spacer()
-            toolbarButton(icon: "list.bullet") { showQueue = true }
+            // Build 38: the current surah's number under the queue
+            // icon, matching the Spotify style.
+            Button { showQueue = true } label: {
+                VStack(spacing: 1) {
+                    Image(systemName: "list.bullet")
+                        .font(.title3)
+                    Text("\(surah.number)")
+                        .font(.caption2.weight(.semibold))
+                }
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
             Spacer()
             SleepMenu {
                 Image(systemName: "moon.fill")

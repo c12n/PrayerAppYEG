@@ -34,14 +34,18 @@ struct MiniPlayerView: View {
                                                    startPoint: .topLeading, endPoint: .bottomTrailing),
                                     in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                             VStack(alignment: .leading, spacing: 1) {
+                                // Build 38: shrink to fit instead of
+                                // cutting the surah name off with "…".
                                 Text(surah.english)
                                     .font(.subheadline.weight(.bold))
                                     .foregroundStyle(.white)
                                     .lineLimit(1)
+                                    .minimumScaleFactor(0.6)
                                 Text(player.currentReciter?.name ?? "")
                                     .font(.caption)
                                     .foregroundStyle(QuranTheme.mutedOnGreen)
                                     .lineLimit(1)
+                                    .minimumScaleFactor(0.6)
                             }
                         }
                     }
