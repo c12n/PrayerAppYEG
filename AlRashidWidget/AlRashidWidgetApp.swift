@@ -93,29 +93,30 @@ final class AppearanceModeObserver: ObservableObject {
 /// KVO cannot observe it by property name; the observer above
 /// watches didChangeNotification (which demonstrably fires for
 /// in-app writes, since explicit Light/Dark always applied
-/// instantly) and calls applyCurrent(). Scene activation also
-/// re-applies once, as a backstop for flips made while the app
-/// was backgrounded.
+/// instantly) and calls applyCurrent(). The root also calls it
+/// once in onAppear for the initial apply at launch. (Build 41
+/// removed the scene-activation re-apply; see AppDelegate.)
 @MainActor
 enum AppearanceController {
     static func applyCurrent() {
-        let style: UIUserInterfaceStyle
-        switch AppAppearance.mode {
-        case .system: style = .unspecified
-        case .light: style = .light
-        case .dark: style = .dark
-        }
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             // Scene-level override: the trait source for every
-            // window, sheet and alert in the scene.
-            windowScene.traitOverrides.userInterfaceStyle = style
-            // Clear (System) or pin (Light/Dark) any legacy
-            // per-window overrides from the old applier, so the
-            // scene value is the only one in play.
-            for window in windowScene.windows
-            where window.overrideUserInterfaceStyle != style {
-                window.overrideUserInterfaceStyle = style
+            // window, sheet and alert in the scene. Build 41
+            // (second Claude consult): System REMOVES the trait
+            // override with remove(_:) instead of assigning
+            // .unspecified (the WWDC23 pattern; assigning is not
+            // documented to remove anything), and the per-window
+            // override loop is gone entirely: the scene override
+            // is authoritative, window overrides only duplicate it,
+            // and nothing in this build writes them any more.
+            switch AppAppearance.mode {
+            case .system:
+                windowScene.traitOverrides.remove(UITraitUserInterfaceStyle.self)
+            case .light:
+                windowScene.traitOverrides.userInterfaceStyle = .light
+            case .dark:
+                windowScene.traitOverrides.userInterfaceStyle = .dark
             }
         }
     }
@@ -130,15 +131,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         OrientationLock.mask
     }
 
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // Backstop (build 39): re-assert the stored mode on the
-        // scene after any appearance flip made while the app sat
-        // in the background (e.g. the Control Center Dark Mode
-        // toggle). In System mode this simply re-removes the
-        // override; the live follow itself comes from the trait
-        // system, not from this call.
-        AppearanceController.applyCurrent()
-    }
+    // Build 41 (second Claude consult): no didBecomeActive
+    // appearance re-apply. A scene trait override persists until
+    // changed, and in System mode there is no override at all, so
+    // UIKit follows Control Center flips live on its own; the old
+    // re-assert on every activation only raced the system's own
+    // trait pass. The single writer runs on mode changes (the
+    // defaults observer) and once at root onAppear.
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {

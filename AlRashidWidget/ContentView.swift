@@ -238,7 +238,12 @@ struct ContentView: View {
     /// Collapse the phone tab bar while content scrolls (build 40).
     /// Called from the shell's scroll-watch gesture as a
     /// vertical-dominant drag moves; cancels any pending re-expand.
+    /// Build 41 (Youssef's rule): the bar only collapses while the
+    /// Quran player is in use (a surah is loaded and the mini
+    /// player is showing). With nothing playing, the full bar
+    /// stays at all times.
     private func noteTabScrolling() {
+        guard quranPlayer.currentSurah != nil else { return }
         tabBarExpandTask?.cancel()
         tabBarExpandTask = nil
         if !tabBarCollapsed {
@@ -281,14 +286,14 @@ struct ContentView: View {
                 phoneLayout(snapshot: snapshot, today: today, now: now)
                     .tag(PhoneTab.prayer)
                 QuranLibraryView(embeddedInTab: true)
-                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 66)
                     .tag(PhoneTab.quran)
                 QiblaTabView()
-                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 66)
                     .tag(PhoneTab.qibla)
                 SettingsView(onSettingsChanged: {}, onDone: { phoneTab = .prayer })
                     .environmentObject(updateChecker)
-                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 80)
+                    .padding(.bottom, quranPlayer.currentSurah != nil ? 128 : 66)
                     .tag(PhoneTab.settings)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -321,6 +326,18 @@ struct ContentView: View {
                     }
                 }
             }
+            // Build 41: if playback is cleared while the bar is
+            // collapsed, the full bar returns at once (the collapse
+            // only exists while the player is in use).
+            .onChange(of: quranPlayer.currentSurah) { _, surah in
+                if surah == nil, tabBarCollapsed {
+                    tabBarExpandTask?.cancel()
+                    tabBarExpandTask = nil
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                        tabBarCollapsed = false
+                    }
+                }
+            }
 
             VStack(spacing: 8) {
                 if quranPlayer.currentSurah != nil {
@@ -347,7 +364,7 @@ struct ContentView: View {
                                     value: proxy.frame(in: .named("homeScroll")).minY)
                 }
                 .frame(height: 0)
-                HeaderView(today: today, now: now) {
+                HeaderView(today: today, now: now, currentPrayerSymbol: snapshot.next.symbolName) {
                     showSettings = true
                 }
                 NextPrayerCard(snapshot: snapshot)
@@ -361,22 +378,20 @@ struct ContentView: View {
                         showStandBy = true
                     }
                 }
-                DuoChip(title: "Quran", detail: "Listen") {
-                    phoneTab = .quran
-                }
                 DailyVerseCard()
                 HijriCountdownCard()
                 DuoChip(title: L10n.t("namesOfAllah"), detail: "") {
                     showNames = true
                 }
-                QiblaCard()
                 FooterView()
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
-            // Clears the floating tab bar (and the mini player above
-            // it) in the phone tab shell.
-            .padding(.bottom, 150)
+            // Clears the floating tab bar in the phone tab shell;
+            // the tall value applies only while the mini player is
+            // showing above the bar, so no dead space is reserved
+            // when nothing is playing (build 41, Youssef's rule).
+            .padding(.bottom, quranPlayer.currentSurah != nil ? 150 : 86)
         }
         .scrollIndicators(.hidden)
         .coordinateSpace(name: "homeScroll")
@@ -406,7 +421,7 @@ struct ContentView: View {
     private func minimalLayout(snapshot: PrayerSnapshot, today: PrayerDay, now: Date) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HeaderView(today: today, now: now) {
+                HeaderView(today: today, now: now, currentPrayerSymbol: snapshot.next.symbolName) {
                     showSettings = true
                 }
                 NextPrayerCard(snapshot: snapshot)
@@ -523,7 +538,7 @@ DuoRailButton(systemImage: "calendar", label: L10n.t("monthlyCalendar"),
         HStack(alignment: .top, spacing: 20) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    HeaderView(today: today, now: now) {
+                    HeaderView(today: today, now: now, currentPrayerSymbol: snapshot.next.symbolName) {
                         showSettings = true
                     }
                     NextPrayerCard(snapshot: snapshot)
@@ -1073,13 +1088,18 @@ struct MonthlyCalendarView: View {
 private struct HeaderView: View {
     let today: PrayerDay
     let now: Date
+    /// SF Symbol of the prayer the app is counting to (the same
+    /// slot the schedule highlights and the hero card names), so
+    /// the greeting icon reflects the current prayer instead of a
+    /// fixed moon (build 41, at Youssef's request).
+    let currentPrayerSymbol: String
     let onSettings: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    Image(systemName: "moon.stars.fill")
+                    Image(systemName: currentPrayerSymbol)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Theme.adaptiveGold)
                     Text(L10n.t("greeting"))
