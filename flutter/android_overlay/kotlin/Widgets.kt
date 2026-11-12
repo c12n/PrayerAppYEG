@@ -142,37 +142,70 @@ object WidgetColors {
     /// the layouts' background ImageView; RemoteViews cannot attach a
     /// generated drawable, so a bitmap is the portable route.
     fun applyBackground(context: Context, views: RemoteViews) {
+        val base = primary(context)
+        paintGradient(views, intArrayOf(shade(base, 1.35f), base, shade(base, 0.62f)))
+    }
+
+    /// The Continue Listening widget's fixed background (iOS
+    /// parity): the iOS widget is a Spotify-style card on a fixed
+    /// green gradient (0.05/0.30/0.22 -> 0.03/0.20/0.15) with a
+    /// fixed light-gold accent, deliberately NOT the part palette.
+    private val listeningGradient =
+        intArrayOf(0xFF0D4D38.toInt(), 0xFF083326.toInt())
+    private val listeningGold = 0xFFEDCC78.toInt()
+
+    fun applyListeningBackground(views: RemoteViews) =
+        paintGradient(views, listeningGradient)
+
+    private fun paintGradient(views: RemoteViews, colors: IntArray) {
         val size = 880
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val base = primary(context)
         val shader = LinearGradient(
             0f, 0f, size.toFloat(), size.toFloat(),
-            intArrayOf(shade(base, 1.35f), base, shade(base, 0.62f)),
-            null, Shader.TileMode.CLAMP
+            colors, null, Shader.TileMode.CLAMP
         )
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
         canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), 72f, 72f, paint)
         views.setImageViewBitmap(R.id.widget_bg_image, bitmap)
     }
 
-    /// Stamps palette colors onto the given id groups.
+    /// Stamps palette colors onto the given id groups. Progress
+    /// bars take the accent as their tint on API 31+ (the iOS
+    /// widgets draw their progress in the accent color; older
+    /// Android versions keep the drawable's fixed light gold,
+    /// which is the default accent anyway). [listeningStyle]
+    /// switches to the Continue Listening widget's fixed colors
+    /// described above.
     fun paint(
         context: Context, views: RemoteViews,
         accentIds: IntArray = intArrayOf(),
         textIds: IntArray = intArrayOf(),
         secondaryIds: IntArray = intArrayOf(),
-        mutedIds: IntArray = intArrayOf()
+        mutedIds: IntArray = intArrayOf(),
+        progressIds: IntArray = intArrayOf(),
+        listeningStyle: Boolean = false
     ) {
-        applyBackground(context, views)
-        val accent = WidgetPrefs.accentColor(context)
-        val text = text(context)
-        val secondary = textSecondary(context)
-        val muted = textMuted(context)
+        if (listeningStyle) applyListeningBackground(views)
+        else applyBackground(context, views)
+        val accent = if (listeningStyle) listeningGold
+                     else WidgetPrefs.accentColor(context)
+        val text = if (listeningStyle) Color.WHITE else text(context)
+        val secondary = if (listeningStyle) withAlpha(Color.WHITE, 0.85f)
+                        else textSecondary(context)
+        val muted = if (listeningStyle) withAlpha(Color.WHITE, 0.72f)
+                    else textMuted(context)
         for (id in accentIds) views.setTextColor(id, accent)
         for (id in textIds) views.setTextColor(id, text)
         for (id in secondaryIds) views.setTextColor(id, secondary)
         for (id in mutedIds) views.setTextColor(id, muted)
+        if (progressIds.isNotEmpty() &&
+            android.os.Build.VERSION.SDK_INT >= 31) {
+            val tint = android.content.res.ColorStateList.valueOf(accent)
+            for (id in progressIds) {
+                views.setColorStateList(id, "setProgressTintList", tint)
+            }
+        }
     }
 }
 
@@ -540,8 +573,11 @@ abstract class BaseWidgetProvider : AppWidgetProvider() {
         accentIds: IntArray = intArrayOf(),
         textIds: IntArray = intArrayOf(),
         secondaryIds: IntArray = intArrayOf(),
-        mutedIds: IntArray = intArrayOf()
-    ) = WidgetColors.paint(context, views, accentIds, textIds, secondaryIds, mutedIds)
+        mutedIds: IntArray = intArrayOf(),
+        progressIds: IntArray = intArrayOf(),
+        listeningStyle: Boolean = false
+    ) = WidgetColors.paint(context, views, accentIds, textIds,
+        secondaryIds, mutedIds, progressIds, listeningStyle)
 
     override fun onUpdate(
         context: Context,
@@ -609,7 +645,8 @@ class NextPrayerWidgetProvider : BaseWidgetProvider() {
             accentIds = intArrayOf(R.id.widget_caption, R.id.widget_countdown),
             textIds = intArrayOf(R.id.widget_next_name),
             secondaryIds = intArrayOf(R.id.widget_next_time),
-            mutedIds = intArrayOf(R.id.widget_date, R.id.widget_iqamah))
+            mutedIds = intArrayOf(R.id.widget_date, R.id.widget_iqamah),
+            progressIds = intArrayOf(R.id.widget_progress))
         applyTextScale(context, views,
             R.id.widget_caption to 12f, R.id.widget_date to 12f,
             R.id.widget_next_name to 28f, R.id.widget_next_time to 17f,
@@ -634,7 +671,8 @@ class ScheduleWidgetProvider : BaseWidgetProvider() {
             accentIds = intArrayOf(R.id.widget_header_countdown),
             textIds = intArrayOf(R.id.widget_header_next),
             mutedIds = intArrayOf(R.id.widget_date, R.id.widget_col_prayer,
-                R.id.widget_col_adhan, R.id.widget_col_iqamah))
+                R.id.widget_col_adhan, R.id.widget_col_iqamah),
+            progressIds = intArrayOf(R.id.widget_progress))
         applyTextScale(context, views,
             R.id.widget_header_next to 16f,
             R.id.widget_header_countdown to 16f,
@@ -729,7 +767,8 @@ class LargeScheduleWidgetProvider : BaseWidgetProvider() {
             textIds = intArrayOf(R.id.widget_next_name, R.id.widget_verse),
             secondaryIds = intArrayOf(R.id.widget_next_time, R.id.widget_iqamah),
             mutedIds = intArrayOf(R.id.widget_hijri, R.id.widget_col_prayer,
-                R.id.widget_col_adhan, R.id.widget_col_iqamah))
+                R.id.widget_col_adhan, R.id.widget_col_iqamah),
+            progressIds = intArrayOf(R.id.widget_progress))
         applyTextScale(context, views,
             R.id.widget_mosque to 14f, R.id.widget_hijri to 13f,
             R.id.widget_next_label to 13f, R.id.widget_next_name to 32f,
@@ -794,7 +833,9 @@ class ContinueListeningWidgetProvider : BaseWidgetProvider() {
         paintWidget(context, views,
             accentIds = intArrayOf(R.id.widget_listen_caption),
             textIds = intArrayOf(R.id.widget_listen_title),
-            secondaryIds = intArrayOf(R.id.widget_listen_sub))
+            secondaryIds = intArrayOf(R.id.widget_listen_sub),
+            progressIds = intArrayOf(R.id.widget_listen_progress),
+            listeningStyle = true)
         applyTextScale(context, views,
             R.id.widget_listen_caption to 11f, R.id.widget_listen_title to 20f,
             R.id.widget_listen_sub to 13f)
