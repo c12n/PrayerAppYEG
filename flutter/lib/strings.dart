@@ -20,6 +20,7 @@ class S {
     'greeting': {AppLanguage.en: 'Assalamu Alaikum', AppLanguage.ar: 'السلام عليكم', AppLanguage.fr: 'Assalamu Alaikum'},
     'done': {AppLanguage.en: 'Done', AppLanguage.ar: 'تم', AppLanguage.fr: 'Terminé'},
     'settings': {AppLanguage.en: 'Settings', AppLanguage.ar: 'الإعدادات', AppLanguage.fr: 'Réglages'},
+    'tabPrayer': {AppLanguage.en: 'Prayer', AppLanguage.ar: 'الصلاة', AppLanguage.fr: 'Prière'},
     'nextPrayer': {AppLanguage.en: 'Next prayer', AppLanguage.ar: 'الصلاة التالية', AppLanguage.fr: 'Prochaine prière'},
     'nextPrayerTomorrow': {AppLanguage.en: 'Next prayer · Tomorrow', AppLanguage.ar: 'الصلاة التالية · غدًا', AppLanguage.fr: 'Prochaine prière · Demain'},
     'todayTimes': {AppLanguage.en: "Today's Prayer Times", AppLanguage.ar: 'مواقيت صلاة اليوم', AppLanguage.fr: "Heures de prière d'aujourd'hui"},

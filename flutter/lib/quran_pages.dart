@@ -12,6 +12,7 @@ import 'quran_downloads.dart';
 import 'quran_models.dart';
 import 'quran_player.dart';
 import 'strings.dart';
+import 'tab_nav.dart';
 import 'prayer_models.dart' show LanguageState;
 
 // MARK: - Scope
@@ -153,9 +154,19 @@ class QuranEntryCard extends StatelessWidget {
         return Card(
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const QuranLibraryPage()),
-            ),
+            // The library is the Quran tab now (1:1 tab shell);
+            // the push remains as a fallback for any context
+            // outside the shell.
+            onTap: () {
+              final nav = TabNavScope.maybeOf(context);
+              if (nav != null) {
+                nav.goTo(TabNavController.quran);
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const QuranLibraryPage()),
+                );
+              }
+            },
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -326,7 +337,10 @@ class MiniPlayerBar extends StatelessWidget {
 // MARK: - Library
 
 class QuranLibraryPage extends StatefulWidget {
-  const QuranLibraryPage({super.key});
+  /// In the tab shell the library is the Quran tab: the shell
+  /// provides the mini player, so the page drops its own.
+  final bool embedded;
+  const QuranLibraryPage({super.key, this.embedded = false});
 
   @override
   State<QuranLibraryPage> createState() => _QuranLibraryPageState();
@@ -390,7 +404,8 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
               ),
             ],
           ),
-          bottomNavigationBar: const MiniPlayerBar(),
+          bottomNavigationBar:
+              widget.embedded ? null : const MiniPlayerBar(),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [

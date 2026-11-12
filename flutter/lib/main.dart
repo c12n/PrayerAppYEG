@@ -42,6 +42,7 @@ import 'quran_player.dart';
 import 'settings_page.dart';
 import 'daily_verse.dart';
 import 'strings.dart';
+import 'tab_nav.dart';
 import 'whats_new.dart';
 
 Future<void> main() async {
@@ -93,6 +94,7 @@ Future<void> main() async {
     downloads: downloads,
     bookmarks: bookmarks,
     tracker: tracker,
+    tabNav: TabNavController(),
   ));
 }
 
@@ -136,6 +138,7 @@ class AlRashidApp extends StatelessWidget {
   final QuranDownloads downloads;
   final QuranBookmarks bookmarks;
   final TrackerStore tracker;
+  final TabNavController tabNav;
   const AlRashidApp({
     super.key,
     required this.settings,
@@ -143,6 +146,7 @@ class AlRashidApp extends StatelessWidget {
     required this.downloads,
     required this.bookmarks,
     required this.tracker,
+    required this.tabNav,
   });
 
   @override
@@ -157,7 +161,9 @@ class AlRashidApp extends StatelessWidget {
             player: player,
             downloads: downloads,
             bookmarks: bookmarks,
-            child: MaterialApp(
+            child: TabNavScope(
+              controller: tabNav,
+              child: MaterialApp(
           title: 'Prayer YEG',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(settings),
@@ -175,7 +181,271 @@ class AlRashidApp extends StatelessWidget {
               child: child!,
             ),
           ),
-              home: const HomePage(),
+              home: const AppShell(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// MARK: - App shell (v3.0.0, 1:1 with the iOS phone tab shell)
+
+/// The root shell: a paged tab view (Prayer / Quran / Qibla /
+/// Settings, swipeable like the iOS paged TabView) with the Quran
+/// mini player floating directly above a pill tab bar. The bar
+/// follows the iOS build 40/41 collapse rule: it shrinks to just
+/// Prayer and Settings only while the Quran player is in use and
+/// the content is scrolling, and it re-expands about a second
+/// after the scroll stops, on any tab switch, or the moment
+/// playback is cleared.
+class AppShell extends StatefulWidget {
+  const AppShell({super.key});
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  final PageController _pageController = PageController();
+  TabNavController? _tabNav;
+  QuranPlayer? _player;
+  bool _collapsed = false;
+  Timer? _expandTimer;
+  int _currentTab = TabNavController.prayer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nav = TabNavScope.of(context);
+    if (nav != _tabNav) {
+      _tabNav?.removeListener(_onNavChanged);
+      _tabNav = nav;
+      nav.addListener(_onNavChanged);
+    }
+    final player = QuranScope.of(context).player;
+    if (player != _player) {
+      _player?.removeListener(_onPlayerChanged);
+      _player = player;
+      player.addListener(_onPlayerChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabNav?.removeListener(_onNavChanged);
+    _player?.removeListener(_onPlayerChanged);
+    _expandTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  /// Programmatic tab switches (cards, the header gear) glide the
+  /// page view to the tab; swipes already land there and no-op.
+  void _onNavChanged() {
+    final nav = _tabNav;
+    if (nav == null || !_pageController.hasClients) return;
+    final page = _pageController.page?.round();
+    if (page != nav.index) {
+      _pageController.animateToPage(
+        nav.index,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  /// Build 41: the collapse exists only while the player is in
+  /// use; clearing playback restores the full bar at once.
+  void _onPlayerChanged() {
+    if (_player?.currentSurah == null && _collapsed) {
+      _expandBar();
+    }
+  }
+
+  void _collapseBar() {
+    _expandTimer?.cancel();
+    _expandTimer = null;
+    if (!_collapsed) setState(() => _collapsed = true);
+  }
+
+  void _expandBar() {
+    _expandTimer?.cancel();
+    _expandTimer = null;
+    if (_collapsed) setState(() => _collapsed = false);
+  }
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification is ScrollUpdateNotification &&
+        notification.metrics.axis == Axis.vertical) {
+      // Only vertical scrolls count (horizontal drags are page
+      // swipes), and only while a surah is loaded (build 41).
+      if (_player?.currentSurah != null) _collapseBar();
+    } else if (notification is ScrollEndNotification && _collapsed) {
+      _expandTimer?.cancel();
+      _expandTimer = Timer(const Duration(milliseconds: 900), _expandBar);
+    }
+    return false;
+  }
+
+  void _onPageChanged(int index) {
+    final previous = _currentTab;
+    _currentTab = index;
+    _expandBar();
+    // The Qibla tab is a compass: portrait only, like iOS.
+    SystemChrome.setPreferredOrientations(
+      index == TabNavController.qibla
+          ? const [DeviceOrientation.portraitUp]
+          : const [],
+    );
+    // Any settings change can change the alert plan's contents:
+    // rebuild it when leaving the Settings tab, the counterpart
+    // of the old pushed-settings return refresh.
+    if (previous == TabNavController.settings &&
+        index != TabNavController.settings) {
+      AlertScheduler.refresh(SettingsScope.of(context));
+    }
+    _tabNav?.goTo(index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nav = TabNavScope.of(context);
+    return Scaffold(
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: _onPageChanged,
+          children: [
+            const KeepAlive(keepAlive: true, child: HomePage()),
+            const KeepAlive(
+                keepAlive: true, child: QuranLibraryPage(embedded: true)),
+            const KeepAlive(
+                keepAlive: true, child: QiblaCompassPage(embedded: true)),
+            KeepAlive(
+              keepAlive: true,
+              child: SettingsPage(settings: SettingsScope.of(context)),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayerBar(),
+          AnimatedBuilder(
+            animation: nav,
+            builder: (context, _) => _PillTabBar(
+              selected: nav.index,
+              collapsed: _collapsed,
+              onSelect: nav.goTo,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The floating pill tab bar (iOS: PhoneTabBar): a capsule with a
+/// deep-green thumb capsule on the selected tab; while collapsed
+/// it narrows to fit just Prayer and Settings, and the thumb
+/// hides when the selected tab is not among the visible ones.
+class _PillTabBar extends StatelessWidget {
+  final int selected;
+  final bool collapsed;
+  final ValueChanged<int> onSelect;
+  const _PillTabBar({
+    required this.selected,
+    required this.collapsed,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <(int, IconData, String)>[
+      (TabNavController.prayer, Icons.home, S.t('tabPrayer')),
+      (TabNavController.quran, Icons.menu_book, S.t('quran')),
+      (TabNavController.qibla, Icons.explore, S.t('qibla')),
+      (TabNavController.settings, Icons.settings, S.t('settings')),
+    ];
+    final visible = collapsed
+        ? items
+            .where((item) =>
+                item.$1 == TabNavController.prayer ||
+                item.$1 == TabNavController.settings)
+            .toList()
+        : items;
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: LayoutBuilder(
+          builder: (context, constraints) => Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              width: collapsed ? 200 : constraints.maxWidth,
+              height: 56,
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                    color: scheme.onSurface.withValues(alpha: 0.09)),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Color(0x38000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 6)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  for (final item in visible)
+                    Expanded(
+                      child: Material(
+                        color: selected == item.$1
+                            ? AppTheme.deepGreen
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(23),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(23),
+                          onTap: () => onSelect(item.$1),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                item.$2,
+                                size: 20,
+                                color: selected == item.$1
+                                    ? Colors.white
+                                    : scheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                item.$3,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: selected == item.$1
+                                      ? Colors.white
+                                      : scheme.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -359,9 +629,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final tomorrow = PrayerProvider.computeDay(tomorrowStart);
 
     return Scaffold(
-      // The Quran mini player rides above the home content while a
-      // surah is loaded (v3.0.0, iOS mini player parity).
-      bottomNavigationBar: const MiniPlayerBar(),
+      // The mini player and the tab bar belong to the app shell
+      // now (v3.0.0 1:1 tab shell); this page is its Prayer tab.
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -822,17 +1091,11 @@ class HeaderSection extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.settings),
               tooltip: S.t('settings'),
-              onPressed: () async {
-                final settings = SettingsScope.of(context);
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SettingsPage(settings: settings),
-                  ),
-                );
-                // Any settings change (language included) can change
-                // the alert plan's contents — rebuild it on return.
-                AlertScheduler.refresh(settings);
-              },
+              // Settings is a tab now (1:1 tab shell); the shell
+              // rebuilds the alert plan when the tab is left,
+              // which the old pushed page did on return.
+              onPressed: () =>
+                  TabNavScope.of(context).goTo(TabNavController.settings),
             ),
           ],
         ),
@@ -1902,9 +2165,9 @@ class _QiblaCardState extends State<QiblaCard> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const QiblaCompassPage()),
-        );
+        // The full-screen compass is the Qibla tab now (1:1 tab
+        // shell), the counterpart of tapping through on iOS.
+        TabNavScope.of(context).goTo(TabNavController.qibla);
       },
       child: AdaptiveCard(
       padding: const EdgeInsets.all(18),
@@ -2105,7 +2368,10 @@ class QiblaDial extends StatelessWidget {
 /// the same live heading stream and dial, large, with the bearing
 /// readout and the "facing the Qibla" state.
 class QiblaCompassPage extends StatefulWidget {
-  const QiblaCompassPage({super.key});
+  /// In the tab shell the compass is a tab page and drops its
+  /// app bar (iOS: QiblaTabView has no sheet chrome).
+  final bool embedded;
+  const QiblaCompassPage({super.key, this.embedded = false});
 
   @override
   State<QiblaCompassPage> createState() => _QiblaCompassPageState();
@@ -2164,9 +2430,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
     final offset = _offset;
     final facing = offset != null && offset.abs() <= 3;
     final dialSize = math.min(300.0, MediaQuery.of(context).size.width - 64);
-    return Scaffold(
-      appBar: AppBar(title: Text(S.t('qiblaCompass'))),
-      body: SafeArea(
+    final content = SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -2230,7 +2494,11 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
             ),
           ),
         ),
-      ),
+      );
+    if (widget.embedded) return content;
+    return Scaffold(
+      appBar: AppBar(title: Text(S.t('qiblaCompass'))),
+      body: content,
     );
   }
 }
