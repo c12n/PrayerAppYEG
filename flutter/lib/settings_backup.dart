@@ -5,7 +5,9 @@
 // 'alrashid/backup' channel (DriveBackup.kt); import reads a file
 // picked through the same channel. Canonical keys match iOS except
 // the per-prayer alert toggles, translated both ways below
-// (iOS 'alerts.prayer.fajr' <-> Android 'alerts.fajr').
+// (iOS 'alerts.prayer.fajr' <-> Android 'alerts.fajr'), and the
+// app-icon choice (iOS 'appearance.iconName' <-> Android
+// 'appearance.appIcon').
 
 import 'dart:convert';
 
@@ -43,9 +45,22 @@ class SettingsBackup {
         AppSettings.minimalModeKey,
         AppSettings.fastingMonThuKey,
         AppSettings.fastingWhiteDaysKey,
+        // v3.0.0 1:1 backup parity: the flattened home-widget
+        // hexes the Kotlin widgets read directly, the ongoing
+        // notification opt-in and its once-per-version prompt
+        // stamp, and the alternate launcher icon choice — the
+        // same coverage the iOS backup gives its equivalents.
+        AppSettings.widgetHomePrimaryKey,
+        AppSettings.widgetHomeAccentKey,
+        AppSettings.widgetHomeTextKey,
+        AppSettings.ongoingEnabledKey,
+        AppSettings.ongoingPromptedVersionKey,
+        AppSettings.appIconKey,
       ];
 
   static String _canonical(String localKey) {
+    // The icon choice travels under the iOS spelling.
+    if (localKey == AppSettings.appIconKey) return 'appearance.iconName';
     for (final p in Prayer.values) {
       if (localKey == AppSettings.alertKey(p)) {
         return 'alerts.prayer.${p.name}';
@@ -55,6 +70,9 @@ class SettingsBackup {
   }
 
   static String _local(String canonicalKey) {
+    if (canonicalKey == 'appearance.iconName') {
+      return AppSettings.appIconKey;
+    }
     for (final p in Prayer.values) {
       if (canonicalKey == 'alerts.prayer.${p.name}') {
         return AppSettings.alertKey(p);
@@ -76,7 +94,7 @@ class SettingsBackup {
       if (value != null) values[_canonical(key)] = value;
     }
     return const JsonEncoder.withIndent('  ').convert({
-      'app': 'AlRashidPrayer',
+      'app': 'PrayerYEG',
       'kind': 'settings-backup',
       'version': 1,
       'values': values,

@@ -183,23 +183,15 @@ class QuranDownloads extends ChangeNotifier {
 
   // MARK: Bulk operations
 
-  /// Downloads every surah not already on disk for this voice, a
-  /// few at a time (iOS fires them all at once; the CDN is happier
-  /// with a small queue, and the end state is the same).
+  /// Downloads every surah not already on disk for this voice,
+  /// all at once — the same fire-everything behavior as the iOS
+  /// downloads manager (1:1 parity; there is no worker cap).
   Future<void> downloadAll(String reciterId) async {
     final pending = [
       for (var n = 1; n <= 114; n++)
         if (!isDownloaded(reciterId, n) && !isDownloading(reciterId, n)) n,
     ];
-    var index = 0;
-    Future<void> worker() async {
-      while (index < pending.length) {
-        final n = pending[index++];
-        await download(n, reciterId);
-      }
-    }
-
-    await Future.wait([for (var i = 0; i < 4; i++) worker()]);
+    await Future.wait([for (final n in pending) download(n, reciterId)]);
   }
 
   void cancelAll(String reciterId) {
