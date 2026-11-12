@@ -17,6 +17,11 @@
 - v3.0.0 1:1 icons: decode the real iOS alternate-icon artwork
   (icon_b64, base64 like the adhan WAVs) into drawable-nodpi
   foregrounds for the alias adaptive icons
+- v3.0.0 Chromebook / large screens: declare touchscreen, PC
+  hardware type and telephony as NOT required (ChromeOS devices
+  may lack any of them) and assert resizeableActivity=true on
+  MainActivity so the window resizes freely on Chromebooks,
+  tablets and foldables
 
 Usage: patch_android.py <path-to-generated-android-dir>
 """
@@ -31,6 +36,16 @@ PERMISSIONS = """    <uses-permission android:name="android.permission.POST_NOTI
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+"""
+
+# ChromeOS / large-screen declarations (v3.0.0): none of these
+# hardware features is required, so the app stays installable on
+# Chromebooks (which may have no touchscreen or telephony at all)
+# and on every foldable. Nothing else in the manifest requires a
+# feature, so nothing blocks ChromeOS.
+FEATURES = """    <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+    <uses-feature android:name="android.hardware.type.pc" android:required="false"/>
+    <uses-feature android:name="android.hardware.telephony" android:required="false"/>
 """
 
 RECEIVERS = """        <receiver
@@ -276,18 +291,27 @@ def main() -> None:
         text, re.DOTALL)
     if not activity_match:
         raise SystemExit("could not find MainActivity in AndroidManifest.xml")
+    # ChromeOS / large screens (v3.0.0): the activity must stay
+    # freely resizable (Flutter's template leaves the attribute
+    # unset, which already defaults to true — assert it so a
+    # template change can never silently lock the window size).
+    activity_open = activity_match.group(1)
+    if "resizeableActivity" not in activity_open:
+        activity_open = (activity_open[:-1]
+                         + ' android:resizeableActivity="true">')
     text = (text[:activity_match.start()]
-            + activity_match.group(1)
+            + activity_open
             + '\n            <meta-data android:name="android.app.shortcuts"'
               ' android:resource="@xml/shortcuts" />'
             + activity_match.group(2)
             + activity_match.group(3)
             + text[activity_match.end():])
-    # Notification permissions go right after the <manifest ...> tag.
+    # Notification permissions and the ChromeOS feature
+    # declarations go right after the <manifest ...> tag.
     match = re.search(r"<manifest\b[^>]*>", text)
     if not match:
         raise SystemExit("no <manifest> tag in AndroidManifest.xml")
-    text = text[:match.end()] + "\n" + PERMISSIONS + text[match.end():]
+    text = text[:match.end()] + "\n" + FEATURES + PERMISSIONS + text[match.end():]
     manifest_path.write_text(text)
 
     gradle_path = android / "app/build.gradle.kts"
@@ -345,7 +369,7 @@ def main() -> None:
             target.write_bytes(base64.b64decode(b64_file.read_text()))
             icons.append(target.name)
 
-    print("patched AndroidManifest.xml (label + widget receivers + alert receivers + QS tile + CarAppService + shortcuts + notification permissions) and build.gradle.kts (minSdk 26 + car app + play-services-auth); decoded raw sounds:", ", ".join(decoded), "; decoded icon foregrounds:", ", ".join(icons))
+    print("patched AndroidManifest.xml (label + widget receivers + alert receivers + QS tile + CarAppService + shortcuts + notification permissions + ChromeOS features + resizeableActivity) and build.gradle.kts (minSdk 26 + car app + play-services-auth); decoded raw sounds:", ", ".join(decoded), "; decoded icon foregrounds:", ", ".join(icons))
 
 
 if __name__ == "__main__":

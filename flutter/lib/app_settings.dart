@@ -20,7 +20,7 @@ import 'prayer_models.dart';
 /// version (3.0.0+22). Shown in the Settings footer and used by the
 /// What's New sheet to decide whether to appear.
 const kAppVersion = '3.0.0';
-const kAppBuildNumber = '23';
+const kAppBuildNumber = '24';
 
 /// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
 /// what travel over the alerts MethodChannel and name the Android
