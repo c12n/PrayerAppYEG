@@ -11,6 +11,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'alert_health.dart';
 import 'alerts.dart';
+import 'layout.dart';
 import 'app_settings.dart';
 import 'live_notification.dart';
 import 'prayer_models.dart';
@@ -26,12 +27,12 @@ class SettingsPage extends StatelessWidget {
     return AnimatedBuilder(
       animation: settings,
       builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(title: Text(S.t('settings'))),
-          body: ListView(
-            padding: const EdgeInsets.only(bottom: 32),
-            children: [
-              _sectionHeader(context, S.t('language')),
+        // The sections as blocks (v3.0.0), so expanded windows
+        // can flow them down two columns; compact and medium
+        // windows render the same single list as always.
+        final blocks = <Widget>[
+          _block([
+            _sectionHeader(context, S.t('language')),
               for (final language in AppLanguage.values)
                 ListTile(
                   title: Text(language.nativeName),
@@ -44,7 +45,9 @@ class SettingsPage extends StatelessWidget {
                       settings.update(() => settings.language = language),
                 ),
               _sectionNote(context, S.t('languageNote')),
-              _sectionHeader(context, S.t('appearance')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('appearance')),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SegmentedButton<ThemeMode>(
@@ -59,7 +62,9 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _sectionNote(context, S.t('appearanceNote')),
-              _sectionHeader(context, S.t('minimalMode')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('minimalMode')),
               SwitchListTile(
                 secondary: const Icon(Icons.view_agenda_outlined),
                 title: Text(S.t('minimalMode')),
@@ -68,7 +73,9 @@ class SettingsPage extends StatelessWidget {
                     settings.update(() => settings.minimalMode = v),
               ),
               _sectionNote(context, S.t('minimalModeFooter')),
-              _sectionHeader(context, S.t('themeColors')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('themeColors')),
               _ColorRow(
                 title: S.t('mainColor'),
                 caption: S.t('mainColorCaption'),
@@ -94,7 +101,9 @@ class SettingsPage extends StatelessWidget {
                 }),
               ),
               _sectionNote(context, S.t('colorsNote')),
-              _sectionHeader(context, S.t('themes')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('themes')),
               _themePreview(context, settings),
               for (final theme in presetThemes)
                 _ThemeRow(
@@ -119,7 +128,9 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _saveTheme(context),
               ),
               _sectionNote(context, S.t('themesNote')),
-              _sectionHeader(context, S.t('widgetColors')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('widgetColors')),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SegmentedButton<String>(
@@ -175,7 +186,9 @@ class SettingsPage extends StatelessWidget {
                   S.t(settings.widgetColorMode == 'separate'
                       ? 'widgetColorsNoteSeparate'
                       : 'widgetColorsNoteMatch')),
-              _sectionHeader(context, S.t('iqamahFirst')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('iqamahFirst')),
               SwitchListTile(
                 title: Text(S.t('iqamahFirst')),
                 value: settings.iqamahFirst,
@@ -202,7 +215,9 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
               _sectionNote(context, S.t('iqamahFirstFooter')),
-              _sectionHeader(context, S.t('ramadan')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('ramadan')),
               ListTile(
                 title: Text(S.t('taraweehAfterIsha')),
                 subtitle: Text(S.t('taraweeh')),
@@ -221,7 +236,9 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _sectionNote(context, S.t('ramadanFooter')),
-              _sectionHeader(context, S.t('fasting')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('fasting')),
               SwitchListTile(
                 title: Text(S.t('fastingMonThu')),
                 value: settings.fastingMonThu,
@@ -239,7 +256,9 @@ class SettingsPage extends StatelessWidget {
                 },
               ),
               _sectionNote(context, S.t('fastingFooter')),
-              _sectionHeader(context, S.t('textSize')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('textSize')),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SegmentedButton<AppTextSize>(
@@ -254,7 +273,9 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _sectionNote(context, S.t('textSizeNote')),
-              _sectionHeader(context, S.t('hijriDate')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('hijriDate')),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SegmentedButton<int>(
@@ -269,7 +290,9 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _sectionNote(context, S.t('hijriOffsetFooter')),
-              _sectionHeader(context, S.t('alerts')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('alerts')),
               SwitchListTile(
                 secondary: const Icon(Icons.notifications_active),
                 title: Text(S.t('adhanNotifications')),
@@ -320,7 +343,9 @@ class SettingsPage extends StatelessWidget {
                 ),
                 onTap: () => _pickSound(context),
               ),
-              _sectionHeader(context, S.t('prayerSounds')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('prayerSounds')),
               for (final prayer in Prayer.values)
                 ListTile(
                   leading: Icon(_prayerIcon(prayer)),
@@ -340,7 +365,9 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => _pickPrayerSound(context, prayer),
                 ),
               _sectionNote(context, S.t('prayerSoundsFooter')),
-              _sectionHeader(context, S.t('alertHealth')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('alertHealth')),
               ListTile(
                 leading: const Icon(Icons.favorite),
                 title: Text(S.t('alertHealth')),
@@ -352,7 +379,9 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _sectionNote(context, S.t('alertHealthFooter')),
-              _sectionHeader(context, S.t('qibla')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('qibla')),
               SwitchListTile(
                 secondary: const Icon(Icons.vibration),
                 title: Text(S.t('haptics')),
@@ -361,7 +390,9 @@ class SettingsPage extends StatelessWidget {
                 onChanged: (v) =>
                     settings.update(() => settings.hapticsEnabled = v),
               ),
-              _sectionHeader(context, S.t('widgetCountdown')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('widgetCountdown')),
               for (final prayer in Prayer.values)
                 SwitchListTile(
                   secondary: Icon(_prayerIcon(prayer)),
@@ -375,15 +406,19 @@ class SettingsPage extends StatelessWidget {
                   },
                 ),
               _sectionNote(context, S.t('widgetCountdownNote')),
-              _sectionHeader(context, S.t('assistant')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('assistant')),
               ListTile(
                 leading: const Icon(Icons.notifications_off_outlined),
                 title: Text(S.t('silenceNext')),
                 onTap: () => _silenceNext(context, settings),
               ),
               _sectionNote(context, S.t('assistantFooter')),
-              _BackupSection(settings: settings),
-              _sectionHeader(context, S.t('privacy')),
+          ]),
+          _BackupSection(settings: settings),
+          _block([
+            _sectionHeader(context, S.t('privacy')),
               ListTile(
                 leading: const Icon(Icons.pan_tool),
                 title: Text(S.t('noDataCollected')),
@@ -399,7 +434,9 @@ class SettingsPage extends StatelessWidget {
                 title: Text(S.t('noExternalLinks')),
                 subtitle: Text(S.t('noExternalLinksBody')),
               ),
-              _sectionHeader(context, S.t('ongoingTitle')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('ongoingTitle')),
               SwitchListTile(
                 secondary: const Icon(Icons.notifications_outlined),
                 title: Text(S.t('ongoingTitle')),
@@ -410,7 +447,9 @@ class SettingsPage extends StatelessWidget {
                   OngoingNotification.sync(v);
                 },
               ),
-              _sectionHeader(context, S.t('appIcon')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('appIcon')),
               ListTile(
                 leading: const Icon(Icons.apps),
                 title: Text(S.t('appIcon')),
@@ -424,7 +463,9 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _pickAppIcon(context),
               ),
               _sectionNote(context, S.t('appIconNote')),
-              _sectionHeader(context, S.t('resetHeader')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('resetHeader')),
               ListTile(
                 leading: const Icon(Icons.restart_alt, color: Colors.red),
                 title: Text(S.t('reset'),
@@ -432,8 +473,10 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _confirmReset(context),
               ),
               _sectionNote(context, S.t('resetNote')),
-              Padding(
-                padding: const EdgeInsets.only(top: 28),
+          ]),
+          _block([
+            Padding(
+              padding: const EdgeInsets.only(top: 28),
                 child: Center(
                   child: Text(
                     '${S.t('version')} $kAppVersion ($kAppBuildNumber)',
@@ -444,10 +487,63 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
-          ),
+          ]),
+        ];
+        return Scaffold(
+          appBar: AppBar(title: Text(S.t('settings'))),
+          body: windowSizeClassOf(context).isExpanded
+              ? _twoColumnSettings(context, blocks)
+              : ListView(
+                  padding: const EdgeInsets.only(bottom: 32),
+                  children: blocks,
+                ),
         );
       },
+    );
+  }
+
+  /// One settings section (header + contents + note) as a
+  /// single block, so the expanded layout can distribute whole
+  /// sections between columns without splitting one in half.
+  Widget _block(List<Widget> children) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+
+  /// Expanded windows (Chromebooks, tablets, unfolded
+  /// foldables): the sections flow down two independently
+  /// scrolling columns — the first half on the leading side,
+  /// the rest (with the version footer last) on the trailing
+  /// side.
+  Widget _twoColumnSettings(BuildContext context, List<Widget> blocks) {
+    final half = (blocks.length - 1) ~/ 2;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: blocks.sublist(0, half),
+              ),
+            ),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: blocks.sublist(half),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

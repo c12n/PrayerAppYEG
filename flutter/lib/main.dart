@@ -5,12 +5,16 @@
 // offsets, Umm al-Qura Hijri date, next-prayer countdown, and Friday
 // Jumu'ah handling — computed fully on-device, offline.
 //
-// Responsive layouts:
-//  - Phone (< 600dp): single column.
-//  - Duo (600–1100dp): two panes — next prayer beside the schedule
-//    (iPhone landscape / small tablets / foldables).
-//  - Tablet (>= 1100dp): wide three-zone layout with today's and
-//    tomorrow's schedules side by side (iPad / Android tablets).
+// Responsive layouts (window size classes, see layout.dart):
+//  - Compact (< 600dp): single column — phones, folded-closed.
+//  - Medium (600–839dp): Duo — two panes, next prayer beside the
+//    schedule (phone landscape / small tablets / foldables).
+//  - Expanded (>= 840dp): Duo continues to 1100dp, then the wide
+//    three-zone Tablet layout with today's and tomorrow's
+//    schedules side by side (tablets / Chromebooks).
+// On foldables the Duo split moves to the hinge in book mode, so
+// neither pane runs under it; devices without a hinge see the
+// plain split, exactly as before.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -30,6 +34,7 @@ import 'package:audio_service/audio_service.dart';
 import 'alerts.dart';
 import 'app_settings.dart';
 import 'hijri_calendar.dart';
+import 'layout.dart';
 import 'live_notification.dart';
 import 'names_of_allah.dart';
 import 'prayer_models.dart';
@@ -652,13 +657,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               if (settings.minimalMode) {
                 return _minimalLayout(context, snapshot, today);
               }
-              if (width >= 1100) {
+              // The same three arrangements as always, now chosen
+              // through the shared size classes: compact is the
+              // phone column, medium is Duo, and expanded runs Duo
+              // until 1100dp where the Tablet layout takes over.
+              final sizeClass = windowSizeClassForWidth(width);
+              if (sizeClass.isCompact) {
+                return _phoneLayout(context, snapshot, today);
+              }
+              if (sizeClass.isExpanded && width >= 1100) {
                 return _tabletLayout(context, snapshot, today, tomorrow);
               }
-              if (width >= 600) {
-                return _duoLayout(context, snapshot, today);
-              }
-              return _phoneLayout(context, snapshot, today);
+              return _duoLayout(context, snapshot, today, width);
             },
           ),
         ),
@@ -730,54 +740,60 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Duo: two panes side by side.
-  Widget _duoLayout(
-      BuildContext context, PrayerSnapshot snapshot, PrayerDay today) {
+  // Duo: two panes side by side. On a foldable held in book mode
+  // the split moves to the hinge (see layout.dart) so neither
+  // pane runs under it; anywhere else the panes keep the plain
+  // 5:6 flex split they have always had.
+  Widget _duoLayout(BuildContext context, PrayerSnapshot snapshot,
+      PrayerDay today, double width) {
+    final firstPane = SingleChildScrollView(
+      controller: _scrollController,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          HeaderSection(today: today, now: _now),
+          const SizedBox(height: 20),
+          NextPrayerCard(snapshot: snapshot),
+          const SizedBox(height: 20),
+          const DailyVerseCard(),
+          const SizedBox(height: 20),
+          const QuranEntryCard(),
+          const SizedBox(height: 20),
+          const HijriCountdownCard(),
+          const SizedBox(height: 20),
+          const NamesEntryCard(),
+          const SizedBox(height: 20),
+          const QiblaCard(),
+        ],
+      ),
+    );
+    final secondPane = SingleChildScrollView(
+      controller: _scrollController,
+      child: Column(
+        children: [
+          ScheduleCard(snapshot: snapshot),
+          const SizedBox(height: 20),
+          PrayerTrackerCard(player: QuranScope.of(context).player),
+          const SizedBox(height: 20),
+          const FooterSection(),
+        ],
+      ),
+    );
+    final split = hingeSplit(context, width, startInset: 20, endInset: 20);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 5,
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  HeaderSection(today: today, now: _now),
-                  const SizedBox(height: 20),
-                  NextPrayerCard(snapshot: snapshot),
-                  const SizedBox(height: 20),
-                  const DailyVerseCard(),
-                  const SizedBox(height: 20),
-                  const QuranEntryCard(),
-                  const SizedBox(height: 20),
-                  const HijriCountdownCard(),
-                  const SizedBox(height: 20),
-                  const NamesEntryCard(),
-                  const SizedBox(height: 20),
-                  const QiblaCard(),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            flex: 6,
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                children: [
-                  ScheduleCard(snapshot: snapshot),
-                  const SizedBox(height: 20),
-                  PrayerTrackerCard(player: QuranScope.of(context).player),
-                  const SizedBox(height: 20),
-                  const FooterSection(),
-                ],
-              ),
-            ),
-          ),
+          if (split != null) ...[
+            SizedBox(width: split.firstWidth, child: firstPane),
+            SizedBox(width: split.gapWidth),
+            Expanded(child: secondPane),
+          ] else ...[
+            Expanded(flex: 5, child: firstPane),
+            const SizedBox(width: 20),
+            Expanded(flex: 6, child: secondPane),
+          ],
         ],
       ),
     );

@@ -12,6 +12,7 @@ import 'package:intl/intl.dart' show DateFormat;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_settings.dart';
+import 'layout.dart';
 import 'prayer_models.dart';
 import 'quran_player.dart';
 import 'strings.dart';
@@ -253,8 +254,11 @@ class PrayerTrackerDetailPage extends StatelessWidget {
             for (var i = 0; i < 7; i++)
               DateTime(now.year, now.month, now.day - i),
           ];
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          // The three sections as blocks, so expanded windows
+          // can grid them; compact renders the same flat list.
+          final daysBlock = Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _sectionLabel(context, S.t('last7Days')),
               Card(
@@ -264,7 +268,12 @@ class PrayerTrackerDetailPage extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+            ],
+          );
+          final totalsBlock = Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               _sectionLabel(context, S.t('totals')),
               Card(
                 child: Column(
@@ -280,7 +289,12 @@ class PrayerTrackerDetailPage extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+            ],
+          );
+          final listeningBlock = Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               _sectionLabel(context, S.t('quranListening')),
               Card(
                 child: Column(
@@ -292,6 +306,41 @@ class PrayerTrackerDetailPage extends StatelessWidget {
                   ],
                 ),
               ),
+            ],
+          );
+          if (windowSizeClassOf(context).isExpanded) {
+            // Stats grid (v3.0.0, large screens): the week on
+            // top, totals and listening side by side below, the
+            // whole page held to a readable width.
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1080),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  children: [
+                    daysBlock,
+                    const SizedBox(height: 20),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: totalsBlock),
+                        const SizedBox(width: 16),
+                        Expanded(child: listeningBlock),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            children: [
+              daysBlock,
+              const SizedBox(height: 20),
+              totalsBlock,
+              const SizedBox(height: 20),
+              listeningBlock,
             ],
           );
         },

@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'layout.dart';
 import 'quran_downloads.dart';
 import 'quran_models.dart';
 import 'quran_player.dart';
@@ -352,6 +353,10 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
   bool _downloadedOnly = false;
   bool _bookmarksOnly = false;
 
+  /// Expanded windows show the player in a right-hand pane; this
+  /// flips that pane between Now Playing and the lyrics view.
+  bool _rightShowsLyrics = false;
+
   List<QuranSurah> _displayed(QuranScope scope) {
     var list = List.of(QuranLibrary.surahs);
     if (_favoritesOnly) {
@@ -406,8 +411,71 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
           ),
           bottomNavigationBar:
               widget.embedded ? null : const MiniPlayerBar(),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          body: _body(context, scope, displayed),
+        );
+      },
+    );
+  }
+
+  /// Compact and medium windows keep the single list the library
+  /// has always been. Expanded windows (Chromebooks, tablets,
+  /// unfolded foldables) split into two panes: the library list
+  /// on the left and Now Playing (or the lyrics) on the right,
+  /// with the split moved to the hinge on book-mode foldables.
+  Widget _body(BuildContext context, QuranScope scope,
+      List<QuranSurah> displayed) {
+    if (!windowSizeClassOf(context).isExpanded) {
+      return _listBody(context, scope, displayed);
+    }
+    final width = MediaQuery.sizeOf(context).width;
+    final split = hingeSplit(context, width, startInset: 16, endInset: 16);
+    final Widget rightPane = _rightShowsLyrics
+        ? QuranLyricsPage(
+            embedded: true,
+            onClose: () => setState(() => _rightShowsLyrics = false),
+          )
+        : NowPlayingPage(
+            embedded: true,
+            onOpenLyrics: () => setState(() => _rightShowsLyrics = true),
+          );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (split != null) ...[
+            SizedBox(
+              width: split.firstWidth,
+              child: _listBody(context, scope, displayed, inPane: true),
+            ),
+            SizedBox(width: split.gapWidth),
+          ] else ...[
+            Expanded(
+              flex: 5,
+              child: _listBody(context, scope, displayed, inPane: true),
+            ),
+            const SizedBox(width: 20),
+          ],
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(26),
+              child: rightPane,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _listBody(BuildContext context, QuranScope scope,
+      List<QuranSurah> displayed,
+      {bool inPane = false}) {
+    final player = scope.player;
+    final expanded = windowSizeClassOf(context).isExpanded;
+    return ListView(
+            padding: inPane
+                ? EdgeInsets.zero
+                : const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               Text(
                 S.f('quranSubFmt',
@@ -494,8 +562,12 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
                         isOn: false,
                         onTap: () {
                           player.resume();
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => const NowPlayingPage()));
+                          if (expanded) {
+                            setState(() => _rightShowsLyrics = false);
+                          } else {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => const NowPlayingPage()));
+                          }
                         }),
                   ],
                 ),
@@ -515,8 +587,12 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
                         player.play(displayed.first.number,
                             queue: displayed.map((s) => s.number).toList(),
                             contextLabel: 'Favorites');
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const NowPlayingPage()));
+                        if (expanded) {
+                          setState(() => _rightShowsLyrics = false);
+                        } else {
+                          Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => const NowPlayingPage()));
+                        }
                       },
                       icon: const Icon(Icons.play_arrow),
                       label: Text(S.t('playAllFavorites')),
@@ -548,16 +624,17 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
                       player.play(surah.number,
                           queue: displayed.map((s) => s.number).toList(),
                           contextLabel: _contextLabel);
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const NowPlayingPage()));
+                      if (expanded) {
+                        setState(() => _rightShowsLyrics = false);
+                      } else {
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const NowPlayingPage()));
+                      }
                     },
                   ),
               ],
             ],
-          ),
-        );
-      },
-    );
+          );
   }
 
   Widget _chip(
@@ -633,6 +710,7 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
   }
 
   List<Widget> _bookmarkRows(BuildContext context, QuranScope scope) {
+    final expanded = windowSizeClassOf(context).isExpanded;
     final bookmarks = scope.bookmarks.bookmarks;
     if (bookmarks.isEmpty) {
       return [
@@ -683,8 +761,12 @@ class _QuranLibraryPageState extends State<QuranLibraryPage> {
                   }));
                 }
               }
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const NowPlayingPage()));
+              if (expanded) {
+                setState(() => _rightShowsLyrics = false);
+              } else {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const NowPlayingPage()));
+              }
             },
           );
         }),
@@ -1187,7 +1269,14 @@ class QuranDownloadsManagerPage extends StatelessWidget {
 // MARK: - Now Playing
 
 class NowPlayingPage extends StatefulWidget {
-  const NowPlayingPage({super.key});
+  /// In the expanded Quran library the player lives in the
+  /// right-hand pane: no Scaffold or AppBar of its own (the
+  /// repeat-ayah menu floats over the artwork instead), and the
+  /// lyrics strip swaps the pane to the lyrics view through
+  /// [onOpenLyrics] instead of pushing a route.
+  final bool embedded;
+  final VoidCallback? onOpenLyrics;
+  const NowPlayingPage({super.key, this.embedded = false, this.onOpenLyrics});
 
   @override
   State<NowPlayingPage> createState() => _NowPlayingPageState();
@@ -1204,6 +1293,27 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       animation: Listenable.merge([player, scope.bookmarks]),
       builder: (context, _) {
         final surah = player.currentSurah;
+        final Widget content = surah == null
+            ? Center(
+                child: Text(S.t('nothingPlaying'),
+                    style: const TextStyle(color: Colors.white70)),
+              )
+            : _body(context, scope, surah);
+        if (widget.embedded) {
+          return Material(
+            color: QuranThemeColors.darkestGreen,
+            child: Stack(
+              children: [
+                content,
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: _repeatAyahButton(context, player),
+                ),
+              ],
+            ),
+          );
+        }
         return Scaffold(
           backgroundColor: QuranThemeColors.darkestGreen,
           appBar: AppBar(
@@ -1219,12 +1329,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
               _repeatAyahButton(context, player),
             ],
           ),
-          body: surah == null
-              ? Center(
-                  child: Text(S.t('nothingPlaying'),
-                      style: const TextStyle(color: Colors.white70)),
-                )
-              : _body(context, scope, surah),
+          body: content,
         );
       },
     );
@@ -1234,23 +1339,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     final player = scope.player;
     final duration = player.duration;
     final position = _scrubValue ?? player.currentTime;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            surahColor(surah.number, 0.50, 0.30),
-            QuranThemeColors.darkestGreen,
-          ],
-        ),
-      ),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        children: [
-          Center(child: SurahArtwork(surah: surah, size: 250)),
-          const SizedBox(height: 24),
-          Row(
+    final artwork = Center(child: SurahArtwork(surah: surah, size: 250));
+    final titleRow = Row(
             children: [
               Expanded(
                 child: Column(
@@ -1285,9 +1375,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                 onPressed: () => player.toggleFavorite(surah.number),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Slider(
+          );
+    final slider = Slider(
             value: duration > 0 ? position.clamp(0.0, duration) : 0,
             min: 0,
             max: duration > 0 ? duration : 1,
@@ -1298,8 +1387,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
               player.seek(v);
               setState(() => _scrubValue = null);
             },
-          ),
-          Row(
+          );
+    final timesRow = Row(
             children: [
               Text(QuranLibrary.formatDuration(position),
                   style: const TextStyle(
@@ -1314,9 +1403,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       fontSize: 12,
                       fontWeight: FontWeight.w600)),
             ],
-          ),
-          const SizedBox(height: 8),
-          Row(
+          );
+    final transportRow = Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
@@ -1357,11 +1445,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                 onPressed: player.cycleRepeatMode,
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          _lyricsStrip(context, scope, surah),
-          const SizedBox(height: 16),
-          Row(
+          );
+    final lyricsStrip = _lyricsStrip(context, scope, surah);
+    final extrasRow = Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _extraButton(
@@ -1388,6 +1474,113 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                 onTap: () => _showQueue(context, scope),
               ),
             ],
+          );
+    final hinge = widget.embedded ? null : tabletopHinge(context);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            surahColor(surah.number, 0.50, 0.30),
+            QuranThemeColors.darkestGreen,
+          ],
+        ),
+      ),
+      child: hinge == null
+          ? ListView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              children: [
+                artwork,
+                const SizedBox(height: 24),
+                titleRow,
+                const SizedBox(height: 8),
+                slider,
+                timesRow,
+                const SizedBox(height: 8),
+                transportRow,
+                const SizedBox(height: 12),
+                lyricsStrip,
+                const SizedBox(height: 16),
+                extrasRow,
+              ],
+            )
+          : _tabletopLayout(
+              context,
+              hinge,
+              artwork: artwork,
+              titleRow: titleRow,
+              lyricsStrip: lyricsStrip,
+              slider: slider,
+              timesRow: timesRow,
+              transportRow: transportRow,
+              extrasRow: extrasRow,
+            ),
+    );
+  }
+
+  /// Tabletop posture on a foldable: the screen splits at the
+  /// fold — artwork, title and the lyrics strip in the region
+  /// above it, the scrubber and the transport controls in the
+  /// region below. Each region centers its content and scrolls
+  /// internally if it runs short, so small folds degrade
+  /// gracefully instead of overflowing.
+  Widget _tabletopLayout(
+    BuildContext context,
+    DisplayFeature hinge, {
+    required Widget artwork,
+    required Widget titleRow,
+    required Widget lyricsStrip,
+    required Widget slider,
+    required Widget timesRow,
+    required Widget transportRow,
+    required Widget extrasRow,
+  }) {
+    final size = MediaQuery.sizeOf(context);
+    final bodyTop = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    final bodyHeight = size.height - bodyTop;
+    final fraction = bodyHeight > 0
+        ? ((hinge.bounds.top - bodyTop) / bodyHeight).clamp(0.25, 0.75)
+        : 0.5;
+    final topFlex = (fraction * 1000).round();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      child: Column(
+        children: [
+          Expanded(
+            flex: topFlex,
+            child: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    artwork,
+                    const SizedBox(height: 16),
+                    titleRow,
+                    const SizedBox(height: 10),
+                    lyricsStrip,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 1000 - topFlex,
+            child: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    slider,
+                    timesRow,
+                    const SizedBox(height: 8),
+                    transportRow,
+                    const SizedBox(height: 12),
+                    extrasRow,
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -1411,9 +1604,15 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const QuranLyricsPage()),
-        ),
+        onTap: () {
+          if (widget.onOpenLyrics != null) {
+            widget.onOpenLyrics!();
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const QuranLyricsPage()),
+            );
+          }
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -1533,8 +1732,12 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                   title: Text(S.t('lyrics')),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const QuranLyricsPage()));
+                    if (widget.onOpenLyrics != null) {
+                      widget.onOpenLyrics!();
+                    } else {
+                      Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const QuranLyricsPage()));
+                    }
                   },
                 ),
               ],
@@ -1649,7 +1852,14 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
 // MARK: - Lyrics
 
 class QuranLyricsPage extends StatefulWidget {
-  const QuranLyricsPage({super.key});
+  /// In the expanded Quran library the lyrics live in the
+  /// right-hand pane: no Scaffold of their own — a header row
+  /// (back button, title, mode switch) replaces the AppBar and
+  /// the loop bar closes the column. [onClose] returns the pane
+  /// to Now Playing.
+  final bool embedded;
+  final VoidCallback? onClose;
+  const QuranLyricsPage({super.key, this.embedded = false, this.onClose});
 
   @override
   State<QuranLyricsPage> createState() => _QuranLyricsPageState();
@@ -1707,37 +1917,7 @@ class _QuranLyricsPageState extends State<QuranLyricsPage> {
         if (ayahs != null && ayahs.isNotEmpty) {
           _maybeScroll(currentIndex, ayahs);
         }
-        return Scaffold(
-          backgroundColor: QuranThemeColors.darkestGreen,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            title: Text(surah == null
-                ? S.t('lyrics')
-                : S.f('surahFmt', {'name': surah.english})),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(
-                        value: 'both', label: Text(S.t('lyricsModeBoth'))),
-                    const ButtonSegment(value: 'arabic', label: Text('عربي')),
-                    const ButtonSegment(value: 'english', label: Text('EN')),
-                  ],
-                  selected: {_mode},
-                  onSelectionChanged: (s) =>
-                      setState(() => _mode = s.first),
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          bottomNavigationBar: _loopBar(context, scope),
-          body: surah == null
+        final Widget content = surah == null
               ? Center(
                   child: Text(S.t('nothingPlaying'),
                       style: const TextStyle(color: Colors.white70)))
@@ -1781,21 +1961,128 @@ class _QuranLyricsPageState extends State<QuranLyricsPage> {
                               ),
                             ),
                           ),
-                        ),
-          floatingActionButton: !_liveScroll && ayahs != null
-              ? FloatingActionButton.extended(
-                  onPressed: () {
-                    setState(() {
-                      _liveScroll = true;
-                      _lastScrolledIndex = -1;
-                    });
-                  },
-                  icon: const Icon(Icons.arrow_downward),
-                  label: Text(S.t('liveScroll')),
-                )
-              : null,
+                        );
+        // Reading column (v3.0.0, large screens): the lyrics
+        // card never grows past a comfortable reading width and
+        // stays centered. Below 748dp the constraint never
+        // binds, so phones render exactly as before.
+        final Widget framedContent = LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = constraints.maxWidth > 748
+                ? 720.0
+                : constraints.maxWidth;
+            return Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: cardWidth,
+                height: constraints.maxHeight,
+                child: content,
+              ),
+            );
+          },
+        );
+        final fab = !_liveScroll && ayahs != null
+            ? FloatingActionButton.extended(
+                onPressed: () {
+                  setState(() {
+                    _liveScroll = true;
+                    _lastScrolledIndex = -1;
+                  });
+                },
+                icon: const Icon(Icons.arrow_downward),
+                label: Text(S.t('liveScroll')),
+              )
+            : null;
+        if (widget.embedded) {
+          return Container(
+            color: QuranThemeColors.darkestGreen,
+            child: Column(
+              children: [
+                _embeddedHeader(context, surah),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: framedContent),
+                      if (fab != null)
+                        Positioned(right: 16, bottom: 16, child: fab),
+                    ],
+                  ),
+                ),
+                _loopBar(context, scope),
+              ],
+            ),
+          );
+        }
+        return Scaffold(
+          backgroundColor: QuranThemeColors.darkestGreen,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            title: Text(surah == null
+                ? S.t('lyrics')
+                : S.f('surahFmt', {'name': surah.english})),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _modeSegmented(),
+              ),
+            ],
+          ),
+          bottomNavigationBar: _loopBar(context, scope),
+          body: framedContent,
+          floatingActionButton: fab,
         );
       },
+    );
+  }
+
+  /// The Both / Arabic / English switch — in the AppBar on the
+  /// standalone page, in the header row when embedded in a pane.
+  Widget _modeSegmented() {
+    return SegmentedButton<String>(
+      segments: [
+        ButtonSegment(value: 'both', label: Text(S.t('lyricsModeBoth'))),
+        const ButtonSegment(value: 'arabic', label: Text('عربي')),
+        const ButtonSegment(value: 'english', label: Text('EN')),
+      ],
+      selected: {_mode},
+      onSelectionChanged: (s) => setState(() => _mode = s.first),
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
+  /// The embedded pane's stand-in for the AppBar: back to Now
+  /// Playing, the surah title, and the mode switch.
+  Widget _embeddedHeader(BuildContext context, QuranSurah? surah) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 6, 8, 2),
+      child: Row(
+        children: [
+          if (widget.onClose != null)
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: widget.onClose,
+            ),
+          Expanded(
+            child: Text(
+              surah == null
+                  ? S.t('lyrics')
+                  : S.f('surahFmt', {'name': surah.english}),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          _modeSegmented(),
+        ],
+      ),
     );
   }
 
