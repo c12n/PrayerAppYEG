@@ -25,6 +25,8 @@ import 'package:intl/date_symbol_data_local.dart';
 // would shadow Flutter's (the v2.3.0 build broke on exactly that).
 import 'package:intl/intl.dart' show DateFormat;
 
+import 'package:audio_service/audio_service.dart';
+
 import 'alerts.dart';
 import 'app_settings.dart';
 import 'hijri_calendar.dart';
@@ -32,6 +34,7 @@ import 'live_notification.dart';
 import 'names_of_allah.dart';
 import 'prayer_models.dart';
 import 'prayer_tracker.dart';
+import 'quran_audio_handler.dart';
 import 'quran_downloads.dart';
 import 'quran_models.dart';
 import 'quran_pages.dart';
@@ -57,6 +60,29 @@ Future<void> main() async {
   final bookmarks = QuranBookmarks();
   await bookmarks.load(prefs);
   final player = QuranPlayer();
+  // Background audio (v3.0.0): the media-session foreground
+  // service (iOS: Now Playing) is registered before the player
+  // restores its session, so a restored surah is published to
+  // the lock screen from the first frame. A failure here must
+  // never take the app down with it — playback still works in
+  // the foreground without the service.
+  final audioHandler = QuranAudioHandler();
+  audioHandler.attach(player);
+  try {
+    await AudioService.init(
+      builder: () => audioHandler,
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.c12n.prayerappAndroid.audio',
+        androidNotificationChannelName: 'Quran Playback',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: true,
+        androidNotificationIcon: 'mipmap/ic_launcher',
+      ),
+    );
+  } catch (_) {
+    // Foreground-service registration unavailable (e.g. a test
+    // environment): the player still runs in-app.
+  }
   await player.init(prefs);
   final tracker = TrackerStore();
   await tracker.load(prefs);

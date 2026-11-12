@@ -322,7 +322,6 @@ class S {
     'sleepEndOfSurah': {AppLanguage.en: 'End of surah', AppLanguage.ar: 'نهاية السورة', AppLanguage.fr: 'Fin de la sourate'},
     'queueTitle': {AppLanguage.en: 'Queue', AppLanguage.ar: 'القائمة', AppLanguage.fr: "File d'attente"},
     'upNext': {AppLanguage.en: 'Up next', AppLanguage.ar: 'التالي', AppLanguage.fr: 'Ensuite'},
-    'speed': {AppLanguage.en: 'Playback speed', AppLanguage.ar: 'سرعة التشغيل', AppLanguage.fr: 'Vitesse de lecture'},
     'surahFmt': {AppLanguage.en: 'Surah {name}', AppLanguage.ar: 'سورة {name}', AppLanguage.fr: 'Sourate {name}'},
     // v3.0.0: prayer tracker (wording mirrors iOS)
     'trackerTitle': {AppLanguage.en: 'Prayer Tracker', AppLanguage.ar: 'متتبّع الصلاة', AppLanguage.fr: 'Suivi des prières'},

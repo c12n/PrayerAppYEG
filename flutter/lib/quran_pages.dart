@@ -1364,14 +1364,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
               ),
               _extraButton(
                 context,
-                icon: Icons.speed,
-                label: S.t('speed'),
-                value: '${player.rate}x',
-                active: player.rate != 1.0,
-                onTap: () => _showRateMenu(context, player),
-              ),
-              _extraButton(
-                context,
                 icon: Icons.queue_music,
                 label: S.t('queueTitle'),
                 value: player.upNextSurah == null
@@ -1580,33 +1572,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                 Navigator.pop(context);
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showRateMenu(BuildContext context, QuranPlayer player) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(S.t('speed'),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            for (final rate in QuranPlayer.allowedRates)
-              ListTile(
-                leading:
-                    Icon(player.rate == rate ? Icons.check : Icons.speed),
-                title: Text('${rate}x'),
-                onTap: () {
-                  player.setRate(rate);
-                  Navigator.pop(context);
-                },
-              ),
           ],
         ),
       ),

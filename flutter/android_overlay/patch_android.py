@@ -11,6 +11,12 @@
 - v1.8 settings backup: allowBackup + fullBackupContent +
   dataExtractionRules pointing at the overlay's res/xml rules, so
   the Flutter settings restore after a reinstall
+- v3.0.0 background audio: WAKE_LOCK / FOREGROUND_SERVICE /
+  FOREGROUND_SERVICE_MEDIA_PLAYBACK permissions and the
+  audio_service AudioService + MediaButtonReceiver components
+- v3.0.0 1:1 icons: decode the real iOS alternate-icon artwork
+  (icon_b64, base64 like the adhan WAVs) into drawable-nodpi
+  foregrounds for the alias adaptive icons
 
 Usage: patch_android.py <path-to-generated-android-dir>
 """
@@ -22,6 +28,9 @@ import sys
 PERMISSIONS = """    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
 """
 
 RECEIVERS = """        <receiver
@@ -104,6 +113,25 @@ RECEIVERS = """        <receiver
         <receiver
             android:name=".OngoingTickReceiver"
             android:exported="false">
+        </receiver>
+        <!-- Background Quran audio (v3.0.0, iOS Now Playing
+             parity): the audio_service media-session service and
+             media-button receiver, per the audio_service plugin's
+             documented manifest setup. -->
+        <service
+            android:name="com.ryanheise.audioservice.AudioService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+        <receiver
+            android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
         </receiver>
         <!-- Alternate launcher icons (v3.0.0): one disabled alias
              per iOS alternate icon; MainActivity switches them

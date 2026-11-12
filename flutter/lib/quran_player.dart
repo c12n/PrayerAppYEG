@@ -1,13 +1,19 @@
 // Quran player (v3.0.0) — the Android counterpart of the iOS
 // QuranPlayer: a just_audio engine streaming one MP3 per surah
 // from the catalogue CDN (or playing the downloaded file), with
-// the same queue / shuffle / repeat / rate / sleep-timer / ayah
-// loop behavior and the same quran.* persistence keys as iOS.
+// the same queue / shuffle / repeat / sleep-timer / ayah loop
+// behavior and the same quran.* persistence keys as iOS. (No
+// playback-speed control: iOS removed its speed toggles by the
+// owner's order, so Android has none either.) Background
+// playback runs through the audio_service foreground service
+// wired in quran_audio_handler.dart, the counterpart of iOS's
+// Now Playing / remote-command integration.
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -84,11 +90,9 @@ class QuranPlayer extends ChangeNotifier {
   static const _kFavorites = 'quran.favorites';
   static const _kRepeatMode = 'quran.repeatMode';
   static const _kShuffle = 'quran.shuffle';
-  static const _kRate = 'quran.rate';
   static const _kAudioLanguage = 'quran.audioLanguage';
   static const _kStats = 'quran.stats.v1';
 
-  static const allowedRates = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   static const sleepMinutes = [5, 10, 15, 30, 45, 60];
 
   static const _widgetChannel = MethodChannel('alrashid/widgets');
@@ -107,11 +111,38 @@ class QuranPlayer extends ChangeNotifier {
   String reciterId = '';
   QuranRepeatMode repeatMode = QuranRepeatMode.off;
   bool shuffle = false;
-  double rate = 1.0;
   QuranSleepOption sleepOption = const QuranSleepOption.off();
   QuranAudioLanguage audioLanguage = QuranAudioLanguage.arabic;
   QuranListeningStats stats = QuranListeningStats();
   String? ayahLoopLabel;
+
+  /// The engine's latest processing state, mirrored for the
+  /// background-audio handler (buffering / ready / completed).
+  ProcessingState _engineState = ProcessingState.idle;
+  ProcessingState get engineState => _engineState;
+
+  /// Whether a surah is loaded (the iOS player's currentSurah
+  /// test that drives its Now Playing presence).
+  bool get isLoaded => currentSurah != null;
+
+  /// The media item the background handler publishes to the
+  /// system media session (iOS: MPNowPlayingInfoCenter): title is
+  /// the surah's English name, artist the reciter, album "Quran".
+  MediaItem? get nowPlayingMediaItem {
+    final surah = currentSurah;
+    if (surah == null) return null;
+    final known = duration;
+    return MediaItem(
+      id: '$activeReciterId/${surah.number}',
+      title: surah.english,
+      artist: currentReciter?.name ?? '',
+      album: 'Quran',
+      duration: known > 0
+          ? Duration(milliseconds: (known * 1000).round())
+          : null,
+      extras: {'surahNumber': surah.number},
+    );
+  }
 
   _AyahLoop? _ayahLoop;
   List<int> _traversal = [];
@@ -177,8 +208,6 @@ class QuranPlayer extends ChangeNotifier {
     repeatMode = QuranRepeatMode
         .values[storedRepeat.clamp(0, QuranRepeatMode.values.length - 1)];
     shuffle = prefs.getBool(_kShuffle) ?? false;
-    final storedRate = prefs.getDouble(_kRate) ?? 1.0;
-    rate = allowedRates.contains(storedRate) ? storedRate : 1.0;
     audioLanguage = prefs.getString(_kAudioLanguage) == 'english'
         ? QuranAudioLanguage.english
         : QuranAudioLanguage.arabic;
@@ -191,6 +220,7 @@ class QuranPlayer extends ChangeNotifier {
     }
 
     _player.playerStateStream.listen((state) {
+      _engineState = state.processingState;
       if (state.processingState == ProcessingState.completed) {
         _handleItemEnd();
       }
@@ -345,14 +375,6 @@ class QuranPlayer extends ChangeNotifier {
     _lastObservedPlaybackTime = target;
     _player.seek(Duration(milliseconds: (target * 1000).round()));
     _persistPosition();
-    notifyListeners();
-  }
-
-  void setRate(double newRate) {
-    if (!allowedRates.contains(newRate)) return;
-    rate = newRate;
-    _prefs?.setDouble(_kRate, newRate);
-    _player.setSpeed(newRate);
     notifyListeners();
   }
 
@@ -634,7 +656,6 @@ class QuranPlayer extends ChangeNotifier {
       _pendingSeek = null;
       await _player.seek(Duration(milliseconds: (target * 1000).round()));
     }
-    await _player.setSpeed(rate);
     if (autoplay) {
       _applyPlay();
       isPlaying = true;
@@ -665,7 +686,6 @@ class QuranPlayer extends ChangeNotifier {
   }
 
   void _applyPlay() {
-    _player.setSpeed(rate);
     _player.play();
   }
 
