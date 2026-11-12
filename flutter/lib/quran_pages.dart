@@ -5,6 +5,7 @@
 // loop), the downloads manager, and the mini player bar.
 
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -1527,7 +1528,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   /// gracefully instead of overflowing.
   Widget _tabletopLayout(
     BuildContext context,
-    DisplayFeature hinge, {
+    ui.DisplayFeature hinge, {
     required Widget artwork,
     required Widget titleRow,
     required Widget lyricsStrip,

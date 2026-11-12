@@ -19,6 +19,8 @@
 // features every helper here returns null and the layouts fall
 // back to their plain forms.
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/widgets.dart';
 
 enum WindowSizeClass { compact, medium, expanded }
@@ -45,10 +47,10 @@ WindowSizeClass windowSizeClassOf(BuildContext context) =>
 /// [width] vertically into two usable regions (a foldable held
 /// in book mode). Null on every non-folding device, and when the
 /// feature does not actually divide the window.
-DisplayFeature? verticalHinge(BuildContext context, double width) {
+ui.DisplayFeature? verticalHinge(BuildContext context, double width) {
   for (final feature in MediaQuery.of(context).displayFeatures) {
-    if (feature.type != DisplayFeatureType.hinge &&
-        feature.type != DisplayFeatureType.fold) {
+    if (feature.type != ui.DisplayFeatureType.hinge &&
+        feature.type != ui.DisplayFeatureType.fold) {
       continue;
     }
     final bounds = feature.bounds;
@@ -64,14 +66,14 @@ DisplayFeature? verticalHinge(BuildContext context, double width) {
 /// standing in tabletop mode. Null everywhere else, including a
 /// foldable lying fully flat (postureFlat), so the tabletop
 /// layout appears only while the posture is actually reported.
-DisplayFeature? tabletopHinge(BuildContext context) {
+ui.DisplayFeature? tabletopHinge(BuildContext context) {
   final size = MediaQuery.sizeOf(context);
   for (final feature in MediaQuery.of(context).displayFeatures) {
-    if (feature.type != DisplayFeatureType.hinge &&
-        feature.type != DisplayFeatureType.fold) {
+    if (feature.type != ui.DisplayFeatureType.hinge &&
+        feature.type != ui.DisplayFeatureType.fold) {
       continue;
     }
-    if (feature.state != DisplayFeatureState.postureHalfOpened) {
+    if (feature.state != ui.DisplayFeatureState.postureHalfOpened) {
       continue;
     }
     final bounds = feature.bounds;
