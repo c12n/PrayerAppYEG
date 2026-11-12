@@ -331,7 +331,21 @@ def main() -> None:
             target.write_bytes(base64.b64decode(b64_file.read_text()))
             decoded.append(target.name)
 
-    print("patched AndroidManifest.xml (label + widget receivers + alert receivers + QS tile + CarAppService + shortcuts + notification permissions) and build.gradle.kts (minSdk 26 + car app + play-services-auth); decoded raw sounds:", ", ".join(decoded))
+    # Alternate-icon artwork (v3.0.0 1:1): the nine iOS alternate
+    # icons travel base64-encoded the same way and decode into
+    # drawable-nodpi foregrounds for the alias adaptive icons,
+    # replacing the flat vector-glyph approximations.
+    icon_dir = overlay / "icon_b64"
+    nodpi_dir = android / "app/src/main/res/drawable-nodpi"
+    nodpi_dir.mkdir(parents=True, exist_ok=True)
+    icons = []
+    if icon_dir.is_dir():
+        for b64_file in sorted(icon_dir.glob("*.png.b64")):
+            target = nodpi_dir / b64_file.name[: -len(".b64")]
+            target.write_bytes(base64.b64decode(b64_file.read_text()))
+            icons.append(target.name)
+
+    print("patched AndroidManifest.xml (label + widget receivers + alert receivers + QS tile + CarAppService + shortcuts + notification permissions) and build.gradle.kts (minSdk 26 + car app + play-services-auth); decoded raw sounds:", ", ".join(decoded), "; decoded icon foregrounds:", ", ".join(icons))
 
 
 if __name__ == "__main__":
