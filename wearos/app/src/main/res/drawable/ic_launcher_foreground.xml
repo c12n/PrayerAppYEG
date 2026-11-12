@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon foreground: a gold mosque silhouette (dome, crescent
+     finial, two minarets) drawn as vector paths, matching the phone
+     app's branding. Canvas is the 108dp adaptive-icon grid; the
+     artwork stays inside the safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/gold"
+        android:pathData="M54,14 L55.8,19.5 L61.5,19.5 L56.9,22.8 L58.6,28.3 L54,25 L49.4,28.3 L51.1,22.8 L46.5,19.5 L52.2,19.5 Z" />
+    <path
+        android:fillColor="@color/gold"
+        android:pathData="M54,30 C45,39 41,48 41,57 L67,57 C67,48 63,39 54,30 Z" />
+    <path
+        android:fillColor="@color/gold"
+        android:pathData="M33,57 L75,57 L75,80 L33,80 Z" />
+    <path
+        android:fillColor="@color/gold"
+        android:pathData="M29,36 C26.5,40 25.5,42.5 25.5,45 L32.5,45 C32.5,42.5 31.5,40 29,36 Z" />
+    <path
+        android:fillColor="@color/gold"
+        android:pathData="M27,45 L31,45 L31,80 L27,80 Z" />
+    <path
+        android:fillColor="@color/gold"
+        android:pathData="M79,36 C76.5,40 75.5,42.5 75.5,45 L82.5,45 C82.5,42.5 81.5,40 79,36 Z" />
+    <path
+        android:fillColor="@color/gold"
+        android:pathData="M77,45 L81,45 L81,80 L77,80 Z" />
+</vector>
