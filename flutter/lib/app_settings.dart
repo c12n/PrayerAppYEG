@@ -17,19 +17,30 @@ import 'hijri_calendar.dart';
 import 'prayer_models.dart';
 
 /// App version identity (v2.0.0) — keep in step with pubspec.yaml's
-/// version (3.0.0+22). Shown in the Settings footer and used by the
+/// version (3.0.2+25). Shown in the Settings footer and used by the
 /// What's New sheet to decide whether to appear.
-const kAppVersion = '3.0.0';
-const kAppBuildNumber = '24';
+const kAppVersion = '3.0.2';
+const kAppBuildNumber = '25';
 
 /// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
 /// what travel over the alerts MethodChannel and name the Android
 /// notification channels.
 /// Build 35: every earlier bundled sound was replaced by the single
 /// adhan from the mosque's MadinaAPPS app — Default / Silent /
-/// Mosque Adhan, same as iOS. v3.0.0 adds the Classic Adhan back as
-/// a fourth choice, again matching iOS.
-const alertSoundNames = ['default', 'silent', 'alrashid', 'classic'];
+/// Mosque Adhan, same as iOS. v3.0.0 added the Classic Adhan back as
+/// a fourth choice. v3.0.2 mirrors iOS 3.0.1/3.0.2: the mosque adhan
+/// is removed and five more sounds join Classic (the same 23-second
+/// WAVs iOS ships), in the iOS picker's order.
+const alertSoundNames = [
+  'default',
+  'silent',
+  'classic',
+  'makkah',
+  'madinah',
+  'quds',
+  'alafasy',
+  'makkahfajr',
+];
 
 /// Launcher icon variants (v3.0.0), matching the iOS alternate
 /// icons: 'default' plus the nine colorways, switched on Android
@@ -176,9 +187,11 @@ class AppSettings extends ChangeNotifier {
 
   /// Alert sounds (v1.8.0): the app-wide Adhan sound plus optional
   /// per-prayer overrides. See [effectiveSound]. v3.0.0: a fresh
-  /// install starts on the Mosque Adhan, like iOS (stored choices
+  /// install started on the Mosque Adhan, like iOS. v3.0.2: the
+  /// mosque adhan is gone (iOS 3.0.1 removed it), so a fresh
+  /// install starts on the Classic Adhan, like iOS (stored choices
   /// are untouched — see load()).
-  String alertSound = 'alrashid';
+  String alertSound = 'classic';
   final Map<Prayer, String> prayerSoundOverrides = {};
 
   /// The sound an Adhan alert for [prayer] actually uses.
@@ -255,9 +268,11 @@ class AppSettings extends ChangeNotifier {
     if (storedSound != null && alertSoundNames.contains(storedSound)) {
       s.alertSound = storedSound;
     } else if (storedSound != null && storedSound.isNotEmpty) {
-      // A sound removed in build 35: replaced by the Mosque
-      // Adhan, not silently reset to the system default.
-      s.alertSound = 'alrashid';
+      // A stored sound that no longer exists (build 35's removed
+      // sounds, or the mosque adhan removed in v3.0.2): replaced
+      // by the Classic Adhan, not silently reset to the system
+      // default — the same rule as iOS's AdhanSound.current.
+      s.alertSound = 'classic';
     }
     for (final p in Prayer.values) {
       final override = prefs.getString(prayerSoundKey(p));
@@ -459,7 +474,7 @@ class AppSettings extends ChangeNotifier {
         reminderEnabled = true;
         reminderLeadMinutes = 10;
         jumuahReminderEnabled = true;
-        alertSound = 'alrashid';
+        alertSound = 'classic';
         prayerSoundOverrides.clear();
         hijriOffsetDays = 0;
         hapticsEnabled = true;

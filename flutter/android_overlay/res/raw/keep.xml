@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Keep the bundled Adhan sounds in release builds: they are
      referenced by notification channels at runtime, and aapt's
-     resource shrinker would otherwise strip them as unused. -->
+     resource shrinker would otherwise strip them as unused.
+     v3.0.2: the mosque adhan is gone; the set is Classic plus the
+     five sounds iOS 3.0.1 added. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@raw/adhan_alrashid" />
+    tools:keep="@raw/adhan_classic,@raw/adhan_makkah,@raw/adhan_madinah,@raw/adhan_quds,@raw/adhan_alafasy,@raw/adhan_makkahfajr" />

@@ -25,6 +25,9 @@ class QuranAudioHandler extends BaseAudioHandler {
   /// position is refreshed at.
   void attach(QuranPlayer player) {
     _player = player;
+    // The mini player's swipe-down dismiss (v3.0.2) stops playback
+    // through this handler's stop(), like the system media controls.
+    player.serviceStop = stop;
     player.addListener(_sync);
     _sync();
   }

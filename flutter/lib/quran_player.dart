@@ -98,6 +98,12 @@ class QuranPlayer extends ChangeNotifier {
   static const _widgetChannel = MethodChannel('alrashid/widgets');
 
   final AudioPlayer _player = AudioPlayer();
+
+  /// The background handler's stop entry point (v3.0.2), set by
+  /// QuranAudioHandler.attach: UI teardown (the mini player's
+  /// swipe-down dismiss) routes through the same audio-service
+  /// stop path as the system's media controls.
+  Future<void> Function()? serviceStop;
   SharedPreferences? _prefs;
 
   // MARK: State (iOS @Published equivalents)
@@ -342,6 +348,38 @@ class QuranPlayer extends ChangeNotifier {
     _flushListenStats();
     _persistPosition();
     _writeWidgetSnapshot(force: true);
+    notifyListeners();
+  }
+
+  /// Dismisses the player entirely (v3.0.2, iOS parity): the mini
+  /// player's swipe-down. Playback stops through the audio-service
+  /// stop path, the surah unloads and the persisted session is
+  /// cleared, so the mini player (and the Continue Listening card,
+  /// which keys off the same state) stays gone until the user
+  /// plays something again — a cold relaunch does not resurrect it.
+  Future<void> dismiss() async {
+    if (currentSurah == null) return;
+    _loadToken++; // an in-flight load must not resurrect the player
+    _flushListenStats();
+    final stop = serviceStop;
+    if (stop != null) {
+      await stop();
+    }
+    await _player.stop();
+    currentSurah = null;
+    queue = [];
+    _traversal = [];
+    _traversalPos = 0;
+    isPlaying = false;
+    currentTime = 0;
+    itemDuration = null;
+    _pendingSeek = null;
+    _ayahLoop = null;
+    ayahLoopLabel = null;
+    sleepOption = const QuranSleepOption.off();
+    _sleepDeadline = null;
+    _prefs?.remove(_kLastSurah);
+    _prefs?.remove(_kLastPosition);
     notifyListeners();
   }
 

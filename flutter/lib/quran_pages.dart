@@ -271,7 +271,18 @@ class MiniPlayerBar extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: Material(
+            child: GestureDetector(
+              // Swipe down on the pill dismisses the player
+              // (v3.0.2, iOS parity): a deliberate downward flick
+              // stops playback and unloads the surah. Taps still
+              // reach the InkWell (open Now Playing) and the
+              // transport buttons.
+              onVerticalDragEnd: (details) {
+                if ((details.primaryVelocity ?? 0) > 300) {
+                  player.dismiss();
+                }
+              },
+              child: Material(
               color: QuranThemeColors.deepGreen,
               borderRadius: BorderRadius.circular(16),
               elevation: 6,
@@ -327,6 +338,7 @@ class MiniPlayerBar extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
               ),
             ),
           ),

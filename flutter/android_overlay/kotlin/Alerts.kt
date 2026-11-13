@@ -25,8 +25,9 @@ import org.json.JSONObject
 
 /// One item of the alert plan computed by the Dart scheduler.
 /// `sound` (v1.8.0) is the effective alert sound for the item —
-/// 'default', 'silent' or 'alrashid' (build 35) — and selects the
-/// notification channel the item posts on.
+/// one of the Dart alertSoundNames ('default', 'silent', 'classic',
+/// 'makkah', 'madinah', 'quds', 'alafasy', 'makkahfajr' as of
+/// v3.0.2) — and selects the notification channel the item posts on.
 data class AlertItem(
     val id: Int,
     val epochMillis: Long,
@@ -136,13 +137,20 @@ object AlertArmer {
 /// (v1.8.0): a channel's sound is fixed at creation on Android, so
 /// each sound gets its own IMPORTANCE_HIGH channel — 'adhan_alerts'
 /// (the original channel, kept so existing users keep their system
-/// settings for it) for the default sound, plus _silent and
-/// _alrashid variants (build 35: one bundled sound, the same WAV
-/// the iOS app ships, in res/raw).
+/// settings for it) for the default sound, plus one variant per
+/// bundled sound. v3.0.2 (iOS 3.0.1 parity): the mosque adhan is
+/// removed; the bundled set is Classic plus Makkah, Madinah,
+/// Al-Aqsa, Alafasy and Makkah Fajr — the same 23-second WAVs iOS
+/// ships, in res/raw. (Devices that already have the old
+/// 'adhan_alerts_alrashid' channel keep it in their system
+/// settings, unused; Dart resolves a stored 'alrashid' choice to
+/// Classic before it ever reaches this code.)
 object AdhanNotifier {
     const val CHANNEL_ID = "adhan_alerts"
 
-    private val SOUNDS = listOf("default", "silent", "alrashid", "classic")
+    private val SOUNDS = listOf(
+        "default", "silent", "classic", "makkah", "madinah", "quds",
+        "alafasy", "makkahfajr")
 
     fun channelId(sound: String): String =
         if (sound == "default") CHANNEL_ID else "adhan_alerts_$sound"
@@ -151,22 +159,33 @@ object AdhanNotifier {
         when (sound) {
             "default" ->
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            // R.raw reference (not a string-built URI) so aapt's
-            // resource shrinker keeps the bundled sound in the APK.
-            // Build 35: the one remaining bundled sound, the adhan
-            // from the mosque's MadinaAPPS app.
-            "alrashid" -> android.net.Uri.parse(
-                "android.resource://${context.packageName}/${R.raw.adhan_alrashid}")
-            // v3.0.0: the Classic Adhan, the same WAV iOS ships.
+            // R.raw references (not string-built URIs) so aapt's
+            // resource shrinker keeps the bundled sounds in the
+            // APK. The same WAVs iOS ships: Classic since v3.0.0,
+            // the other five since v3.0.2.
             "classic" -> android.net.Uri.parse(
                 "android.resource://${context.packageName}/${R.raw.adhan_classic}")
+            "makkah" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_makkah}")
+            "madinah" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_madinah}")
+            "quds" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_quds}")
+            "alafasy" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_alafasy}")
+            "makkahfajr" -> android.net.Uri.parse(
+                "android.resource://${context.packageName}/${R.raw.adhan_makkahfajr}")
             else -> null // silent
         }
 
     private fun channelName(sound: String): String = when (sound) {
         "silent" -> "Adhan Alerts · Silent"
-        "alrashid" -> "Adhan Alerts · Mosque Adhan"
         "classic" -> "Adhan Alerts · Classic Adhan"
+        "makkah" -> "Adhan Alerts · Makkah Adhan"
+        "madinah" -> "Adhan Alerts · Madinah Adhan"
+        "quds" -> "Adhan Alerts · Al-Aqsa Adhan"
+        "alafasy" -> "Adhan Alerts · Alafasy Adhan"
+        "makkahfajr" -> "Adhan Alerts · Makkah Fajr Adhan"
         else -> "Adhan Alerts"
     }
 
