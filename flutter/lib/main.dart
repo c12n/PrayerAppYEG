@@ -48,6 +48,7 @@ import 'settings_page.dart';
 import 'daily_verse.dart';
 import 'strings.dart';
 import 'tab_nav.dart';
+import 'update_checker.dart';
 import 'whats_new.dart';
 
 Future<void> main() async {
@@ -319,23 +320,30 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final nav = TabNavScope.of(context);
     return Scaffold(
-      body: NotificationListener<ScrollNotification>(
-        onNotification: _onScroll,
-        child: PageView(
-          controller: _pageController,
-          onPageChanged: _onPageChanged,
-          children: [
-            const KeepAlive(keepAlive: true, child: HomePage()),
-            const KeepAlive(
-                keepAlive: true, child: QuranLibraryPage(embedded: true)),
-            const KeepAlive(
-                keepAlive: true, child: QiblaCompassPage(embedded: true)),
-            KeepAlive(
-              keepAlive: true,
-              child: SettingsPage(settings: SettingsScope.of(context)),
+      body: Column(
+        children: [
+          const _UpdateBanner(),
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onScroll,
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                children: [
+                  const KeepAlive(keepAlive: true, child: HomePage()),
+                  const KeepAlive(
+                      keepAlive: true, child: QuranLibraryPage(embedded: true)),
+                  const KeepAlive(
+                      keepAlive: true, child: QiblaCompassPage(embedded: true)),
+                  KeepAlive(
+                    keepAlive: true,
+                    child: SettingsPage(settings: SettingsScope.of(context)),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
@@ -351,6 +359,66 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// In-app update banner (v3.0.3): sits at the very top of the
+/// Prayer tab while the update checker has a newer version the
+/// user has not dismissed. Update opens the manifest's link in
+/// the browser; the close button dismisses it for that version.
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final nav = TabNavScope.of(context);
+    return AnimatedBuilder(
+      animation: Listenable.merge([nav, UpdateChecker.instance]),
+      builder: (context, _) {
+        final checker = UpdateChecker.instance;
+        if (nav.index != TabNavController.prayer || !checker.bannerVisible) {
+          return const SizedBox.shrink();
+        }
+        final scheme = Theme.of(context).colorScheme;
+        return Material(
+          color: scheme.primaryContainer,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+              child: Row(
+                children: [
+                  Icon(Icons.system_update,
+                      size: 20, color: scheme.onPrimaryContainer),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      S.f('updateBanner',
+                          {'version': checker.availableVersion!}),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => checker.openUpdate(),
+                    child: Text(S.t('updateButton')),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 19),
+                    color: scheme.onPrimaryContainer,
+                    tooltip: S.t('done'),
+                    onPressed: () => checker.dismiss(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -488,6 +556,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // Arm the Adhan alerts (v1.5) and ask for the notification
     // permission on first launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // In-app update notification (v3.0.3): throttled, silent.
+      unawaited(UpdateChecker.instance.checkOnStart());
       AlertScheduler.refresh(SettingsScope.of(context), askPermission: true);
       // Show the What's New dialog once after an update (v1.8.0).
       if (!SettingsScope.of(context).minimalMode) {

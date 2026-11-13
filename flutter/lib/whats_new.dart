@@ -24,6 +24,10 @@ class WhatsNew {
 
   /// One feature row of the dialog: an icon and a strings.dart key.
   static const Map<String, List<(IconData, String)>> _entries = {
+    '3.0.3': [
+      (Icons.system_update, 'wnUpdate303'),
+      (Icons.linear_scale, 'wnScrub303'),
+    ],
     '3.0.2': [
       (Icons.volume_up, 'wnSounds302'),
       (Icons.swipe_down, 'wnDismiss302'),

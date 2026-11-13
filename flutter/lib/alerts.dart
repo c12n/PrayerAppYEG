@@ -25,9 +25,11 @@ class PlannedNotification {
   final String title;
   final String body;
 
-  /// Alert sound name (v1.8.0): 'default', 'silent' or 'alrashid'
-  /// (build 35). The native side posts on the notification channel for
-  /// this sound. Reminders keep the default sound, like iOS.
+  /// Alert sound name (v1.8.0): one of alertSoundNames ('default',
+  /// 'silent', 'classic', 'makkah', 'madinah', 'quds', 'alafasy',
+  /// 'makkahfajr' as of v3.0.2). The native side posts on the
+  /// notification channel for this sound. Reminders keep the
+  /// default sound, like iOS.
   final String sound;
 
   const PlannedNotification({

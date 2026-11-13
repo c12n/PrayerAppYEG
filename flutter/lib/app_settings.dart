@@ -17,10 +17,10 @@ import 'hijri_calendar.dart';
 import 'prayer_models.dart';
 
 /// App version identity (v2.0.0) — keep in step with pubspec.yaml's
-/// version (3.0.2+25). Shown in the Settings footer and used by the
+/// version (3.0.3+26). Shown in the Settings footer and used by the
 /// What's New sheet to decide whether to appear.
-const kAppVersion = '3.0.2';
-const kAppBuildNumber = '25';
+const kAppVersion = '3.0.3';
+const kAppBuildNumber = '26';
 
 /// The Adhan alert sounds (v1.8.0), mirroring iOS: the raw values are
 /// what travel over the alerts MethodChannel and name the Android

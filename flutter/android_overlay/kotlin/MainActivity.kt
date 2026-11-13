@@ -166,6 +166,24 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                     else -> result.notImplemented()
                 }
             }
+        // In-app update notification (v3.0.3): the Dart update
+        // checker asks for the manifest's update link (the GitHub
+        // releases page) to be opened in the browser.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alrashid/updater")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "openUrl" -> {
+                        val url = call.argument<String>("url") ?: ""
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         // Ongoing countdown notification (v3.0.0, see
         // OngoingNotification.kt): the Dart side syncs the user's
         // opt-in; the notification itself is kept fresh natively.

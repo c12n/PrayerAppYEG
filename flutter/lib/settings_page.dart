@@ -17,6 +17,7 @@ import 'live_notification.dart';
 import 'prayer_models.dart';
 import 'settings_backup.dart';
 import 'strings.dart';
+import 'update_checker.dart';
 
 class SettingsPage extends StatelessWidget {
   final AppSettings settings;
@@ -25,7 +26,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: settings,
+      animation: Listenable.merge([settings, UpdateChecker.instance]),
       builder: (context, _) {
         // The sections as blocks (v3.0.0), so expanded windows
         // can flow them down two columns; compact and medium
@@ -463,6 +464,23 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _pickAppIcon(context),
               ),
               _sectionNote(context, S.t('appIconNote')),
+          ]),
+          _block([
+            _sectionHeader(context, S.t('updates')),
+              if (UpdateChecker.instance.updateAvailable)
+                ListTile(
+                  leading: const Icon(Icons.system_update),
+                  title: Text(S.f('updateBanner', {
+                    'version': UpdateChecker.instance.availableVersion!,
+                  })),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => UpdateChecker.instance.openUpdate(),
+                ),
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: Text(S.t('updateCheck')),
+                onTap: () => _checkForUpdates(context),
+              ),
           ]),
           _block([
             _sectionHeader(context, S.t('resetHeader')),
@@ -1071,6 +1089,21 @@ class _ThemeRow extends StatelessWidget {
       onTap: onTap,
     );
   }
+}
+
+/// Manual update check (v3.0.3): forces a manifest fetch (the
+/// 6-hour start throttle does not apply) and reports the outcome.
+Future<void> _checkForUpdates(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final outcome = await UpdateChecker.instance.checkNow();
+  final checker = UpdateChecker.instance;
+  final text = switch (outcome) {
+    UpdateCheckOutcome.updateAvailable =>
+      S.f('updateBanner', {'version': checker.availableVersion ?? ''}),
+    UpdateCheckOutcome.upToDate => S.t('updateUpToDate'),
+    UpdateCheckOutcome.failed => S.t('updateCheckFailed'),
+  };
+  messenger.showSnackBar(SnackBar(content: Text(text)));
 }
 
 /// Silence-next (v2.0.0): names the next upcoming Adhan in the

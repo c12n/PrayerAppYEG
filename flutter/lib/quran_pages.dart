@@ -1389,17 +1389,37 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
               ),
             ],
           );
-    final slider = Slider(
-            value: duration > 0 ? position.clamp(0.0, duration) : 0,
-            min: 0,
-            max: duration > 0 ? duration : 1,
-            activeColor: Colors.white,
-            inactiveColor: Colors.white24,
-            onChanged: (v) => setState(() => _scrubValue = v),
-            onChangeEnd: (v) {
-              player.seek(v);
-              setState(() => _scrubValue = null);
-            },
+    // Scrubber (v3.0.3): the stock slider's thumb was a small
+    // white dot that vanished against the white filled track.
+    // The knob design (Youssef's spec, parity with iOS 3.0.3): a
+    // large round gold thumb on a thicker track — gold is the
+    // player theme's accent, so the knob reads against both the
+    // filled (white) and unfilled (white24) parts of the track.
+    // Dragging previews through _scrubValue; the seek itself
+    // still lands on release via player.seek, as before.
+    final slider = SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 5,
+              trackShape: const RoundedRectSliderTrackShape(),
+              activeTrackColor: Colors.white,
+              inactiveTrackColor: Colors.white24,
+              thumbColor: QuranThemeColors.lightGold,
+              overlayColor:
+                  QuranThemeColors.lightGold.withValues(alpha: 0.18),
+              thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 15, elevation: 3, pressedElevation: 6),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 26),
+            ),
+            child: Slider(
+              value: duration > 0 ? position.clamp(0.0, duration) : 0,
+              min: 0,
+              max: duration > 0 ? duration : 1,
+              onChanged: (v) => setState(() => _scrubValue = v),
+              onChangeEnd: (v) {
+                player.seek(v);
+                setState(() => _scrubValue = null);
+              },
+            ),
           );
     final timesRow = Row(
             children: [
