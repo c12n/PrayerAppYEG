@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "version": "3.0.3",
+    "url": "https://testflight.apple.com/join/n8Zx6g2S"
+  },
+  "android": {
+    "version": "3.0.3",
+    "url": "https://github.com/c12n/PrayerAppYEG/releases"
+  }
+}
