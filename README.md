@@ -1,32 +1,32 @@
 <p align="center">
-  <img src="AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" width="120" alt="Prayer YEG app icon">
+  <img src="AlRashidWidget/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" width="120" alt="PrayerYEG app icon">
 </p>
 
-<h1 align="center">Prayer YEG</h1>
+<h1 align="center">PrayerYEG</h1>
 
-<p align="center">Prayer times for Edmonton | Home & Lock Screen widgets, a Live Activity, Apple Watch and Android, all calibrated to the mosque's published timetable.</p>
+<p align="center">Prayer times for Edmonton | Home & Lock Screen widgets, a Live Activity, Android and Wear OS, all calibrated to the mosque's published timetable.</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-iOS%2017%2B%20%C2%B7%20Android%208.0%2B-0B3D2E" alt="Platform: iOS 17+ · Android 8.0+">
-  <a href="https://github.com/c12n/alrashid-widget/releases/latest"><img src="https://img.shields.io/github/v/release/c12n/alrashid-widget?label=Latest%20release&color=0E5A40" alt="Latest release"></a>
-  <a href="https://github.com/c12n/alrashid-widget/releases"><img src="https://img.shields.io/github/downloads/c12n/alrashid-widget/total?label=Downloads&color=0E5A40" alt="Downloads"></a>
-  <img src="https://img.shields.io/github/license/c12n/alrashid-widget?color=0E5A40" alt="License: MIT">
+  <a href="https://github.com/c12n/PrayerAppYEG/releases/latest"><img src="https://img.shields.io/github/v/release/c12n/PrayerAppYEG?label=Latest%20release&color=0E5A40" alt="Latest release"></a>
+  <a href="https://github.com/c12n/PrayerAppYEG/releases"><img src="https://img.shields.io/github/downloads/c12n/PrayerAppYEG/total?label=Downloads&color=0E5A40" alt="Downloads"></a>
+  <img src="https://img.shields.io/github/license/c12n/PrayerAppYEG?color=0E5A40" alt="License: MIT">
 </p>
 
 <p align="center">
-  🕌 <a href="https://prayer.07051969.xyz"><b>Join the TestFlight beta</b></a> · 📥 <a href="https://github.com/c12n/alrashid-widget/releases/latest"><b>Download v2.0.0</b></a> · 🪶 <a href="https://raw.githubusercontent.com/c12n/alrashid-widget/main/altstore/source.json"><b>AltStore source</b></a> · 🐛 <a href="https://github.com/c12n/alrashid-widget/issues"><b>Report an issue</b></a>
+  🕌 <a href="https://prayer.c12napps.com"><b>Join the TestFlight beta</b></a> · 📥 <a href="https://github.com/c12n/PrayerAppYEG/releases/latest"><b>Download the latest release</b></a> · 🪶 <a href="https://raw.githubusercontent.com/c12n/PrayerAppYEG/main/altstore/source.json"><b>AltStore source</b></a> · 🐛 <a href="https://github.com/c12n/PrayerAppYEG/issues"><b>Report an issue</b></a>
 </p>
 
-`v2.0.0` · Our biggest update yet | colored widgets, Ramadan mode, a monthly calendar, Minimal Mode, and more.
+`v3.0.3` · In-app update notifications and a draggable scrubber knob in the Quran player.
 
 > [!NOTE]
-> **Unofficial.** Prayer YEG is an independent app, completely separate from the mosque. It is a third-party project made entirely on the developer's own initiative: Al Rashid Mosque did not ask for, commission, or endorse this app. It simply follows the prayer timetable the mosque publishes publicly on its website (13070 113 St NW, Edmonton, Canada - [alrashidmosque.ca](https://alrashidmosque.ca)).
+> **Unofficial.** PrayerYEG is an independent app, completely separate from any mosque. It is a third-party project made entirely on the developer's own initiative: it was not asked for, commissioned, or endorsed by any mosque. Prayer time data is publicly accessible from the Al Rashid Mosque website.
 
 ---
 
 ## 📱 Screenshots
 
-![Prayer YEG 2.0.0 | feature overview](screenshots/00-feature-graphic.png)
+![PrayerYEG | feature overview](screenshots/00-feature-graphic.png)
 
 | ![Today](screenshots/01-home.png) | ![Colored widgets](screenshots/02-widgets.png) | ![Ramadan mode](screenshots/03-ramadan.png) | ![Monthly calendar](screenshots/04-calendar.png) | ![Minimal Mode](screenshots/05-minimal.png) |
 | :---: | :---: | :---: | :---: | :---: |
@@ -36,7 +36,7 @@
 | :---: | :---: |
 | **StandBy** | **iPhone Duo** |
 
-*Screenshots are design-faithful renders of the shipped 2.0.0 interface.*
+*Screenshots are design-faithful renders.*
 
 ---
 
@@ -57,14 +57,14 @@
 
 **TestFlight**
 
-1. Open **[prayer.07051969.xyz](https://prayer.07051969.xyz)** on your iPhone or iPad.
-2. Join the public beta and install **Prayer YEG** from the TestFlight app.
+1. Open **[prayer.c12napps.com](https://prayer.c12napps.com)** on your iPhone or iPad.
+2. Join the public beta and install **PrayerYEG** from the TestFlight app.
 3. Updates arrive through TestFlight automatically.
 
 **Sideload**
 
-1. Easiest: add the dedicated AltStore source (only this app) in AltStore, SideStore or Feather: `https://raw.githubusercontent.com/c12n/alrashid-widget/main/altstore/source.json`, then install **Prayer YEG** from it.
-2. Or download `AlRashidWidget-2.0.0.ipa` from the [latest release](https://github.com/c12n/alrashid-widget/releases/latest) and install it with Sideloadly, AltServer, Xcode, or your preferred sideloading tool.
+1. Easiest: add the dedicated AltStore source (only this app) in AltStore, SideStore or Feather: `https://raw.githubusercontent.com/c12n/PrayerAppYEG/main/altstore/source.json`, then install **PrayerYEG** from it.
+2. Older iOS builds are in the release history; current iOS builds ship through TestFlight (above).
 
 > [!TIP]
 > The app and its widgets share data through an App Group, so re-signing with a free developer certificate is fine.
@@ -73,7 +73,7 @@
 
 **Sideload**
 
-1. Download `AlRashidWidget-2.0.0.apk` from the [latest release](https://github.com/c12n/alrashid-widget/releases/latest) on your phone.
+1. Download `PrayerYEG-3.0.3-versionCode26.apk` from the [latest release](https://github.com/c12n/PrayerAppYEG/releases/latest) on your phone.
 2. Open the APK. If Android asks, allow **installing from unknown sources** for your browser or Files app, then tap **Install**.
 3. Open the app once, then long-press your home screen to add the prayer widgets.
 4. For **Android Auto**: if the app does not appear on the car screen, turn on **Unknown sources** in Android Auto's developer settings.
@@ -83,14 +83,14 @@
 ## 📖 How to Use
 
 1. **Open the app once** so the widgets load today's times.
-2. **Add a widget:** long-press the Home Screen → **+** → search **Prayer YEG**. For the Lock Screen, long-press it → **Customize**.
+2. **Add a widget:** long-press the Home Screen → **+** → search **PrayerYEG**. For the Lock Screen, long-press it → **Customize**.
 3. **Make it yours:** Settings → Appearance for themes, widget colors, per-prayer sounds | or flip on **Minimal Mode** for the essentials only.
 
 ---
 
 ## 🗺️ Roadmap
 
-- **App Store release** | waiting on written permission from the mosque to use its name and timetable.
+- **App Store and Play Store release** | on hold.
 - **Google Drive backup sign-in** on Android (file backup already works).
 - **CarPlay** | ready in code, waiting on Apple to allow the category.
 
@@ -110,7 +110,7 @@
 Yes | free, no ads, no in-app purchases.
 
 **Where do the times come from?**
-They're calculated on your device for the mosque's coordinates (53.591189, -113.515598, America/Edmonton) and calibrated against the mosque's published timetable, including its Iqamah offsets (Fajr +20, Dhuhr +10, Asr +10, Maghrib +5, Isha +10). The Hijri date uses the same Umm al-Qura calendar as the mosque's official app.
+They're calculated on your device for the mosque's coordinates (53.591189, -113.515598, America/Edmonton) and calibrated against the mosque's published timetable, including its Iqamah offsets (Fajr +20, Dhuhr +10, Asr +10, Maghrib +5, Isha +10). The Hijri date uses the Umm al-Qura calendar.
 
 **Does it need the internet?**
 No. Times, widgets and alerts all work offline. The only network use: while a Live Activity is running, the app sends that activity's push token and upcoming prayer times to the project's own small server so the activity can roll over at each Adhan | nothing is linked to an identity.
@@ -122,7 +122,7 @@ No accounts, no analytics, no tracking, no ads. See the Privacy section below.
 
 ## 🔒 Privacy
 
-Prayer YEG does not collect analytics or usage data and shows no ads. Prayer times are calculated and stored on the device. The single exception above (Live Activity push token + prayer schedule to the project's own server) is covered by the app's bundled privacy manifest.
+PrayerYEG does not collect analytics or usage data and shows no ads. Prayer times are calculated and stored on the device. The single exception above (Live Activity push token + prayer schedule to the project's own server) is covered by the app's bundled privacy manifest.
 
 ---
 
@@ -138,8 +138,8 @@ Prayer YEG does not collect analytics or usage data and shows no ads. Prayer tim
 You need a Mac with Xcode 15 or later (CI uses the Xcode on `macos-26` runners).
 
 ```sh
-git clone https://github.com/c12n/alrashid-widget.git
-cd alrashid-widget
+git clone https://github.com/c12n/PrayerAppYEG.git
+cd PrayerAppYEG
 
 xcodebuild \
   -project AlRashidWidget.xcodeproj \
@@ -158,8 +158,8 @@ That gives you an unsigned archive. To run it on your own device, open the proje
 You need Flutter 3.47.8 (stable channel), Java 17, and Python 3 with Pillow. The Android project is assembled from `flutter/` plus the overlay in `flutter/android_overlay/`, the same way CI does it:
 
 ```sh
-git clone https://github.com/c12n/alrashid-widget.git
-cd alrashid-widget
+git clone https://github.com/c12n/PrayerAppYEG.git
+cd PrayerAppYEG
 
 # Generate the platform scaffolding (only needed once)
 flutter create --project-name alrashidwidget --org com.c12n \
@@ -214,7 +214,7 @@ The calculator is fitted to the mosque's published May to December 2026 tables (
 
 ## Disclaimer
 
-Prayer YEG is an unofficial open-source project, completely separate from the mosque. It is not affiliated with, authorized, or endorsed by Al Rashid Mosque or Apple Inc. Provided "as is", without warranty of any kind. Prayer times are calculated in good faith against the mosque's published timetable; when in doubt, follow the mosque's own announcements.
+PrayerYEG is an unofficial open-source project, completely separate from any mosque. It is not affiliated with, authorized, or endorsed by any mosque or by Apple Inc. Provided "as is", without warranty of any kind. Prayer times are calculated in good faith against the mosque's published timetable; when in doubt, follow the mosque's own announcements.
 
 - This app is **free**. If a third party charged you for it, you may have been misled.
 - No user data is collected, stored, or distributed by this repository.
