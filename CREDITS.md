@@ -1,10 +1,10 @@
-# Credits and Attribution | Prayer YEG
+# Credits and Attribution | PrayerYEG
 
-This file records where everything used in Prayer YEG came from: the texts, the voices, the data, the schedules, the libraries, and the design references. Every entry names the evidence it is based on, in this repository. Anything whose origin could not be traced from this repository is listed openly at the end, under "Origins not documented", rather than guessed.
+This file records where everything used in PrayerYEG came from: the texts, the voices, the data, the schedules, the libraries, and the design references. Every entry names the evidence it is based on, in this repository. Anything whose origin could not be traced from this repository is listed openly at the end, under "Origins not documented", rather than guessed.
 
 ## This app
 
-- Prayer YEG, designed and developed by c12n Apps. Copyright (c) 2026 c12n Apps. Released under the MIT License (see LICENSE). Prayer YEG is an independent third-party project, made entirely on the developer's own initiative: it was not asked for, commissioned, or endorsed by Al Rashid Mosque. Earlier builds were published under the names Al Rashid Prayer and Edmonton Prayer Times.
+- PrayerYEG, designed and developed by c12n Apps. Copyright (c) 2026 c12n Apps. Released under the MIT License (see LICENSE). PrayerYEG is an independent third-party project, made entirely on the developer's own initiative: it was not asked for, commissioned, or endorsed by any mosque.
 - The app itself is original work by c12n Apps, including: the on-device prayer time calculator and its mosque timetable calibration, the widget suite and Live Activity system, the Quran player engine and its interfaces, Minimal Mode, the iPhone Duo and iPad layouts, the settings backup format, and the Android edition. Evidence: the source code in this repository (AlRashidWidget/, Shared/, PrayerWidgetExtension/, flutter/).
 - App icon artwork: original artwork drawn for this app by c12n Apps, generated programmatically with make_icon.py using Pillow (the Python imaging library, imported as PIL). Evidence: make_icon.py header and imports.
 - No third-party fonts are bundled; the apps use the system fonts and SF Symbols of the platforms they run on.
@@ -20,8 +20,12 @@ This file records where everything used in Prayer YEG came from: the texts, the 
 - Arabic Quran recitation (streaming and downloads): audio files are served by the Islamic Network CDN (cdn.islamic.network). Evidence: the "audioBase" URL in AlRashidWidget/Quran/surahs.json ("https://cdn.islamic.network/quran/audio-surah/128"), loaded by AlRashidWidget/Quran/QuranModels.swift.
 - Arabic reciters, as named in the bundled surah catalogue (surahs.json): Mishary Rashid Alafasy, Abdul Basit Abdul Samad, Abdullah Basfar, and Aziz Alili. Evidence: the "reciters" list in surahs.json, with per-surah durations for each reciter.
 - English Quran narration: narrated by Ibrahim Walk, audio hosted by QuranicAudio (download.quranicaudio.com). Evidence: the stream URL "https://download.quranicaudio.com/quran/ibrahim_walk/%03d.mp3" and the "QuranicAudio" doc comment in AlRashidWidget/Quran/QuranModels.swift.
-- Adhan alert sound, mosque recording (adhan_alrashid.wav): the adhan sound from Al Rashid Mosque's own mobile app, an app developed by MadinaAPPS. Evidence: code comments in AlRashidWidget/AlRashidWidgetApp.swift and flutter/lib/app_settings.dart describe it as "the single adhan from the mosque's MadinaAPPS app". The muezzin who performs this recording is not named in this repository; see "Origins not documented".
 - Adhan alert sound, classic recording (adhan_classic.wav): a bundled adhan recording offered as the "Classic" sound option. Its original recording source and muezzin are not documented in this repository; see "Origins not documented".
+- Adhan alert sound, Makkah recording (adhan_makkah.wav): the "Makkah Adhan" sound option, sourced from the "adhan" collection (identifier adhan_202303) on the Internet Archive (archive.org), file adhan-alharam-almakaa.mp3. Evidence: the download record in the 3.0.1 change notes.
+- Adhan alert sound, Madinah recording (adhan_madinah.wav): the "Madinah Adhan" sound option, sourced from the "adhan" collection (identifier adhan_202303) on the Internet Archive (archive.org), file alharam-almudnaa.mp3.
+- Adhan alert sound, Al-Aqsa recording (adhan_quds.wav): the "Al-Aqsa Adhan" sound option, sourced from the "adhan" collection (identifier adhan_202303) on the Internet Archive (archive.org), file adhan-alquds.mp3.
+- Adhan alert sound, Alafasy recording (adhan_alafasy.wav): the "Alafasy Adhan" sound option, performed by Mishary Rashid Alafasy, sourced from the "adhans" collection (identifier adhans_sunnah) on the Internet Archive (archive.org), file Athan_alafasi_nice.mp3.
+- Adhan alert sound, Makkah Fajr recording (adhan_makkahfajr.wav): the "Makkah Fajr Adhan" sound option, a Fajr adhan performed by Sheikh Ali Ahmed Mullah, sourced from the Internet Archive (archive.org), item "Makkah Fajr Adhan 6 9 13 Sheikh Ali Mullah" (identifier MakkahFajrAdhan6913SheikhAliMullah).
 
 ## Prayer data and schedules
 
@@ -60,7 +64,6 @@ Features below were implemented in this project with another app as the visual a
 The following are used in the app, but this repository does not document where they originally came from. They are listed here so the gap is on the record, not hidden:
 
 - The digital source of the bundled Arabic Quran text file (quran_text.json), beyond its Uthmani script.
-- The muezzin (performer) of the mosque adhan recording (adhan_alrashid.wav).
 - The original recording source and muezzin of the classic adhan recording (adhan_classic.wav).
 - The original translator of the Daily Verse English and French renderings.
 - The external source, if any, of the embedded 99 Names list and its meanings.
